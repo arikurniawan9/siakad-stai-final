@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+
+@source '../js/**/*.{js,jsx,ts,tsx}';
+@source '../views/**/*.blade.php';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-primary: #1B365D;
+    --color-secondary: #107C41;
+}
+
+/* ========================================================================= */
+/* PREMIUM ULTRA-SLEEK SIDEBAR SCROLLBAR                                     */
+/* ========================================================================= */
+.custom-sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(51, 65, 85, 0.4) transparent;
+}
+
+.custom-sidebar-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+.custom-sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 6px 0;
+}
+
+.custom-sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(71, 85, 105, 0.35);
+    border-radius: 9999px;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.custom-sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.9) 100%);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.custom-sidebar-scrollbar.developer-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(168, 85, 247, 0.6) 0%, rgba(126, 34, 206, 0.9) 100%);
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+}
+
+/* ========================================================================= */
+/* GLOBAL SUBTLE SCROLLBAR                                                   */
+/* ========================================================================= */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f8fafc;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
