@@ -7,7 +7,8 @@ import {
     Edit2, KeyRound, Trash2, CheckCircle2, ChevronRight,
     GraduationCap, Calendar, BookOpen, CreditCard, ShieldCheck,
     AlertCircle, X, FileSpreadsheet, Phone, Mail, Copy, Check,
-    Printer, RefreshCw, AlertTriangle, Layers, Clock, Sparkles
+    Printer, RefreshCw, AlertTriangle, Layers, Clock, Sparkles,
+    Plus, MoreVertical
 } from 'lucide-react';
 
 export default function StudentsIndex({ students, academicYears = [], studyPrograms = [], activePeriod, stats = {}, filters = {} }) {
@@ -18,6 +19,7 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
     const [krsStatus, setKrsStatus] = useState(filters.krs_status || '');
     const [invoiceStatus, setInvoiceStatus] = useState(filters.invoice_status || '');
     const [showFilters, setShowFilters] = useState(Boolean(filters.academic_year || filters.study_program || filters.status || filters.krs_status || filters.invoice_status));
+    const [isMobileFabOpen, setIsMobileFabOpen] = useState(false);
     const isFirstRender = useRef(true);
 
     // Live search debounce otomatis tanpa harus klik tombol cari atau tekan enter
@@ -356,54 +358,79 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                        {/* Tombol Cetak PDF Resmi Berkop Surat */}
-                        <Link
-                            href={`/admin/students/print-pdf?academic_year=${encodeURIComponent(year)}&study_program=${encodeURIComponent(prodi)}&status=${encodeURIComponent(status)}`}
-                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 border border-slate-300 shadow-2xs cursor-pointer"
-                        >
-                            <Printer className="w-3.5 h-3.5 text-slate-700" />
-                            <span>Cetak PDF Resmi</span>
-                        </Link>
+                    {/* Desktop Icon Actions with Tooltips */}
+                    <div className="hidden sm:flex items-center space-x-2">
+                        {/* 1. Tombol Cetak PDF Resmi */}
+                        <div className="relative group">
+                            <Link
+                                href={`/admin/students/print-pdf?academic_year=${encodeURIComponent(year)}&study_program=${encodeURIComponent(prodi)}&status=${encodeURIComponent(status)}`}
+                                className="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl flex items-center justify-center border border-slate-300 shadow-2xs transition cursor-pointer"
+                                aria-label="Cetak PDF Resmi"
+                            >
+                                <Printer className="w-4 h-4 text-slate-700" />
+                            </Link>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-30">
+                                Cetak PDF Resmi
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900" />
+                            </div>
+                        </div>
 
-                        {/* Tombol Ekspor Excel Mewah */}
-                        <a
-                            href={`/admin/students/export-excel?search=${encodeURIComponent(search)}&academic_year=${encodeURIComponent(year)}&study_program=${encodeURIComponent(prodi)}&status=${encodeURIComponent(status)}`}
-                            className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
-                        >
-                            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
-                            <span>Unduh Excel</span>
-                        </a>
+                        {/* 2. Tombol Unduh Excel */}
+                        <div className="relative group">
+                            <a
+                                href={`/admin/students/export-excel?search=${encodeURIComponent(search)}&academic_year=${encodeURIComponent(year)}&study_program=${encodeURIComponent(prodi)}&status=${encodeURIComponent(status)}`}
+                                className="w-10 h-10 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center border border-emerald-200 shadow-2xs transition cursor-pointer"
+                                aria-label="Unduh Excel (.xls)"
+                            >
+                                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                            </a>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-30">
+                                Unduh Excel (.xls)
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900" />
+                            </div>
+                        </div>
 
-                        {/* Tombol Impor Excel Cerdas */}
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setImportRecords([]);
-                                setImportSummary(null);
-                                setImportResult(null);
-                                setImportFileName('');
-                                setImportError('');
-                                setIsImportOpen(true);
-                            }}
-                            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
-                        >
-                            <Upload className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Impor Excel</span>
-                        </button>
+                        {/* 3. Tombol Impor Excel */}
+                        <div className="relative group">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setImportRecords([]);
+                                    setImportSummary(null);
+                                    setImportResult(null);
+                                    setImportFileName('');
+                                    setImportError('');
+                                    setIsImportOpen(true);
+                                }}
+                                className="w-10 h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl flex items-center justify-center shadow-xs transition cursor-pointer"
+                                aria-label="Impor Data Excel"
+                            >
+                                <Upload className="w-4 h-4 text-emerald-400" />
+                            </button>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-30">
+                                Impor Data Excel
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900" />
+                            </div>
+                        </div>
 
-                        {/* Tombol Tambah Mahasiswa Baru */}
-                        <button
-                            type="button"
-                            onClick={() => {
-                                createForm.reset();
-                                setIsCreateOpen(true);
-                            }}
-                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
-                        >
-                            <UserPlus className="w-3.5 h-3.5" />
-                            <span>Tambah Baru</span>
-                        </button>
+                        {/* 4. Tombol Tambah Mahasiswa Baru */}
+                        <div className="relative group">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    createForm.reset();
+                                    setIsCreateOpen(true);
+                                }}
+                                className="w-10 h-10 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-xs transition cursor-pointer"
+                                aria-label="Tambah Mahasiswa Baru"
+                            >
+                                <UserPlus className="w-4 h-4" />
+                            </button>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-30">
+                                Tambah Mahasiswa Baru
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1339,6 +1366,100 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                         </div>
                     </div>
                 )}
+
+                {/* MOBILE FLOATING ACTION BUTTON (FAB) & SPEED DIAL MENU */}
+                <div className="fixed bottom-6 right-6 z-40 sm:hidden">
+                    {/* Backdrop overlay when speed dial is open */}
+                    {isMobileFabOpen && (
+                        <div 
+                            onClick={() => setIsMobileFabOpen(false)}
+                            className="fixed inset-0 bg-slate-900/50 backdrop-blur-2xs z-30 transition-opacity"
+                        />
+                    )}
+
+                    {/* Floating Speed Dial Actions */}
+                    {isMobileFabOpen && (
+                        <div className="relative z-40 mb-3 space-y-2.5 flex flex-col items-end animate-in fade-in slide-in-from-bottom-5 duration-200">
+                            {/* 1. Tambah Mahasiswa */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsMobileFabOpen(false);
+                                    createForm.reset();
+                                    setIsCreateOpen(true);
+                                }}
+                                className="flex items-center space-x-2 bg-white text-slate-800 pl-3 pr-2 py-1.5 rounded-full shadow-lg border border-slate-200 text-xs font-bold active:scale-95 transition cursor-pointer"
+                            >
+                                <span>Tambah Mahasiswa</span>
+                                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                                    <UserPlus className="w-4 h-4" />
+                                </div>
+                            </button>
+
+                            {/* 2. Impor Excel */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsMobileFabOpen(false);
+                                    setImportRecords([]);
+                                    setImportSummary(null);
+                                    setImportResult(null);
+                                    setImportFileName('');
+                                    setImportError('');
+                                    setIsImportOpen(true);
+                                }}
+                                className="flex items-center space-x-2 bg-white text-slate-800 pl-3 pr-2 py-1.5 rounded-full shadow-lg border border-slate-200 text-xs font-bold active:scale-95 transition cursor-pointer"
+                            >
+                                <span>Impor Excel</span>
+                                <div className="w-8 h-8 rounded-full bg-slate-900 text-emerald-400 flex items-center justify-center shadow-xs">
+                                    <Upload className="w-4 h-4" />
+                                </div>
+                            </button>
+
+                            {/* 3. Unduh Excel */}
+                            <a
+                                href={`/admin/students/export-excel?search=${encodeURIComponent(search)}&academic_year=${encodeURIComponent(year)}&study_program=${encodeURIComponent(prodi)}&status=${encodeURIComponent(status)}`}
+                                onClick={() => setIsMobileFabOpen(false)}
+                                className="flex items-center space-x-2 bg-white text-slate-800 pl-3 pr-2 py-1.5 rounded-full shadow-lg border border-slate-200 text-xs font-bold active:scale-95 transition cursor-pointer"
+                            >
+                                <span>Unduh Excel</span>
+                                <div className="w-8 h-8 rounded-full bg-emerald-700 text-white flex items-center justify-center shadow-xs">
+                                    <FileSpreadsheet className="w-4 h-4" />
+                                </div>
+                            </a>
+
+                            {/* 4. Cetak PDF Resmi */}
+                            <Link
+                                href={`/admin/students/print-pdf?academic_year=${encodeURIComponent(year)}&study_program=${encodeURIComponent(prodi)}&status=${encodeURIComponent(status)}`}
+                                onClick={() => setIsMobileFabOpen(false)}
+                                className="flex items-center space-x-2 bg-white text-slate-800 pl-3 pr-2 py-1.5 rounded-full shadow-lg border border-slate-200 text-xs font-bold active:scale-95 transition cursor-pointer"
+                            >
+                                <span>Cetak PDF Resmi</span>
+                                <div className="w-8 h-8 rounded-full bg-slate-700 text-white flex items-center justify-center shadow-xs">
+                                    <Printer className="w-4 h-4" />
+                                </div>
+                            </Link>
+                        </div>
+                    )}
+
+                    {/* Main FAB Trigger Button */}
+                    <button
+                        type="button"
+                        onClick={() => setIsMobileFabOpen(!isMobileFabOpen)}
+                        className={`relative z-40 w-13 h-13 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 active:scale-90 cursor-pointer ${
+                            isMobileFabOpen 
+                                ? 'bg-slate-900 text-white rotate-90 shadow-slate-900/40' 
+                                : 'bg-gradient-to-tr from-emerald-700 to-teal-500 text-white shadow-emerald-700/40 hover:shadow-2xl'
+                        }`}
+                        aria-label="Aksi Cepat Menu"
+                    >
+                        {isMobileFabOpen ? (
+                            <X className="w-6 h-6" />
+                        ) : (
+                            <Plus className="w-6 h-6" />
+                        )}
+                    </button>
+                </div>
             </div>
         </AppLayout>
     );
