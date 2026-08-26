@@ -101,76 +101,64 @@ class FacilityController extends Controller
             ->orderBy('buildings.id', 'asc')
             ->get();
 
-        // Query Ruang Kelas
-        $roomsQuery = DB::table('rooms')
-            ->join('buildings', 'rooms.building_id', '=', 'buildings.id')
-            ->select(
-                'rooms.*',
-                'buildings.name as building_name',
-                'buildings.code as building_code'
-            );
+        $rooms = [];
+        $selectedBuilding = null;
 
-        if ($search) {
-            $roomsQuery->where(function ($q) use ($search) {
-                $q->where('rooms.name', 'ilike', "%{$search}%")
-                  ->orWhere('rooms.code', 'ilike', "%{$search}%")
-                  ->orWhere('buildings.name', 'ilike', "%{$search}%")
-                  ->orWhere('buildings.code', 'ilike', "%{$search}%");
-            });
-        }
-
+        // Hanya tampilkan data ruangan jika gedung telah dipilih
         if ($buildingId) {
-            $roomsQuery->where('rooms.building_id', $buildingId);
+            $selectedBuilding = DB::table('buildings')->where('id', $buildingId)->first();
+
+            $roomsQuery = DB::table('rooms')
+                ->join('buildings', 'rooms.building_id', '=', 'buildings.id')
+                ->where('rooms.building_id', $buildingId)
+                ->select(
+                    'rooms.*',
+                    'buildings.name as building_name',
+                    'buildings.code as building_code'
+                );
+
+            if ($search) {
+                $roomsQuery->where(function ($q) use ($search) {
+                    $q->where('rooms.name', 'ilike', "%{$search}%")
+                      ->orWhere('rooms.code', 'ilike', "%{$search}%");
+                });
+            }
+
+            if ($roomType) {
+                $roomsQuery->where('rooms.room_type', $roomType);
+            }
+
+            if ($floor) {
+                $roomsQuery->where('rooms.floor_number', $floor);
+            }
+
+            if ($status !== null && $status !== '') {
+                $roomsQuery->where('rooms.is_active', $status === 'active');
+            }
+
+            $rooms = $roomsQuery
+                ->orderBy('rooms.floor_number', 'asc')
+                ->orderBy('rooms.code', 'asc')
+                ->get()
+                ->map(function ($r) {
+                    if (is_string($r->facilities)) {
+                        $decoded = json_decode($r->facilities, true);
+                        $r->facilities = is_array($decoded) ? $decoded : [];
+                    } elseif (is_array($r->facilities)) {
+                        $r->facilities = $r->facilities;
+                    } else {
+                        $r->facilities = [];
+                    }
+                    $r->room_type_name = self::getRoomTypeName($r->room_type);
+                    return $r;
+                });
         }
-
-        if ($roomType) {
-            $roomsQuery->where('rooms.room_type', $roomType);
-        }
-
-        if ($floor) {
-            $roomsQuery->where('rooms.floor_number', $floor);
-        }
-
-        if ($status !== null && $status !== '') {
-            $roomsQuery->where('rooms.is_active', $status === 'active');
-        }
-
-        $rooms = $roomsQuery
-            ->orderBy('buildings.name', 'asc')
-            ->orderBy('rooms.floor_number', 'asc')
-            ->orderBy('rooms.code', 'asc')
-            ->get()
-            ->map(function ($r) {
-                if (is_string($r->facilities)) {
-                    $decoded = json_decode($r->facilities, true);
-                    $r->facilities = is_array($decoded) ? $decoded : [];
-                } elseif (is_array($r->facilities)) {
-                    $r->facilities = $r->facilities;
-                } else {
-                    $r->facilities = [];
-                }
-                $r->room_type_name = self::getRoomTypeName($r->room_type);
-                return $r;
-            });
-
-        // KPI Ringkasan Fasilitas Kampus
-        $totalBuildings = DB::table('buildings')->count();
-        $totalRooms = DB::table('rooms')->count();
-        $activeRooms = DB::table('rooms')->where('is_active', true)->count();
-        $totalCapacity = DB::table('rooms')->where('is_active', true)->sum('capacity') ?? 0;
-        $totalExamCapacity = DB::table('rooms')->where('is_active', true)->sum('exam_capacity') ?? 0;
 
         return Inertia::render('Admin/Facilities/Index', [
             'buildings' => $buildings,
+            'selectedBuilding' => $selectedBuilding,
             'rooms' => $rooms,
             'roomTypes' => self::ROOM_TYPES,
-            'stats' => [
-                'total_buildings' => $totalBuildings,
-                'total_rooms' => $totalRooms,
-                'active_rooms' => $activeRooms,
-                'total_capacity' => (int) $totalCapacity,
-                'total_exam_capacity' => (int) $totalExamCapacity,
-            ],
             'filters' => [
                 'search' => $search,
                 'building_id' => $buildingId,
