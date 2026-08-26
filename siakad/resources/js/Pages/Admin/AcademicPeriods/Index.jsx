@@ -5,7 +5,7 @@ import {
     School, Calendar, CheckCircle2, Clock, 
     Plus, Sparkles, AlertCircle, ArrowRight, 
     Layers, BookOpen, CreditCard, Star, FileText, Check, X,
-    LayoutGrid, List, ChevronLeft, ChevronRight, Search
+    LayoutGrid, List, ChevronLeft, ChevronRight, Search, Save
 } from 'lucide-react';
 
 export default function AcademicPeriodsIndex({ academicYears = [], academicPeriods = [], activePeriod = null }) {
@@ -634,31 +634,38 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                         onClick={(e) => {
                             if (e.target === e.currentTarget) setShowYearModal(false);
                         }}
-                        className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-2xs flex items-center justify-center p-3 animate-fadeIn"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
                     >
-                        <div className="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-3.5 animate-in zoom-in-95 duration-150">
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                                <div>
-                                    <h3 className="text-xs font-black text-slate-900">Tambah Tahun Akademik</h3>
-                                    <p className="text-[10px] text-slate-500">Definisikan master kalender tahun ajaran baru.</p>
+                        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                            <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg border border-emerald-500/30">
+                                        <School className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-xs text-white">Tambah Tahun Akademik</h3>
+                                        <p className="text-[10px] text-slate-300">Definisikan master kalender tahun ajaran baru.</p>
+                                    </div>
                                 </div>
                                 <div className="flex items-center space-x-1.5">
-                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
                                         ESC
                                     </span>
                                     <button 
                                         type="button"
                                         onClick={() => setShowYearModal(false)} 
-                                        className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                                        className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
 
-                            <form onSubmit={submitYear} className="space-y-3 text-[11px]">
+                            <form onSubmit={submitYear} className="p-5 space-y-3.5 text-xs">
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-0.5">Kode Tahun Akademik *</label>
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                        Kode Tahun Akademik <span className="text-rose-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         value={yearForm.data.code}
@@ -670,7 +677,9 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                                 </div>
 
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-0.5">Nama Tahun Akademik *</label>
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                        Nama Tahun Akademik <span className="text-rose-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         value={yearForm.data.name}
@@ -681,43 +690,48 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-0.5">Tanggal Mulai *</label>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Tanggal Mulai <span className="text-rose-500">*</span>
+                                        </label>
                                         <input
                                             type="date"
                                             value={yearForm.data.start_date}
                                             onChange={(e) => yearForm.setData('start_date', e.target.value)}
-                                            className="w-full p-1.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500 text-xs"
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-0.5">Tanggal Berakhir *</label>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Tanggal Berakhir <span className="text-rose-500">*</span>
+                                        </label>
                                         <input
                                             type="date"
                                             value={yearForm.data.end_date}
                                             onChange={(e) => yearForm.setData('end_date', e.target.value)}
-                                            className="w-full p-1.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500 text-xs"
                                             required
                                         />
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                                <div className="pt-2 flex justify-end space-x-2 border-t border-slate-100">
                                     <button
                                         type="button"
                                         onClick={() => setShowYearModal(false)}
-                                        className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 cursor-pointer"
+                                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
                                     >
                                         Batal
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={yearForm.processing}
-                                        className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 cursor-pointer shadow-xs"
+                                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-xs flex items-center space-x-1.5 cursor-pointer"
                                     >
-                                        Simpan
+                                        <Save className="w-3.5 h-3.5" />
+                                        <span>{yearForm.processing ? 'Menyimpan...' : 'Simpan Tahun Akademik'}</span>
                                     </button>
                                 </div>
                             </form>
@@ -731,36 +745,43 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                         onClick={(e) => {
                             if (e.target === e.currentTarget) setShowPeriodModal(false);
                         }}
-                        className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-2xs flex items-center justify-center p-3 animate-fadeIn"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
                     >
-                        <div className="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                                <div>
-                                    <h3 className="text-xs font-black text-slate-900">Tambah Periode Semester</h3>
-                                    <p className="text-[10px] text-slate-500">Atur jadwal masa kuliah, KRS, dan SPP.</p>
+                        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150">
+                            <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between shrink-0">
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg border border-emerald-500/30">
+                                        <Calendar className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-xs text-white">Tambah Periode Semester</h3>
+                                        <p className="text-[10px] text-slate-300">Atur jadwal perkuliahan, pengisian KRS, dan billing SPP.</p>
+                                    </div>
                                 </div>
                                 <div className="flex items-center space-x-1.5">
-                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
                                         ESC
                                     </span>
                                     <button 
                                         type="button"
                                         onClick={() => setShowPeriodModal(false)} 
-                                        className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                                        className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
 
-                            <form onSubmit={submitPeriod} className="space-y-2.5 text-[11px]">
-                                <div className="grid grid-cols-2 gap-2">
+                            <form onSubmit={submitPeriod} className="p-5 overflow-y-auto space-y-3.5 text-xs flex-1">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-0.5">Tahun Akademik *</label>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Tahun Akademik <span className="text-rose-500">*</span>
+                                        </label>
                                         <select
                                             value={periodForm.data.academic_year_id}
                                             onChange={(e) => periodForm.setData('academic_year_id', e.target.value)}
-                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold focus:outline-emerald-500"
                                             required
                                         >
                                             {academicYears.map((yr) => (
@@ -769,11 +790,13 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-0.5">Tipe Semester *</label>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Tipe Semester <span className="text-rose-500">*</span>
+                                        </label>
                                         <select
                                             value={periodForm.data.semester_type}
                                             onChange={(e) => periodForm.setData('semester_type', e.target.value)}
-                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold focus:outline-emerald-500"
                                         >
                                             <option value="GANJIL">Semester Ganjil</option>
                                             <option value="GENAP">Semester Genap</option>
@@ -782,105 +805,110 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-0.5">Kode Semester *</label>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Kode Semester <span className="text-rose-500">*</span>
+                                        </label>
                                         <input
                                             type="text"
                                             value={periodForm.data.code}
                                             onChange={(e) => periodForm.setData('code', e.target.value)}
                                             placeholder="Contoh: 20262"
-                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold focus:outline-emerald-500"
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-0.5">Nama Semester *</label>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Nama Semester <span className="text-rose-500">*</span>
+                                        </label>
                                         <input
                                             type="text"
                                             value={periodForm.data.name}
                                             onChange={(e) => periodForm.setData('name', e.target.value)}
                                             placeholder="Contoh: Semester Genap"
-                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold focus:outline-emerald-500"
                                             required
                                         />
                                     </div>
                                 </div>
 
-                                <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
                                     <p className="font-bold text-slate-800 text-[10px] uppercase">1. Masa Perkuliahan</p>
                                     <div className="grid grid-cols-2 gap-2">
                                         <input
                                             type="date"
                                             value={periodForm.data.start_date}
                                             onChange={(e) => periodForm.setData('start_date', e.target.value)}
-                                            className="w-full p-1.5 bg-white border border-slate-300 rounded-lg text-[10px]"
+                                            className="w-full p-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:outline-emerald-500"
                                             required
                                         />
                                         <input
                                             type="date"
                                             value={periodForm.data.end_date}
                                             onChange={(e) => periodForm.setData('end_date', e.target.value)}
-                                            className="w-full p-1.5 bg-white border border-slate-300 rounded-lg text-[10px]"
+                                            className="w-full p-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:outline-emerald-500"
                                             required
                                         />
                                     </div>
                                 </div>
 
-                                <div className="p-2 bg-purple-50 rounded-xl border border-purple-200 space-y-1">
+                                <div className="p-2.5 bg-purple-50/70 rounded-xl border border-purple-200 space-y-1.5">
                                     <p className="font-bold text-purple-900 text-[10px] uppercase">2. Masa Pengisian KRS</p>
                                     <div className="grid grid-cols-2 gap-2">
                                         <input
                                             type="date"
                                             value={periodForm.data.krs_start_date}
                                             onChange={(e) => periodForm.setData('krs_start_date', e.target.value)}
-                                            className="w-full p-1.5 bg-white border border-purple-300 rounded-lg text-[10px]"
+                                            className="w-full p-1.5 bg-white border border-purple-300 rounded-lg text-xs focus:outline-purple-500"
                                             required
                                         />
                                         <input
                                             type="date"
                                             value={periodForm.data.krs_end_date}
                                             onChange={(e) => periodForm.setData('krs_end_date', e.target.value)}
-                                            className="w-full p-1.5 bg-white border border-purple-300 rounded-lg text-[10px]"
+                                            className="w-full p-1.5 bg-white border border-purple-300 rounded-lg text-xs focus:outline-purple-500"
                                             required
                                         />
                                     </div>
                                 </div>
 
-                                <div className="p-2 bg-amber-50 rounded-xl border border-amber-200 space-y-1">
+                                <div className="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200 space-y-1.5">
                                     <p className="font-bold text-amber-900 text-[10px] uppercase">3. Masa Bayar SPP BSI</p>
                                     <div className="grid grid-cols-2 gap-2">
                                         <input
                                             type="date"
                                             value={periodForm.data.payment_start_date}
                                             onChange={(e) => periodForm.setData('payment_start_date', e.target.value)}
-                                            className="w-full p-1.5 bg-white border border-amber-300 rounded-lg text-[10px]"
+                                            className="w-full p-1.5 bg-white border border-amber-300 rounded-lg text-xs focus:outline-amber-500"
                                             required
                                         />
                                         <input
                                             type="date"
                                             value={periodForm.data.payment_end_date}
                                             onChange={(e) => periodForm.setData('payment_end_date', e.target.value)}
-                                            className="w-full p-1.5 bg-white border border-amber-300 rounded-lg text-[10px]"
+                                            className="w-full p-1.5 bg-white border border-amber-300 rounded-lg text-xs focus:outline-amber-500"
                                             required
                                         />
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                                <div className="pt-2 flex justify-end space-x-2 border-t border-slate-100 shrink-0">
                                     <button
                                         type="button"
                                         onClick={() => setShowPeriodModal(false)}
-                                        className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 cursor-pointer"
+                                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
                                     >
                                         Batal
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={periodForm.processing}
-                                        className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 cursor-pointer"
+                                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-xs flex items-center space-x-1.5 cursor-pointer"
                                     >
-                                        Simpan
+                                        <Save className="w-3.5 h-3.5" />
+                                        <span>{periodForm.processing ? 'Menyimpan...' : 'Simpan Periode Semester'}</span>
                                     </button>
                                 </div>
                             </form>
