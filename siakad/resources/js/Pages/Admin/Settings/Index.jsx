@@ -186,12 +186,6 @@ export default function SettingsIndex({ settings, isMaintenance }) {
                     </form>
                 </div>
             </div>
-
-            {/* Winpay Modal */}
-            <WinpayConfigModal
-                isOpen={isWinpayModalOpen}
-                onClose={() => setIsWinpayModalOpen(false)}
-            />
         </AppLayout>
     );
 }
