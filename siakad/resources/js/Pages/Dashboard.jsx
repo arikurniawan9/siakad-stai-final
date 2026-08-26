@@ -9,7 +9,8 @@ import {
     Sparkles, Star, School, FileText, Activity, 
     HardDrive, Cpu, Radio, ShieldCheck, Database,
     Server, Terminal, AlertOctagon, Check, Play,
-    Megaphone, TrendingUp, Award, FileCheck, Sliders, Send, Key, Landmark
+    Megaphone, TrendingUp, Award, FileCheck, Sliders, Send, Key, Landmark,
+    UserCheck2, ShieldAlert
 } from 'lucide-react';
 
 export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = [], recentBsiTransactions = [] }) {

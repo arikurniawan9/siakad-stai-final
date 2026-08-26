@@ -5,7 +5,7 @@ import {
     CreditCard, BookOpen, Star, FileText, Settings, 
     LogOut, UserCheck, ShieldAlert, ChevronDown, Menu, 
     X, Bell, ExternalLink, RefreshCw, UserCheck2, Landmark,
-    Activity, Database, Terminal, ShieldCheck, AlertOctagon,
+    Activity, Database, Terminal, ShieldCheck, AlertOctagon, Server,
     Users, ChevronLeft, ChevronRight, HardDrive, Cpu, Radio, Award,
     Megaphone, FileCheck, Sparkles, BookMarked, ArrowRightLeft, Layers
 } from 'lucide-react';
