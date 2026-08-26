@@ -4,7 +4,7 @@ import AppLayout from '../../../Layouts/AppLayout';
 import { 
     GraduationCap, Building2, Plus, Edit2, Trash2, Search, 
     Award, Users, X, Save, Sparkles, ChevronLeft, ChevronRight,
-    ChevronDown, Check, Lock
+    ChevronDown, Check, Lock, RefreshCw, AlertTriangle
 } from 'lucide-react';
 
 export default function StudyProgramsIndex({ studyPrograms = [], faculties = [], lecturers = [] }) {
@@ -27,6 +27,10 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
     // Modal State - Faculty
     const [isFacultyModalOpen, setIsFacultyModalOpen] = useState(false);
     const [editingFaculty, setEditingFaculty] = useState(null);
+
+    // Modal State - Konfirmasi Hapus
+    const [itemToDelete, setItemToDelete] = useState(null); // { type: 'prodi' | 'faculty', data: Object }
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Form Prodi
     const prodiForm = useForm({
@@ -58,7 +62,9 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
-                if (isFacultyDropdownOpen) {
+                if (itemToDelete) {
+                    setItemToDelete(null);
+                } else if (isFacultyDropdownOpen) {
                     setIsFacultyDropdownOpen(false);
                 } else if (isProdiModalOpen) {
                     setIsProdiModalOpen(false);
@@ -70,7 +76,7 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isProdiModalOpen, isFacultyModalOpen, isFacultyDropdownOpen]);
+    }, [isProdiModalOpen, isFacultyModalOpen, isFacultyDropdownOpen, itemToDelete]);
 
     // Close faculty dropdown on click outside
     useEffect(() => {
@@ -82,6 +88,40 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Helper untuk auto-generate kode fakultas otomatis
+    const generateFacultyCode = () => {
+        let nextNum = faculties.length + 1;
+        let candidate = `FAK-${String(nextNum).padStart(2, '0')}`;
+        while (faculties.some(f => f.code?.toUpperCase() === candidate.toUpperCase())) {
+            nextNum++;
+            candidate = `FAK-${String(nextNum).padStart(2, '0')}`;
+        }
+        return candidate;
+    };
+
+    // Helper untuk auto-generate kode program studi otomatis
+    const generateProdiCode = (targetFacultyId = null) => {
+        const facId = targetFacultyId || selectedFacultyId || (faculties[0]?.id ? String(faculties[0].id) : null);
+        const targetFac = faculties.find(f => String(f.id) === String(facId));
+        
+        let prefix = 'PRD';
+        if (targetFac?.code) {
+            const clean = targetFac.code.replace(/[^A-Za-z0-9]/g, '');
+            if (clean.length >= 2) {
+                prefix = clean.substring(0, 3).toUpperCase();
+            }
+        }
+
+        const countInFaculty = studyPrograms.filter(p => String(p.faculty_id) === String(facId)).length;
+        let nextNum = countInFaculty + 1;
+        let candidate = `${prefix}-${String(nextNum).padStart(2, '0')}`;
+        while (studyPrograms.some(p => p.code?.toUpperCase() === candidate.toUpperCase())) {
+            nextNum++;
+            candidate = `${prefix}-${String(nextNum).padStart(2, '0')}`;
+        }
+        return candidate;
+    };
 
     // Open Prodi Modal
     const openProdiModal = (prodi = null) => {
@@ -99,10 +139,12 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                 is_active: Boolean(prodi.is_active),
             });
         } else {
+            const initialFacId = selectedFacultyId || (faculties[0]?.id ? String(faculties[0].id) : '');
+            const autoCode = generateProdiCode(initialFacId);
             prodiForm.reset();
             prodiForm.setData({
-                faculty_id: selectedFacultyId || (faculties[0]?.id ? String(faculties[0].id) : ''),
-                code: '',
+                faculty_id: initialFacId,
+                code: autoCode,
                 name: '',
                 degree: 'S1',
                 accreditation: 'Baik Sekali',
@@ -126,9 +168,10 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                 is_active: Boolean(faculty.is_active),
             });
         } else {
+            const autoCode = generateFacultyCode();
             facultyForm.reset();
             facultyForm.setData({
-                code: '',
+                code: autoCode,
                 name: '',
                 dean_name: '',
                 is_active: true,
@@ -177,17 +220,21 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
         }
     };
 
-    // Delete Handlers
-    const handleDeleteProdi = (prodi) => {
-        if (confirm(`Apakah Anda yakin ingin menghapus Program Studi ${prodi.name} (${prodi.code})?`)) {
-            router.delete(`/admin/study-programs/${prodi.id}`);
-        }
-    };
+    // Eksekusi Konfirmasi Hapus (Prodi / Fakultas)
+    const confirmDeleteItem = () => {
+        if (!itemToDelete) return;
+        setIsDeleting(true);
+        const endpoint = itemToDelete.type === 'prodi' 
+            ? `/admin/study-programs/${itemToDelete.data.id}` 
+            : `/admin/faculties/${itemToDelete.data.id}`;
 
-    const handleDeleteFaculty = (faculty) => {
-        if (confirm(`Apakah Anda yakin ingin menghapus Fakultas ${faculty.name}?`)) {
-            router.delete(`/admin/faculties/${faculty.id}`);
-        }
+        router.delete(endpoint, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsDeleting(false);
+                setItemToDelete(null);
+            },
+        });
     };
 
     // Filter Prodi: Hanya ambil data jika fakultas sudah dipilih!
@@ -234,7 +281,7 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
 
             <div className="space-y-3.5">
                 {/* 1. COMPACT HERO HEADER DENGAN INTEGRATED SUB-BAR PILIH FAKULTAS */}
-                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 rounded-2xl p-4 sm:p-5 text-white shadow-md relative border border-slate-700/50 z-30">
+                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 rounded-2xl p-4 sm:p-5 text-white shadow-md relative border border-slate-700/50 z-10">
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                         <div>
                             <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black mb-1">
@@ -244,9 +291,6 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                             <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
                                 Program Studi & Fakultas
                             </h2>
-                            <p className="text-[11px] text-slate-300 mt-0.5 max-w-xl">
-                                Kelola data jurusan, jenjang studi (D3/S1/S2), SK akreditasi BAN-PT/LAM, pimpinan Kaprodi, dan fakultas kampus.
-                            </p>
                         </div>
 
                         {/* Action Buttons */}
@@ -703,7 +747,7 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                                                 </button>
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => handleDeleteProdi(prodi)}
+                                                                    onClick={() => setItemToDelete({ type: 'prodi', data: prodi })}
                                                                     className="p-1 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition cursor-pointer"
                                                                     title="Hapus Program Studi"
                                                                 >
@@ -870,7 +914,7 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            onClick={() => handleDeleteFaculty(f)}
+                                                            onClick={() => setItemToDelete({ type: 'faculty', data: f })}
                                                             className="p-1 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition cursor-pointer"
                                                             title="Hapus Fakultas"
                                                         >
@@ -955,7 +999,14 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                     ) : (
                                         <select
                                             value={prodiForm.data.faculty_id}
-                                            onChange={(e) => prodiForm.setData('faculty_id', e.target.value)}
+                                            onChange={(e) => {
+                                                const newFacId = e.target.value;
+                                                prodiForm.setData({
+                                                    ...prodiForm.data,
+                                                    faculty_id: newFacId,
+                                                    code: editingProdi ? prodiForm.data.code : generateProdiCode(newFacId)
+                                                });
+                                            }}
                                             className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-emerald-500"
                                             required
                                         >
@@ -990,12 +1041,28 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                             {/* Kode Prodi & Akreditasi */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">
-                                        Kode Singkat Prodi <span className="text-rose-500">*</span>
-                                    </label>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="block font-bold text-slate-700 text-[11px]">
+                                            Kode Singkat Prodi <span className="text-rose-500">*</span>
+                                            {!editingProdi && (
+                                                <span className="text-[10px] text-emerald-600 font-normal ml-1.5">(Terisi otomatis, dapat diedit)</span>
+                                            )}
+                                        </label>
+                                        {!editingProdi && (
+                                            <button
+                                                type="button"
+                                                onClick={() => prodiForm.setData('code', generateProdiCode(prodiForm.data.faculty_id))}
+                                                className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold flex items-center space-x-1 cursor-pointer transition"
+                                                title="Generate ulang kode otomatis"
+                                            >
+                                                <RefreshCw className="w-2.5 h-2.5" />
+                                                <span>Auto Code</span>
+                                            </button>
+                                        )}
+                                    </div>
                                     <input
                                         type="text"
-                                        placeholder="Contoh: PAI / MPI / HES"
+                                        placeholder="Contoh: PAI / MPI / TAR-01"
                                         value={prodiForm.data.code}
                                         onChange={(e) => prodiForm.setData('code', e.target.value.toUpperCase())}
                                         className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold uppercase focus:outline-emerald-500"
@@ -1158,12 +1225,28 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
 
                         <form onSubmit={handleFacultySubmit} className="p-5 space-y-3.5 text-xs">
                             <div>
-                                <label className="block font-bold text-slate-700 mb-1 text-[11px]">
-                                    Kode Fakultas <span className="text-rose-500">*</span>
-                                </label>
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="block font-bold text-slate-700 text-[11px]">
+                                        Kode Fakultas <span className="text-rose-500">*</span>
+                                        {!editingFaculty && (
+                                            <span className="text-[10px] text-emerald-600 font-normal ml-1.5">(Terisi otomatis, dapat diedit)</span>
+                                        )}
+                                    </label>
+                                    {!editingFaculty && (
+                                        <button
+                                            type="button"
+                                            onClick={() => facultyForm.setData('code', generateFacultyCode())}
+                                            className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold flex items-center space-x-1 cursor-pointer transition"
+                                            title="Generate ulang kode otomatis"
+                                        >
+                                            <RefreshCw className="w-2.5 h-2.5" />
+                                            <span>Auto Code</span>
+                                        </button>
+                                    )}
+                                </div>
                                 <input
                                     type="text"
-                                    placeholder="Contoh: TARBIYAH / SYARIAH"
+                                    placeholder="Contoh: TARBIYAH / SYARIAH / FAK-01"
                                     value={facultyForm.data.code}
                                     onChange={(e) => facultyForm.setData('code', e.target.value.toUpperCase())}
                                     className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold uppercase focus:outline-emerald-500"
@@ -1214,6 +1297,127 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* MODAL KONFIRMASI HAPUS (PREMIUM ROSE / RED DESIGN) */}
+            {/* ========================================================================= */}
+            {itemToDelete && (
+                <div 
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget && !isDeleting) setItemToDelete(null);
+                    }}
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-2xs animate-fadeIn"
+                >
+                    <div className="bg-white rounded-2xl shadow-2xl border border-rose-100 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                        {/* Header Dark Rose Gradient */}
+                        <div className="px-5 py-4 bg-gradient-to-r from-slate-950 via-rose-950 to-slate-950 text-white flex items-center justify-between border-b border-rose-900/40">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30">
+                                    <Trash2 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-xs text-white">
+                                        {itemToDelete.type === 'prodi' ? 'Konfirmasi Hapus Program Studi' : 'Konfirmasi Hapus Fakultas'}
+                                    </h3>
+                                    <p className="text-[10px] text-rose-300">Tindakan ini permanen dan tidak dapat dibatalkan</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-1.5">
+                                <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
+                                    ESC
+                                </span>
+                                <button 
+                                    type="button" 
+                                    disabled={isDeleting}
+                                    onClick={() => setItemToDelete(null)} 
+                                    className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-5 space-y-4">
+                            {/* Item Details Box */}
+                            <div className="bg-rose-50/60 border border-rose-200/80 rounded-xl p-3.5 space-y-1.5">
+                                {itemToDelete.type === 'prodi' ? (
+                                    <>
+                                        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                                            <span className="font-mono text-[10px] font-black px-2 py-0.5 bg-rose-100 text-rose-800 border border-rose-300 rounded">
+                                                {itemToDelete.data.code}
+                                            </span>
+                                            {itemToDelete.data.degree && (
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-white border border-rose-200 rounded text-slate-700">
+                                                    Jenjang {itemToDelete.data.degree}
+                                                </span>
+                                            )}
+                                            {itemToDelete.data.accreditation && (
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-white border border-rose-200 rounded text-slate-700">
+                                                    Akreditasi {itemToDelete.data.accreditation}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs font-black text-slate-900 leading-snug">
+                                            {itemToDelete.data.name}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500">
+                                            Fakultas: <strong className="text-slate-700">{itemToDelete.data.faculty_name || activeFacultyObj?.name || '-'}</strong>
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center space-x-2">
+                                            <span className="font-mono text-[10px] font-black px-2 py-0.5 bg-rose-100 text-rose-800 border border-rose-300 rounded">
+                                                {itemToDelete.data.code}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs font-black text-slate-900 leading-snug">
+                                            {itemToDelete.data.name}
+                                        </p>
+                                        {itemToDelete.data.dean_name && (
+                                            <p className="text-[10px] text-slate-500">
+                                                Dekan: <strong className="text-slate-700">{itemToDelete.data.dean_name}</strong>
+                                            </p>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Warning Alert */}
+                            <div className="flex items-start space-x-2.5 p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-amber-900 text-[11px] leading-relaxed">
+                                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                <span>
+                                    {itemToDelete.type === 'prodi'
+                                        ? 'Data program studi ini beserta seluruh kurikulum, mata kuliah, dan relasi mahasiswa yang bernaung di bawahnya akan terpengaruh. Pastikan Anda benar-benar yakin sebelum melanjutkan.'
+                                        : 'Menghapus fakultas ini akan berdampak pada seluruh program studi yang bernaung di bawahnya. Pastikan tidak ada program studi aktif sebelum menghapus fakultas ini.'}
+                                </span>
+                            </div>
+
+                            {/* Footer Buttons */}
+                            <div className="pt-2 flex items-center justify-end space-x-2 border-t border-slate-100">
+                                <button 
+                                    type="button" 
+                                    disabled={isDeleting}
+                                    onClick={() => setItemToDelete(null)} 
+                                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button 
+                                    type="button" 
+                                    disabled={isDeleting}
+                                    onClick={confirmDeleteItem}
+                                    className="px-4 py-2 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold rounded-xl text-xs shadow-md shadow-rose-600/30 transition flex items-center space-x-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>{isDeleting ? 'Menghapus...' : 'Ya, Hapus Permanen'}</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

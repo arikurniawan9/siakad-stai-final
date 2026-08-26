@@ -19,7 +19,11 @@ class CurriculumController extends Controller
         $studyPrograms = DB::table('study_programs')
             ->select('id', 'code', 'name', 'degree')
             ->orderBy('id', 'asc')
-            ->get();
+            ->get()
+            ->map(function ($p) {
+                $p->curricula_count = DB::table('curricula')->where('study_program_id', $p->id)->count();
+                return $p;
+            });
 
         $selectedProgramId = $request->input('program_id');
         

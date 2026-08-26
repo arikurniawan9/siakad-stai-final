@@ -188,16 +188,19 @@ Route::middleware('auth')->group(function () {
         // 2. Data Matakuliah
         Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
         Route::post('/courses', [CourseController::class, 'store'])->name('courses.store');
+        Route::put('/courses/{id}', [CourseController::class, 'update'])->name('courses.update');
         Route::delete('/courses/{id}', [CourseController::class, 'destroy'])->name('courses.destroy');
 
         // 3. Data Matakuliah - Kurikulum
         Route::get('/course-curriculum', [CourseCurriculumController::class, 'index'])->name('course_curriculum.index');
         Route::post('/course-curriculum', [CourseCurriculumController::class, 'store'])->name('course_curriculum.store');
+        Route::put('/course-curriculum/{id}', [CourseCurriculumController::class, 'update'])->name('course_curriculum.update');
         Route::delete('/course-curriculum/{id}', [CourseCurriculumController::class, 'destroy'])->name('course_curriculum.destroy');
 
         // Penjadwalan Kuliah Lanjutan & Anti-Clash Matrix
         Route::get('/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
         Route::post('/schedules', [ScheduleController::class, 'store'])->name('schedules.store');
+        Route::put('/schedules/{id}', [ScheduleController::class, 'update'])->name('schedules.update');
         Route::post('/schedules/check-conflict', [ScheduleController::class, 'checkConflict'])->name('schedules.check_conflict');
         Route::delete('/schedules/{id}', [ScheduleController::class, 'destroy'])->name('schedules.destroy');
 

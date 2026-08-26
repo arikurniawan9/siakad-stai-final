@@ -19,7 +19,11 @@ class CourseCurriculumController extends Controller
         $studyPrograms = DB::table('study_programs')
             ->select('id', 'code', 'national_code', 'name', 'degree')
             ->orderBy('id', 'asc')
-            ->get();
+            ->get()
+            ->map(function ($p) {
+                $p->curricula_count = DB::table('curricula')->where('study_program_id', $p->id)->count();
+                return $p;
+            });
 
         $selectedProgramId = $request->input('program_id');
         $selectedCurriculumId = $request->input('curriculum_id');
@@ -32,7 +36,11 @@ class CourseCurriculumController extends Controller
             $curricula = DB::table('curricula')
                 ->where('study_program_id', $selectedProgramId)
                 ->orderBy('start_year', 'desc')
-                ->get();
+                ->get()
+                ->map(function ($c) {
+                    $c->courses_count = DB::table('courses')->where('curriculum_id', $c->id)->count();
+                    return $c;
+                });
 
             // Ambil master matakuliah untuk dropdown penugasan
             $availableCourses = DB::table('courses')
@@ -114,6 +122,30 @@ class CourseCurriculumController extends Controller
             'program_id' => $validated['program_id'],
             'curriculum_id' => $validated['curriculum_id']
         ])->with('success', 'Mata kuliah berhasil dimasukkan ke struktur semester kurikulum.');
+    }
+
+    /**
+     * Perbarui Penempatan Semester Mata Kuliah di Kurikulum
+     */
+    public function update(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'semester' => ['required', 'integer', 'min:1', 'max:14'],
+        ]);
+
+        $course = DB::table('courses')->find($id);
+        $programId = $course?->study_program_id;
+        $curriculumId = $course?->curriculum_id;
+
+        DB::table('courses')->where('id', $id)->update([
+            'semester_level' => $validated['semester'],
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('admin.course_curriculum.index', [
+            'program_id' => $programId,
+            'curriculum_id' => $curriculumId
+        ])->with('success', 'Penempatan semester mata kuliah berhasil diperbarui.');
     }
 
     /**

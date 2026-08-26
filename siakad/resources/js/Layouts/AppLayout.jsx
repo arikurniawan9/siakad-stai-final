@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { 
     LayoutDashboard, Building2, School, GraduationCap, 
@@ -20,6 +20,36 @@ export default function AppLayout({ title, children }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
     const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+    const [showProfileModal, setShowProfileModal] = useState(false);
+    const userDropdownRef = useRef(null);
+
+    // Auto-close user dropdown on outside click and ESC key press
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+                setUserDropdownOpen(false);
+            }
+        };
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setUserDropdownOpen(false);
+                setShowProfileModal(false);
+            }
+        };
+
+        if (userDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('touchstart', handleClickOutside);
+        }
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [userDropdownOpen]);
 
     const handleLogout = (e) => {
         e.preventDefault();
@@ -266,7 +296,7 @@ export default function AppLayout({ title, children }) {
         { header: 'MASTER AKADEMIK' },
         { label: 'Master Gedung & Ruang', href: '/admin/facilities', icon: Building2 },
         { label: 'Tahun & Periode Semester', href: '/admin/academic-periods', icon: School },
-        { label: 'Plotting & Anti-Clash Jadwal', href: '/admin/schedules', icon: BookOpen },
+        { label: 'Penjadwalan Kuliah', href: '/admin/schedules', icon: BookOpen },
         { header: 'STRUKTUR KURIKULUM' },
         { label: 'Program Studi & Fakultas', href: '/admin/study-programs', icon: GraduationCap },
         { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
@@ -301,7 +331,7 @@ export default function AppLayout({ title, children }) {
         { header: 'MASTER AKADEMIK' },
         { label: 'Gedung & Ruang Kelas', href: '/admin/facilities', icon: Building2 },
         { label: 'Tahun & Periode Semester', href: '/admin/academic-periods', icon: School },
-        { label: 'Plotting & Anti-Clash Jadwal', href: '/admin/schedules', icon: BookOpen },
+        { label: 'Penjadwalan Kuliah', href: '/admin/schedules', icon: BookOpen },
         { header: 'STRUKTUR KURIKULUM' },
         { label: 'Program Studi & Fakultas', href: '/admin/study-programs', icon: GraduationCap },
         { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
@@ -512,8 +542,8 @@ export default function AppLayout({ title, children }) {
                 <div className={`flex-1 flex flex-col min-w-0 transition-all duration-200 ${
                     sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
                 }`}>
-                    {/* Top Header Navbar (Compact h-14) */}
-                    <header className={`h-14 bg-white border-b border-slate-200 flex items-center justify-between px-3 md:px-5 sticky ${impersonation.is_active ? 'top-10' : 'top-0'} z-30 shadow-2xs`}>
+                    {/* Top Header Navbar (Compact h-14 with z-40 to stay above main content) */}
+                    <header className={`h-14 bg-white border-b border-slate-200 flex items-center justify-between px-3 md:px-5 sticky ${impersonation.is_active ? 'top-10' : 'top-0'} z-40 shadow-2xs`}>
                         <div className="flex items-center space-x-2.5">
                             <button
                                 onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
@@ -544,10 +574,12 @@ export default function AppLayout({ title, children }) {
 
                         {/* Right Navigation Controls */}
                         <div className="flex items-center space-x-3">
-                            <div className="relative">
+                            <div ref={userDropdownRef} className="relative z-50">
                                 <button
                                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                                    className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+                                    className={`flex items-center space-x-2 p-1.5 rounded-xl transition cursor-pointer ${
+                                        userDropdownOpen ? 'bg-slate-100 ring-2 ring-emerald-500/30' : 'hover:bg-slate-100'
+                                    }`}
                                 >
                                     <div className="w-7 h-7 rounded-lg bg-slate-800 text-white flex items-center justify-center font-black text-xs shadow-xs">
                                         {user.name ? user.name.charAt(0) : 'U'}
@@ -556,21 +588,69 @@ export default function AppLayout({ title, children }) {
                                         <p className="text-xs font-bold text-slate-900 truncate max-w-32">{user.name}</p>
                                         <p className="text-[10px] text-slate-400 truncate max-w-32 font-mono">{user.identity_number || user.username}</p>
                                     </div>
-                                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${userDropdownOpen ? 'rotate-180 text-emerald-600' : ''}`} />
                                 </button>
 
                                 {userDropdownOpen && (
-                                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                                        <div className="px-4 py-2 border-b border-slate-100">
-                                            <p className="text-xs font-bold text-slate-900">{user.name}</p>
-                                            <p className="text-[10px] text-slate-500 truncate font-mono">{user.email}</p>
+                                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                                        {/* User Identity Box */}
+                                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/80 rounded-t-2xl">
+                                            <div className="flex items-center space-x-2.5">
+                                                <div className="w-8 h-8 rounded-lg bg-slate-800 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                                                    {user.name ? user.name.charAt(0) : 'U'}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-bold text-slate-900 truncate">{user.name}</p>
+                                                    <div className="flex items-center space-x-1.5 mt-0.5">
+                                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                            {role?.replace('_', ' ')}
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-400 truncate font-mono">
+                                                            {user.identity_number || user.username}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {user.email && (
+                                                <p className="text-[10px] text-slate-500 truncate font-mono mt-1.5">
+                                                    {user.email}
+                                                </p>
+                                            )}
                                         </div>
-                                        <div className="p-1">
+
+                                        {/* Action Items */}
+                                        <div className="p-1.5 space-y-0.5">
                                             <button
-                                                onClick={handleLogout}
-                                                className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer"
+                                                type="button"
+                                                onClick={() => {
+                                                    setUserDropdownOpen(false);
+                                                    setShowProfileModal(true);
+                                                }}
+                                                className="w-full flex items-center space-x-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl transition cursor-pointer text-left"
                                             >
-                                                <LogOut className="w-4 h-4" />
+                                                <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                <span>Pengaturan Profil</span>
+                                            </button>
+
+                                            {(role === 'superadmin' || role === 'admin_akademik') && (
+                                                <Link
+                                                    href="/admin/settings"
+                                                    onClick={() => setUserDropdownOpen(false)}
+                                                    className="w-full flex items-center space-x-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:text-blue-800 hover:bg-blue-50 rounded-xl transition cursor-pointer text-left"
+                                                >
+                                                    <Settings className="w-4 h-4 text-blue-600 shrink-0" />
+                                                    <span>Pengaturan Sistem</span>
+                                                </Link>
+                                            )}
+
+                                            <div className="my-1 border-t border-slate-100"></div>
+
+                                            <button
+                                                type="button"
+                                                onClick={handleLogout}
+                                                className="w-full flex items-center space-x-2.5 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer text-left"
+                                            >
+                                                <LogOut className="w-4 h-4 text-rose-600 shrink-0" />
                                                 <span>Keluar (Logout)</span>
                                             </button>
                                         </div>
@@ -604,6 +684,118 @@ export default function AppLayout({ title, children }) {
                     </footer>
                 </div>
             </div>
+
+            {/* MODAL PENGATURAN PROFIL & AKUN */}
+            {showProfileModal && (
+                <div 
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setShowProfileModal(false);
+                    }}
+                    className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
+                >
+                    <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                        {/* Header Dark Gradient */}
+                        <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <div className="p-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg border border-emerald-500/30">
+                                    <UserCheck className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-xs text-white">Profil & Pengaturan Akun</h3>
+                                    <p className="text-[10px] text-slate-300">Informasi kredensial pengguna aktif SIAKAD</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-1.5">
+                                <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
+                                    ESC
+                                </span>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowProfileModal(false)} 
+                                    className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Profile Info Content */}
+                        <div className="p-5 space-y-3.5 text-xs">
+                            {/* User Identity Card */}
+                            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center space-x-3">
+                                <div className="w-11 h-11 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-sm shadow-xs shrink-0">
+                                    {user.name ? user.name.charAt(0) : 'U'}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="font-black text-sm text-slate-900 truncate">{user.name}</h4>
+                                    <div className="flex items-center space-x-2 mt-0.5">
+                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            {role?.replace('_', ' ')}
+                                        </span>
+                                        <span className="text-[10px] text-slate-500 font-mono">
+                                            @{user.username}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div className="grid grid-cols-2 gap-2.5">
+                                <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">No. Identitas / NIP / NIM</span>
+                                    <span className="font-mono font-bold text-slate-800 text-xs mt-0.5 block truncate">
+                                        {user.identity_number || '-'}
+                                    </span>
+                                </div>
+                                <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Email Terdaftar</span>
+                                    <span className="font-mono font-bold text-slate-800 text-xs mt-0.5 block truncate">
+                                        {user.email || '-'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Status Card */}
+                            <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-emerald-900 text-[11px] flex items-start space-x-2.5">
+                                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <span className="font-bold">Status Akun Terverifikasi</span>
+                                    <p className="text-[10px] text-emerald-800/80 mt-0.5">
+                                        Akun aktif dan memiliki izin penuh modul sesuai hak akses role {role?.replace('_', ' ')}.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Security Note */}
+                            <div className="p-2.5 bg-slate-50 rounded-xl text-slate-500 text-[10px] border border-slate-200 leading-relaxed">
+                                💡 Untuk pembaruan gelar akademik atau pergantian password, silakan hubungi Tim IT / Administrator SIAKAD.
+                            </div>
+
+                            {/* Actions Footer */}
+                            <div className="pt-2 flex justify-between items-center border-t border-slate-100">
+                                {(role === 'superadmin' || role === 'admin_akademik') ? (
+                                    <Link
+                                        href="/admin/settings"
+                                        onClick={() => setShowProfileModal(false)}
+                                        className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center space-x-1"
+                                    >
+                                        <Settings className="w-3.5 h-3.5" />
+                                        <span>Buka Pengaturan Sistem →</span>
+                                    </Link>
+                                ) : <span />}
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowProfileModal(false)}
+                                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs"
+                                >
+                                    Tutup
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

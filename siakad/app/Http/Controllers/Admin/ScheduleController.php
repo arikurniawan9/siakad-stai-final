@@ -17,8 +17,11 @@ class ScheduleController extends Controller
      */
     public function index(Request $request): Response
     {
+        $academicPeriods = DB::table('academic_periods')->orderBy('start_date', 'desc')->get();
         $activePeriod = DB::table('academic_periods')->where('is_active', true)->first();
         $selectedPeriodId = $request->input('period_id', $activePeriod?->id ?? 1);
+
+        $studyPrograms = DB::table('study_programs')->select('id', 'code', 'name', 'degree')->orderBy('id', 'asc')->get();
 
         // Ambil semua gedung dan ruang
         $buildings = DB::table('buildings')->orderBy('id', 'asc')->get();
@@ -43,6 +46,7 @@ class ScheduleController extends Controller
                 'courses.name as course_name',
                 'courses.credits',
                 'courses.semester_level',
+                'courses.study_program_id',
                 'lecturers.id as lecturer_id',
                 'lecturers.name as lecturer_name'
             )
@@ -53,6 +57,7 @@ class ScheduleController extends Controller
         $schedules = DB::table('class_schedules')
             ->join('course_classes', 'class_schedules.course_class_id', '=', 'course_classes.id')
             ->join('courses', 'course_classes.course_id', '=', 'courses.id')
+            ->leftJoin('study_programs', 'courses.study_program_id', '=', 'study_programs.id')
             ->join('rooms', 'class_schedules.room_id', '=', 'rooms.id')
             ->join('buildings', 'rooms.building_id', '=', 'buildings.id')
             ->leftJoin('class_lecturers', function ($j) {
@@ -70,6 +75,9 @@ class ScheduleController extends Controller
                 'courses.name as course_name',
                 'courses.credits',
                 'courses.semester_level',
+                'courses.study_program_id',
+                'study_programs.name as study_program_name',
+                'study_programs.code as study_program_code',
                 'rooms.name as room_name',
                 'rooms.code as room_code',
                 'rooms.capacity as room_capacity',
@@ -85,8 +93,10 @@ class ScheduleController extends Controller
         $conflicts = $this->detectAllConflicts($schedules);
 
         return Inertia::render('Admin/Schedules/Index', [
+            'academicPeriods' => $academicPeriods,
             'activePeriod' => $activePeriod,
             'selectedPeriodId' => (int) $selectedPeriodId,
+            'studyPrograms' => $studyPrograms,
             'buildings' => $buildings,
             'rooms' => $rooms,
             'classes' => $classes,
@@ -206,6 +216,47 @@ class ScheduleController extends Controller
         ]);
 
         return back()->with('success', 'Jadwal perkuliahan berhasil diplot dan disimpan.');
+    }
+
+    /**
+     * Update Plotting Jadwal Perkuliahan
+     */
+    public function update(Request $request, $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'course_class_id' => ['required', 'exists:course_classes,id'],
+            'room_id' => ['required', 'exists:rooms,id'],
+            'day_of_week' => ['required', 'string', 'in:SENIN,SELASA,RABU,KAMIS,JUMAT,SABTU,AHAD'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'is_online' => ['nullable', 'boolean'],
+            'online_meeting_url' => ['nullable', 'url'],
+            'allow_clash_override' => ['nullable', 'boolean'],
+        ]);
+
+        if (empty($validated['allow_clash_override'])) {
+            $checkReq = new Request(array_merge($validated, ['exclude_schedule_id' => $id]));
+            $conflictCheck = $this->checkConflict($checkReq)->getData();
+            if ($conflictCheck->has_conflict) {
+                $reason = $conflictCheck->room_clash 
+                    ? "Ruangan sudah dipakai oleh {$conflictCheck->room_clash->course_name} ({$conflictCheck->room_clash->start_time}-{$conflictCheck->room_clash->end_time})."
+                    : "Dosen pengampu sudah memiliki jadwal mengajar pada jam tersebut ({$conflictCheck->lecturer_clash->course_name}).";
+                return back()->with('error', "Gagal memperbarui! Deteksi Bentrok: {$reason}");
+            }
+        }
+
+        DB::table('class_schedules')->where('id', $id)->update([
+            'course_class_id' => $validated['course_class_id'],
+            'room_id' => $validated['room_id'],
+            'day_of_week' => $validated['day_of_week'],
+            'start_time' => $validated['start_time'] . ':00',
+            'end_time' => $validated['end_time'] . ':00',
+            'is_online' => $validated['is_online'] ?? false,
+            'online_meeting_url' => $validated['online_meeting_url'] ?? null,
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'Jadwal perkuliahan berhasil diperbarui.');
     }
 
     /**

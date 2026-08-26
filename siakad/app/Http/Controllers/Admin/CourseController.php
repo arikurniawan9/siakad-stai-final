@@ -19,7 +19,11 @@ class CourseController extends Controller
         $studyPrograms = DB::table('study_programs')
             ->select('id', 'code', 'national_code', 'name', 'degree')
             ->orderBy('id', 'asc')
-            ->get();
+            ->get()
+            ->map(function ($p) {
+                $p->courses_count = DB::table('courses')->where('study_program_id', $p->id)->count();
+                return $p;
+            });
 
         $selectedProgramId = $request->input('program_id');
 
@@ -81,6 +85,40 @@ class CourseController extends Controller
 
         return redirect()->route('admin.courses.index', ['program_id' => $validated['study_program_id']])
             ->with('success', 'Mata kuliah baru berhasil ditambahkan.');
+    }
+
+    /**
+     * Perbarui Data Mata Kuliah
+     */
+    public function update(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'study_program_id' => ['required', 'exists:study_programs,id'],
+            'code' => ['required', 'string', 'max:32'],
+            'name' => ['required', 'string', 'max:150'],
+            'credits' => ['required', 'numeric', 'min:0'],
+            'theory_credits' => ['required', 'numeric', 'min:0'],
+            'practice_credits' => ['required', 'numeric', 'min:0'],
+            'field_credits' => ['required', 'numeric', 'min:0'],
+            'course_type' => ['required', 'string'],
+            'course_group' => ['required', 'string'],
+        ]);
+
+        DB::table('courses')->where('id', $id)->update([
+            'study_program_id' => $validated['study_program_id'],
+            'code' => $validated['code'],
+            'name' => $validated['name'],
+            'credits' => $validated['credits'],
+            'theory_credits' => $validated['theory_credits'],
+            'practice_credits' => $validated['practice_credits'],
+            'field_credits' => $validated['field_credits'],
+            'course_type' => $validated['course_type'],
+            'course_group' => $validated['course_group'],
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('admin.courses.index', ['program_id' => $validated['study_program_id']])
+            ->with('success', 'Data mata kuliah berhasil diperbarui.');
     }
 
     /**
