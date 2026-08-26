@@ -5,7 +5,7 @@ import {
     Building2, DoorOpen, Plus, CheckCircle2, ShieldCheck, 
     Layers, Users, Tv, Check, X, Printer, FileSpreadsheet, 
     Edit2, Trash2, AlertCircle, RefreshCw, LayoutGrid, List, 
-    Power, MapPin, Armchair, GraduationCap, ChevronDown, Lock 
+    Power, MapPin, Armchair, GraduationCap, ChevronDown, Lock, Sparkles 
 } from 'lucide-react';
 
 export const ROOM_TYPE_GROUPS = [
@@ -397,236 +397,226 @@ export default function FacilitiesIndex({
             <Head title="Gedung & Ruang Kelas — SIAKAD STAI Al-Ittihad" />
 
             <div className="space-y-4">
-                {/* 1. Header Banner & Action Center */}
-                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-2xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black mb-1">
-                            <Building2 className="w-3 h-3 text-emerald-600" />
-                            <span>INFRASTRUKTUR & INVENTARIS KAMPUS</span>
-                        </div>
-                        <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                            Master Gedung & Ruang Perkuliahan
-                        </h2>
-                        <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
-                            Kelola data master gedung, denah lantai, kapasitas perkuliahan & ujian, serta inventaris fasilitas ruang kelas.
-                        </p>
-                    </div>
-
-                    {/* Desktop Icon Actions with Tooltips */}
-                    <div className="hidden sm:flex items-center space-x-2">
-                        {/* 1. Tombol Cetak PDF Resmi */}
-                        <div className="relative group">
-                            <Link
-                                href={buildingId ? `/admin/facilities/print-pdf?building_id=${encodeURIComponent(buildingId)}` : '/admin/facilities/print-pdf'}
-                                className="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl flex items-center justify-center border border-slate-300 shadow-2xs transition cursor-pointer"
-                                aria-label="Cetak PDF Resmi"
-                            >
-                                <Printer className="w-4 h-4 text-slate-700" />
-                            </Link>
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-30">
-                                Cetak PDF Resmi
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900" />
+                {/* 1. COMPACT HERO HEADER (Standard Dashboard & Master Akademik Style) */}
+                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 rounded-2xl p-4 sm:p-5 text-white shadow-md relative overflow-hidden border border-slate-700/50">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div>
+                            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black mb-1">
+                                <Sparkles className="w-3 h-3 text-emerald-400" />
+                                <span>INFRASTRUKTUR & INVENTARIS KAMPUS</span>
                             </div>
+                            <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
+                                Master Gedung & Ruang Perkuliahan
+                            </h2>
+                            <p className="text-[11px] text-slate-300 mt-0.5 max-w-xl">
+                                Kelola data master gedung, denah lantai, kapasitas perkuliahan & ujian, serta inventaris fasilitas ruang kelas.
+                            </p>
                         </div>
 
-                        {/* 2. Tombol Unduh Excel */}
-                        <div className="relative group">
-                            <a
-                                href={buildingId ? `/admin/facilities/export-excel?building_id=${encodeURIComponent(buildingId)}` : '/admin/facilities/export-excel'}
-                                className="w-10 h-10 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center border border-emerald-200 shadow-2xs transition cursor-pointer"
-                                aria-label="Unduh Excel (.xls)"
-                            >
-                                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
-                            </a>
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-30">
-                                Unduh Excel (.xls)
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900" />
+                        {/* Action Buttons (Desktop) */}
+                        <div className="hidden sm:flex items-center gap-2 self-start md:self-auto">
+                            {/* 1. Tombol Cetak PDF Resmi */}
+                            <div className="relative group">
+                                <Link
+                                    href={buildingId ? `/admin/facilities/print-pdf?building_id=${encodeURIComponent(buildingId)}` : '/admin/facilities/print-pdf'}
+                                    className="w-8 h-8 bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg flex items-center justify-center border border-slate-700 shadow transition cursor-pointer"
+                                    aria-label="Cetak PDF Resmi"
+                                >
+                                    <Printer className="w-3.5 h-3.5" />
+                                </Link>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-30">
+                                    Cetak PDF Resmi
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900" />
+                                </div>
                             </div>
-                        </div>
 
-                        {/* 3. Tombol Tambah Gedung */}
-                        <div className="relative group">
+                            {/* 2. Tombol Unduh Excel */}
+                            <div className="relative group">
+                                <a
+                                    href={buildingId ? `/admin/facilities/export-excel?building_id=${encodeURIComponent(buildingId)}` : '/admin/facilities/export-excel'}
+                                    className="w-8 h-8 bg-slate-800/90 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 rounded-lg flex items-center justify-center border border-slate-700 shadow transition cursor-pointer"
+                                    aria-label="Unduh Excel (.xls)"
+                                >
+                                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                                </a>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-30">
+                                    Unduh Excel (.xls)
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900" />
+                                </div>
+                            </div>
+
+                            {/* 3. Tombol Tambah Gedung */}
                             <button
                                 type="button"
                                 onClick={handleOpenCreateBuilding}
-                                className="w-10 h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl flex items-center justify-center shadow-xs transition cursor-pointer"
-                                aria-label="Tambah Gedung Kampus"
+                                className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-white rounded-lg text-[11px] font-bold transition flex items-center space-x-1 shadow border border-slate-700 cursor-pointer"
                             >
-                                <Building2 className="w-4 h-4 text-emerald-400" />
+                                <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>+ Gedung Kampus</span>
                             </button>
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-30">
-                                Tambah Gedung Kampus
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900" />
-                            </div>
-                        </div>
 
-                        {/* 4. Tombol Tambah Ruang Kelas */}
-                        <div className="relative group">
+                            {/* 4. Tombol Tambah Ruang Kelas */}
                             <button
                                 type="button"
                                 onClick={handleOpenCreateRoom}
-                                className="w-10 h-10 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-xs transition cursor-pointer"
-                                aria-label="Tambah Ruang Kelas"
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-black transition flex items-center space-x-1 shadow cursor-pointer"
                             >
-                                <Plus className="w-5 h-5 text-white" />
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>+ Ruang Kelas</span>
                             </button>
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-30">
-                                {buildingId ? `Tambah Ruang di ${activeBuildingObj?.name || 'Gedung'}` : 'Tambah Ruang Kelas'}
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 2. Selector Pilih Gedung Kampus (Compact & Elegan) */}
-                <div className="bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center space-x-2.5">
-                        <div className="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100/80">
-                            <Building2 className="w-4 h-4" />
-                        </div>
-                        <div className="flex items-center space-x-2 flex-wrap">
-                            <span className="text-xs font-bold text-slate-700">Gedung Kampus:</span>
-                            {activeBuildingObj ? (
-                                <div className="inline-flex items-center space-x-1.5">
-                                    <span className="text-xs font-black text-slate-900">{activeBuildingObj.name}</span>
-                                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 border border-emerald-200">
-                                        {activeBuildingObj.code}
-                                    </span>
-                                    <span className="text-[11px] text-slate-500 font-medium">
-                                        ({activeBuildingObj.total_floors} Lt • {rooms.length} Ruang)
-                                    </span>
-                                </div>
-                            ) : (
-                                <span className="text-xs text-slate-400 italic">Belum dipilih</span>
-                            )}
                         </div>
                     </div>
 
-                    {/* Custom Compact Dropdown Trigger & Popover */}
-                    <div ref={buildingDropdownRef} className="relative w-full sm:w-72">
-                        <button
-                            type="button"
-                            onClick={() => setIsBuildingDropdownOpen(prev => !prev)}
-                            className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition shadow-2xs cursor-pointer text-left border ${
-                                isBuildingDropdownOpen 
-                                    ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-white' 
-                                    : activeBuildingObj 
-                                        ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 text-emerald-950 font-bold' 
-                                        : 'border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium'
-                            }`}
-                        >
-                            <div className="flex items-center space-x-2 truncate">
-                                <Building2 className={`w-3.5 h-3.5 shrink-0 ${activeBuildingObj ? 'text-emerald-700' : 'text-slate-400'}`} />
-                                <span className="truncate">
-                                    {activeBuildingObj ? activeBuildingObj.name : 'Pilih Gedung Kampus...'}
-                                </span>
+                    {/* Integrated Sub-bar Pilih Gedung Kampus */}
+                    <div className="relative z-10 mt-3 pt-3 border-t border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center space-x-2.5">
+                            <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30">
+                                <Building2 className="w-4 h-4" />
                             </div>
-
-                            <div className="flex items-center space-x-1 shrink-0 ml-1.5">
-                                {buildingId && (
-                                    <span
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleBuildingChange('');
-                                            setIsBuildingDropdownOpen(false);
-                                        }}
-                                        className="p-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded transition cursor-pointer"
-                                        title="Reset Pilihan"
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </span>
+                            <div className="flex items-center space-x-2 flex-wrap">
+                                <span className="text-xs font-bold text-slate-300">Gedung Kampus:</span>
+                                {activeBuildingObj ? (
+                                    <div className="inline-flex items-center space-x-1.5">
+                                        <span className="text-xs font-black text-white">{activeBuildingObj.name}</span>
+                                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/30 text-emerald-300 border border-emerald-500/40">
+                                            {activeBuildingObj.code}
+                                        </span>
+                                        <span className="text-[11px] text-slate-300 font-medium">
+                                            ({activeBuildingObj.total_floors} Lt • {rooms.length} Ruang)
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className="text-xs text-slate-400 italic">Belum dipilih</span>
                                 )}
-                                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                                    isBuildingDropdownOpen ? 'rotate-180 text-emerald-600' : ''
-                                }`} />
                             </div>
-                        </button>
+                        </div>
 
-                        {/* Popover Dropdown Menu */}
-                        {isBuildingDropdownOpen && (
-                            <div className="absolute right-0 top-full mt-1.5 w-full sm:w-84 bg-white rounded-xl border border-slate-200 shadow-xl z-50 overflow-hidden animate-fadeIn">
-                                {/* Header Popover */}
-                                <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center space-x-1">
-                                        <Building2 className="w-3 h-3 text-emerald-600" />
-                                        <span>PILIH GEDUNG ({buildings.length})</span>
-                                    </span>
-                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-200/60 px-1 py-0.2 rounded">
-                                        ESC
+                        {/* Custom Dropdown Trigger */}
+                        <div ref={buildingDropdownRef} className="relative w-full sm:w-72">
+                            <button
+                                type="button"
+                                onClick={() => setIsBuildingDropdownOpen(prev => !prev)}
+                                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition shadow-2xs cursor-pointer text-left border ${
+                                    isBuildingDropdownOpen 
+                                        ? 'border-emerald-400 ring-2 ring-emerald-500/30 bg-slate-800 text-white' 
+                                        : activeBuildingObj 
+                                            ? 'border-emerald-500/50 bg-emerald-950/50 hover:bg-emerald-900/50 text-emerald-200 font-bold' 
+                                            : 'border-slate-700 bg-slate-800/90 hover:bg-slate-700/90 text-slate-300 font-medium'
+                                }`}
+                            >
+                                <div className="flex items-center space-x-2 truncate">
+                                    <Building2 className={`w-3.5 h-3.5 shrink-0 ${activeBuildingObj ? 'text-emerald-400' : 'text-slate-400'}`} />
+                                    <span className="truncate">
+                                        {activeBuildingObj ? activeBuildingObj.name : 'Pilih Gedung Kampus...'}
                                     </span>
                                 </div>
 
-                                {/* List Gedung */}
-                                <div className="p-1.5 space-y-1 max-h-72 overflow-y-auto divide-y divide-slate-100/60">
-                                    {buildings.map((b) => {
-                                        const isSelected = String(b.id) === String(buildingId);
-                                        return (
-                                            <div
-                                                key={b.id}
-                                                onClick={() => {
-                                                    handleBuildingChange(String(b.id));
-                                                    setIsBuildingDropdownOpen(false);
-                                                }}
-                                                className={`p-2 rounded-lg transition cursor-pointer flex items-center justify-between group ${
-                                                    isSelected
-                                                        ? 'bg-emerald-50 border border-emerald-300'
-                                                        : 'hover:bg-slate-50 border border-transparent hover:border-slate-200'
-                                                }`}
-                                            >
-                                                <div className="flex items-center space-x-2.5 min-w-0">
-                                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition ${
-                                                        isSelected 
-                                                            ? 'bg-emerald-600 text-white' 
-                                                            : 'bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-800'
-                                                    }`}>
-                                                        <Building2 className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="flex items-center space-x-1.5">
-                                                            <h4 className={`text-xs font-bold truncate ${
-                                                                isSelected ? 'text-emerald-950 font-black' : 'text-slate-900 group-hover:text-emerald-700'
-                                                            }`}>
-                                                                {b.name}
-                                                            </h4>
-                                                            <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-slate-100 text-slate-600">
-                                                                {b.code}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-[10px] text-slate-500 truncate">
-                                                            {b.total_floors} Lantai • {b.total_rooms || 0} Ruang Kelas
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="shrink-0 ml-2">
-                                                    {isSelected && (
-                                                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Footer Popover */}
-                                {buildingId && (
-                                    <div className="p-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[10px]">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
+                                <div className="flex items-center space-x-1 shrink-0 ml-1.5">
+                                    {buildingId && (
+                                        <span
+                                            onClick={(e) => {
+                                                e.stopPropagation();
                                                 handleBuildingChange('');
                                                 setIsBuildingDropdownOpen(false);
                                             }}
-                                            className="font-bold text-rose-600 hover:underline cursor-pointer flex items-center space-x-1"
+                                            className="p-0.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition cursor-pointer"
+                                            title="Reset Pilihan"
                                         >
                                             <X className="w-3 h-3" />
-                                            <span>Reset Pilihan</span>
-                                        </button>
-                                        <span className="text-slate-400">Gedung aktif</span>
+                                        </span>
+                                    )}
+                                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                                        isBuildingDropdownOpen ? 'rotate-180 text-emerald-400' : ''
+                                    }`} />
+                                </div>
+                            </button>
+
+                            {/* Popover Dropdown Menu */}
+                            {isBuildingDropdownOpen && (
+                                <div className="absolute right-0 top-full mt-1.5 w-full sm:w-84 bg-white text-slate-900 rounded-xl border border-slate-200 shadow-2xl z-50 overflow-hidden animate-fadeIn">
+                                    {/* Header Popover */}
+                                    <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center space-x-1">
+                                            <Building2 className="w-3 h-3 text-emerald-600" />
+                                            <span>PILIH GEDUNG ({buildings.length})</span>
+                                        </span>
+                                        <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-200/60 px-1 py-0.2 rounded">
+                                            ESC
+                                        </span>
                                     </div>
-                                )}
-                            </div>
-                        )}
+
+                                    {/* List Gedung */}
+                                    <div className="p-1.5 space-y-1 max-h-72 overflow-y-auto divide-y divide-slate-100/60">
+                                        {buildings.map((b) => {
+                                            const isSelected = String(b.id) === String(buildingId);
+                                            return (
+                                                <div
+                                                    key={b.id}
+                                                    onClick={() => {
+                                                        handleBuildingChange(String(b.id));
+                                                        setIsBuildingDropdownOpen(false);
+                                                    }}
+                                                    className={`p-2 rounded-lg transition cursor-pointer flex items-center justify-between group ${
+                                                        isSelected
+                                                            ? 'bg-emerald-50 border border-emerald-300'
+                                                            : 'hover:bg-slate-50 border border-transparent hover:border-slate-200'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center space-x-2.5 min-w-0">
+                                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition ${
+                                                            isSelected 
+                                                                ? 'bg-emerald-600 text-white' 
+                                                                : 'bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-800'
+                                                        }`}>
+                                                            <Building2 className="w-3.5 h-3.5" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center space-x-1.5">
+                                                                <h4 className={`text-xs font-bold truncate ${
+                                                                    isSelected ? 'text-emerald-950 font-black' : 'text-slate-900 group-hover:text-emerald-700'
+                                                                }`}>
+                                                                    {b.name}
+                                                                </h4>
+                                                                <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-slate-100 text-slate-600">
+                                                                    {b.code}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[10px] text-slate-500 truncate">
+                                                                {b.total_floors} Lantai • {b.total_rooms || 0} Ruang Kelas
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="shrink-0 ml-2">
+                                                        {isSelected && (
+                                                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Footer Popover */}
+                                    {buildingId && (
+                                        <div className="p-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[10px]">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    handleBuildingChange('');
+                                                    setIsBuildingDropdownOpen(false);
+                                                }}
+                                                className="font-bold text-rose-600 hover:underline cursor-pointer flex items-center space-x-1"
+                                            >
+                                                <X className="w-3 h-3" />
+                                                <span>Reset Pilihan</span>
+                                            </button>
+                                            <span className="text-slate-400">Gedung aktif</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
