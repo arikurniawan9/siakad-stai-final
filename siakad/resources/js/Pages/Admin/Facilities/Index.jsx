@@ -5,7 +5,7 @@ import {
     Building2, DoorOpen, Plus, CheckCircle2, ShieldCheck, 
     Layers, Users, Tv, Check, X, Printer, FileSpreadsheet, 
     Edit2, Trash2, AlertCircle, RefreshCw, LayoutGrid, List, 
-    Power, MapPin, Armchair, GraduationCap, ChevronDown, Lock, Sparkles 
+    Power, MapPin, Armchair, GraduationCap, ChevronDown, Lock, Sparkles, Save 
 } from 'lucide-react';
 
 export const ROOM_TYPE_GROUPS = [
@@ -1022,102 +1022,119 @@ export default function FacilitiesIndex({
                 {showBuildingModal && (
                     <div 
                         onClick={(e) => { if (e.target === e.currentTarget) setShowBuildingModal(false); }}
-                        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
                     >
-                        <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-200">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3 text-slate-900">
-                                    <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
-                                        <Building2 className="w-5 h-5" />
+                        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                            <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg border border-emerald-500/30">
+                                        <Building2 className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <h3 className="text-base font-black text-slate-900">
+                                        <h3 className="font-bold text-xs text-white">
                                             {isEditingBuilding ? 'Edit Data Gedung Kampus' : 'Tambah Gedung Kampus Baru'}
                                         </h3>
-                                        <p className="text-[11px] text-slate-500">Kelola master identitas gedung & denah lantai</p>
+                                        <p className="text-[10px] text-slate-300">
+                                            Kelola master identitas gedung & denah lantai perkuliahan
+                                        </p>
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowBuildingModal(false)}
-                                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center space-x-1"
-                                    title="Tutup Modal (Tekan ESC)"
-                                >
-                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 border border-slate-200">ESC</span>
-                                    <X className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center space-x-1.5">
+                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
+                                        ESC
+                                    </span>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setShowBuildingModal(false)} 
+                                        className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
 
-                            <form onSubmit={handleSubmitBuilding} className="space-y-3 text-xs">
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Kode Gedung</label>
-                                    <input
-                                        type="text"
-                                        value={buildingForm.data.code}
-                                        onChange={(e) => buildingForm.setData('code', e.target.value.toUpperCase())}
-                                        placeholder="Contoh: G-TARBIYAH"
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl uppercase font-mono font-bold focus:bg-white focus:ring-2 focus:ring-emerald-500"
-                                        required
-                                    />
+                            <form onSubmit={handleSubmitBuilding} className="p-5 space-y-3.5 text-xs">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                    <div className="sm:col-span-2">
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Kode Gedung <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={buildingForm.data.code}
+                                            onChange={(e) => buildingForm.setData('code', e.target.value.toUpperCase())}
+                                            placeholder="Contoh: G-TARBIYAH"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg uppercase font-mono font-bold focus:outline-emerald-500"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Jumlah Lantai <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={20}
+                                            value={buildingForm.data.total_floors}
+                                            onChange={(e) => buildingForm.setData('total_floors', parseInt(e.target.value))}
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold focus:outline-emerald-500"
+                                            required
+                                        />
+                                    </div>
                                 </div>
+
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Nama Gedung</label>
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                        Nama Gedung <span className="text-rose-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         value={buildingForm.data.name}
                                         onChange={(e) => buildingForm.setData('name', e.target.value)}
                                         placeholder="Contoh: Gedung Fakultas Tarbiyah"
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500"
+                                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold focus:outline-emerald-500"
                                         required
                                     />
                                 </div>
+
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Jumlah Lantai</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        max={20}
-                                        value={buildingForm.data.total_floors}
-                                        onChange={(e) => buildingForm.setData('total_floors', parseInt(e.target.value))}
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Alamat / Lokasi Gedung</label>
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">Alamat / Lokasi Gedung</label>
                                     <input
                                         type="text"
                                         value={buildingForm.data.address}
                                         onChange={(e) => buildingForm.setData('address', e.target.value)}
                                         placeholder="Contoh: Sayap Barat Kampus STAI Al-Ittihad"
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500"
+                                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500"
                                     />
                                 </div>
+
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Keterangan / Fungsi Gedung</label>
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">Keterangan / Fungsi Gedung</label>
                                     <textarea
                                         value={buildingForm.data.description}
                                         onChange={(e) => buildingForm.setData('description', e.target.value)}
                                         placeholder="Deskripsi peruntukan gedung perkuliahan..."
                                         rows={2}
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500"
+                                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500 resize-none"
                                     />
                                 </div>
 
-                                <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                                <div className="pt-2 flex justify-end space-x-2 border-t border-slate-100">
                                     <button
                                         type="button"
                                         onClick={() => setShowBuildingModal(false)}
-                                        className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 cursor-pointer"
+                                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
                                     >
-                                        Batal (ESC)
+                                        Batal
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={buildingForm.processing}
-                                        className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-xs cursor-pointer"
+                                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-xs flex items-center space-x-1.5 cursor-pointer"
                                     >
-                                        {isEditingBuilding ? 'Perbarui Gedung' : 'Simpan Gedung'}
+                                        <Save className="w-3.5 h-3.5" />
+                                        <span>{buildingForm.processing ? 'Menyimpan...' : (isEditingBuilding ? 'Perbarui Gedung' : 'Simpan Gedung')}</span>
                                     </button>
                                 </div>
                             </form>
@@ -1129,49 +1146,57 @@ export default function FacilitiesIndex({
                 {showDeleteBuildingModal && selectedBuildingItem && (
                     <div 
                         onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteBuildingModal(false); }}
-                        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
                     >
-                        <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-200">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3 text-rose-600">
-                                    <div className="p-2.5 bg-rose-100 rounded-xl">
-                                        <AlertCircle className="w-5 h-5" />
+                        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                            <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-rose-950 text-white flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-1.5 bg-rose-500/20 text-rose-300 rounded-lg border border-rose-500/30">
+                                        <AlertCircle className="w-4 h-4" />
                                     </div>
-                                    <h3 className="text-base font-black text-slate-900">Konfirmasi Hapus Gedung</h3>
+                                    <div>
+                                        <h3 className="font-bold text-xs text-white">Konfirmasi Hapus Gedung</h3>
+                                        <p className="text-[10px] text-slate-300">Peringatan penghapusan master gedung</p>
+                                    </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDeleteBuildingModal(false)}
-                                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center space-x-1"
-                                    title="Tutup Modal (Tekan ESC)"
-                                >
-                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 border border-slate-200">ESC</span>
-                                    <X className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center space-x-1.5">
+                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
+                                        ESC
+                                    </span>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setShowDeleteBuildingModal(false)} 
+                                        className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                                Apakah Anda yakin ingin menghapus gedung <strong>{selectedBuildingItem.name}</strong> ({selectedBuildingItem.code})?
-                            </p>
-                            {selectedBuildingItem.total_rooms > 0 && (
-                                <div className="p-3 bg-amber-50 rounded-xl text-amber-800 text-[11px] border border-amber-200 font-bold">
-                                    ⚠️ Gedung ini memiliki {selectedBuildingItem.total_rooms} ruang kelas di dalamnya. Hapus atau pindahkan semua ruangan terlebih dahulu sebelum menghapus gedung ini.
+                            <div className="p-5 space-y-3 text-xs">
+                                <p className="text-slate-600 leading-relaxed">
+                                    Apakah Anda yakin ingin menghapus gedung <strong className="text-slate-900">{selectedBuildingItem.name}</strong> (<span className="font-mono">{selectedBuildingItem.code}</span>)?
+                                </p>
+                                {selectedBuildingItem.total_rooms > 0 && (
+                                    <div className="p-3 bg-amber-50 rounded-xl text-amber-800 text-[11px] border border-amber-200 font-bold">
+                                        ⚠️ Gedung ini memiliki {selectedBuildingItem.total_rooms} ruang kelas di dalamnya. Hapus atau pindahkan semua ruangan terlebih dahulu sebelum menghapus gedung ini.
+                                    </div>
+                                )}
+                                <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDeleteBuildingModal(false)}
+                                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleConfirmDeleteBuilding}
+                                        className="px-4 py-1.5 bg-rose-600 text-white rounded-lg font-bold hover:bg-rose-700 shadow-xs cursor-pointer"
+                                    >
+                                        Ya, Hapus Gedung
+                                    </button>
                                 </div>
-                            )}
-                            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDeleteBuildingModal(false)}
-                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 cursor-pointer"
-                                >
-                                    Batal (ESC)
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleConfirmDeleteBuilding}
-                                    className="px-4 py-2 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 shadow-xs cursor-pointer"
-                                >
-                                    Ya, Hapus Gedung
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -1181,61 +1206,68 @@ export default function FacilitiesIndex({
                 {showRoomModal && (
                     <div 
                         onClick={(e) => { if (e.target === e.currentTarget) setShowRoomModal(false); }}
-                        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
                     >
-                        <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3 text-slate-900">
-                                    <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
-                                        <DoorOpen className="w-5 h-5" />
+                        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150">
+                            <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between shrink-0">
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg border border-emerald-500/30">
+                                        <DoorOpen className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <h3 className="text-base font-black text-slate-900">
+                                        <h3 className="font-bold text-xs text-white">
                                             {isEditingRoom ? 'Edit Ruang Kelas Perkuliahan' : 'Tambah Ruang Kelas Baru'}
                                         </h3>
-                                        <p className="text-[11px] text-slate-500">Tentukan gedung, nomor lantai, kapasitas & fasilitas</p>
+                                        <p className="text-[10px] text-slate-300">
+                                            Tentukan gedung, nomor lantai, kapasitas & fasilitas
+                                        </p>
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowRoomModal(false)}
-                                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center space-x-1"
-                                    title="Tutup Modal (Tekan ESC)"
-                                >
-                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 border border-slate-200">ESC</span>
-                                    <X className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center space-x-1.5">
+                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
+                                        ESC
+                                    </span>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setShowRoomModal(false)} 
+                                        className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
 
-                            <form onSubmit={handleSubmitRoom} className="space-y-3 text-xs">
-                                <div className="grid grid-cols-2 gap-3">
+                            <form onSubmit={handleSubmitRoom} className="p-5 overflow-y-auto space-y-3.5 text-xs flex-1">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     {/* Gedung Kampus: Otomatis Terkunci Bila Sudah Memilih Gedung di Awal */}
                                     <div>
                                         <div className="flex items-center justify-between mb-1">
-                                            <label className="block font-bold text-slate-700">Pilih Gedung</label>
+                                            <label className="block font-bold text-slate-700 text-[11px]">
+                                                Pilih Gedung <span className="text-rose-500">*</span>
+                                            </label>
                                             {buildingId && !isEditingRoom && (
-                                                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 flex items-center space-x-1">
-                                                    <Lock className="w-3 h-3 text-emerald-600" />
+                                                <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 flex items-center space-x-1">
+                                                    <Lock className="w-2.5 h-2.5 text-emerald-600" />
                                                     <span>Terkunci</span>
                                                 </span>
                                             )}
                                         </div>
                                         {buildingId && !isEditingRoom ? (
-                                            <div className="w-full p-2.5 bg-slate-100 border border-slate-300 rounded-xl font-bold text-slate-800 text-xs flex items-center justify-between shadow-2xs">
+                                            <div className="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg font-bold text-slate-800 text-xs flex items-center justify-between shadow-2xs">
                                                 <div className="flex items-center space-x-2 truncate">
-                                                    <Building2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                                                    <Building2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
                                                     <span className="truncate">
                                                         {activeBuildingObj?.name || 'Gedung Terpilih'} ({activeBuildingObj?.code})
                                                     </span>
                                                 </div>
-                                                <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                                <Lock className="w-3 h-3 text-slate-400 shrink-0" />
                                             </div>
                                         ) : (
                                             <div className="relative">
                                                 <select
                                                     value={roomForm.data.building_id}
                                                     onChange={(e) => roomForm.setData('building_id', e.target.value)}
-                                                    className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-300 rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
+                                                    className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-2.5 pr-8 py-2 text-xs font-bold text-slate-900 focus:outline-emerald-500 appearance-none cursor-pointer"
                                                     required
                                                 >
                                                     <option value="">-- Pilih Gedung --</option>
@@ -1243,41 +1275,45 @@ export default function FacilitiesIndex({
                                                         <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
                                                     ))}
                                                 </select>
-                                                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                             </div>
                                         )}
                                     </div>
 
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-1">Nomor Lantai</label>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Nomor Lantai <span className="text-rose-500">*</span>
+                                        </label>
                                         <input
                                             type="number"
                                             min={1}
                                             max={activeBuildingObj?.total_floors || 20}
                                             value={roomForm.data.floor_number}
                                             onChange={(e) => roomForm.setData('floor_number', parseInt(e.target.value))}
-                                            className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 font-bold"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500 font-bold"
                                             required
                                         />
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-1">Kode Ruang</label>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Kode Ruang <span className="text-rose-500">*</span>
+                                        </label>
                                         <input
                                             type="text"
                                             value={roomForm.data.code}
                                             onChange={(e) => roomForm.setData('code', e.target.value.toUpperCase())}
                                             placeholder="Contoh: R-101"
-                                            className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold uppercase focus:bg-white focus:ring-2 focus:ring-emerald-500"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold uppercase focus:outline-emerald-500"
                                             required
                                         />
                                     </div>
                                     <div>
                                         <div className="flex items-center justify-between mb-1">
-                                            <label className="block font-bold text-slate-700">Tipe Ruangan</label>
-                                            <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                            <label className="block font-bold text-slate-700 text-[11px]">Tipe Ruangan</label>
+                                            <span className="text-[9px] font-black text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                                                 {getRoomTypeName(roomForm.data.room_type)}
                                             </span>
                                         </div>
@@ -1285,7 +1321,7 @@ export default function FacilitiesIndex({
                                             <select
                                                 value={roomForm.data.room_type}
                                                 onChange={(e) => roomForm.setData('room_type', e.target.value)}
-                                                className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-300 rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
+                                                className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-2.5 pr-8 py-2 text-xs font-bold text-slate-900 focus:outline-emerald-500 appearance-none cursor-pointer"
                                             >
                                                 {ROOM_TYPE_GROUPS.map((group) => (
                                                     <optgroup key={group.category} label={`── ${group.category} ──`} className="font-black text-slate-900 bg-slate-100 py-1">
@@ -1297,52 +1333,58 @@ export default function FacilitiesIndex({
                                                     </optgroup>
                                                 ))}
                                             </select>
-                                            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Nama Ruang Kelas</label>
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                        Nama Ruang Kelas <span className="text-rose-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         value={roomForm.data.name}
                                         onChange={(e) => roomForm.setData('name', e.target.value)}
                                         placeholder="Contoh: Ruang Kuliah 101 (Al-Ghazali)"
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500"
+                                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500 font-bold"
                                         required
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-1">Kapasitas Kuliah (Kursi)</label>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Kapasitas Kuliah (Kursi) <span className="text-rose-500">*</span>
+                                        </label>
                                         <input
                                             type="number"
                                             min={5}
                                             max={500}
                                             value={roomForm.data.capacity}
                                             onChange={(e) => roomForm.setData('capacity', parseInt(e.target.value))}
-                                            className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 font-bold"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500 font-bold"
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-1">Kapasitas Ujian (Kursi)</label>
+                                        <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                            Kapasitas Ujian (Kursi) <span className="text-rose-500">*</span>
+                                        </label>
                                         <input
                                             type="number"
                                             min={5}
                                             max={300}
                                             value={roomForm.data.exam_capacity}
                                             onChange={(e) => roomForm.setData('exam_capacity', parseInt(e.target.value))}
-                                            className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 font-bold"
+                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500 font-bold"
                                             required
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1.5">Checklist Fasilitas Ruangan:</label>
+                                    <label className="block font-bold text-slate-700 mb-1.5 text-[11px]">Checklist Fasilitas Ruangan:</label>
                                     <div className="grid grid-cols-2 gap-2">
                                         {availableFacilities.map((fac, idx) => {
                                             const isSelected = Array.isArray(roomForm.data.facilities) && roomForm.data.facilities.includes(fac);
@@ -1351,7 +1393,7 @@ export default function FacilitiesIndex({
                                                     key={idx}
                                                     type="button"
                                                     onClick={() => toggleFacility(fac)}
-                                                    className={`p-2 rounded-xl border text-left flex items-center justify-between transition cursor-pointer ${
+                                                    className={`p-2 rounded-lg border text-left flex items-center justify-between transition cursor-pointer text-xs ${
                                                         isSelected 
                                                             ? 'bg-emerald-50 border-emerald-400 text-emerald-900 font-bold shadow-2xs' 
                                                             : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -1365,20 +1407,21 @@ export default function FacilitiesIndex({
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                                <div className="pt-2 flex justify-end space-x-2 border-t border-slate-100 shrink-0">
                                     <button
                                         type="button"
                                         onClick={() => setShowRoomModal(false)}
-                                        className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 cursor-pointer"
+                                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
                                     >
-                                        Batal (ESC)
+                                        Batal
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={roomForm.processing}
-                                        className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-xs cursor-pointer"
+                                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-xs flex items-center space-x-1.5 cursor-pointer"
                                     >
-                                        {isEditingRoom ? 'Perbarui Ruangan' : 'Simpan Ruang Kelas'}
+                                        <Save className="w-3.5 h-3.5" />
+                                        <span>{roomForm.processing ? 'Menyimpan...' : (isEditingRoom ? 'Perbarui Ruangan' : 'Simpan Ruang Kelas')}</span>
                                     </button>
                                 </div>
                             </form>
@@ -1390,47 +1433,55 @@ export default function FacilitiesIndex({
                 {showDeleteRoomModal && selectedRoom && (
                     <div 
                         onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteRoomModal(false); }}
-                        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
                     >
-                        <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-200">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3 text-rose-600">
-                                    <div className="p-2.5 bg-rose-100 rounded-xl">
-                                        <AlertCircle className="w-5 h-5" />
+                        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                            <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-rose-950 text-white flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-1.5 bg-rose-500/20 text-rose-300 rounded-lg border border-rose-500/30">
+                                        <AlertCircle className="w-4 h-4" />
                                     </div>
-                                    <h3 className="text-base font-black text-slate-900">Konfirmasi Hapus Ruang Kelas</h3>
+                                    <div>
+                                        <h3 className="font-bold text-xs text-white">Konfirmasi Hapus Ruang Kelas</h3>
+                                        <p className="text-[10px] text-slate-300">Peringatan penghapusan master ruangan</p>
+                                    </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDeleteRoomModal(false)}
-                                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center space-x-1"
-                                    title="Tutup Modal (Tekan ESC)"
-                                >
-                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 border border-slate-200">ESC</span>
-                                    <X className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center space-x-1.5">
+                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
+                                        ESC
+                                    </span>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setShowDeleteRoomModal(false)} 
+                                        className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                                Apakah Anda yakin ingin menghapus ruang <strong>{selectedRoom.name}</strong> ({selectedRoom.code}) di <strong>{selectedRoom.building_name}</strong>?
-                            </p>
-                            <div className="p-3 bg-amber-50 rounded-xl text-amber-800 text-[11px] border border-amber-200">
-                                💡 Jika ruangan sedang dalam renovasi atau perbaikan berkala, Anda disarankan cukup <strong>mengubah status menjadi Perawatan</strong> tanpa menghapus master data ruang.
-                            </div>
-                            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDeleteRoomModal(false)}
-                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 cursor-pointer"
-                                >
-                                    Batal (ESC)
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleConfirmDeleteRoom}
-                                    className="px-4 py-2 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 shadow-xs cursor-pointer"
-                                >
-                                    Ya, Hapus Ruangan
-                                </button>
+                            <div className="p-5 space-y-3 text-xs">
+                                <p className="text-slate-600 leading-relaxed">
+                                    Apakah Anda yakin ingin menghapus ruang <strong className="text-slate-900">{selectedRoom.name}</strong> (<span className="font-mono">{selectedRoom.code}</span>) di <strong>{selectedRoom.building_name}</strong>?
+                                </p>
+                                <div className="p-3 bg-amber-50 rounded-xl text-amber-800 text-[11px] border border-amber-200">
+                                    💡 Jika ruangan sedang dalam renovasi atau perbaikan berkala, Anda disarankan cukup <strong>mengubah status menjadi Perawatan</strong> tanpa menghapus master data ruang.
+                                </div>
+                                <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDeleteRoomModal(false)}
+                                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleConfirmDeleteRoom}
+                                        className="px-4 py-1.5 bg-rose-600 text-white rounded-lg font-bold hover:bg-rose-700 shadow-xs cursor-pointer"
+                                    >
+                                        Ya, Hapus Ruangan
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
