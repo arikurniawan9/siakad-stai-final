@@ -493,6 +493,7 @@ class DatabaseSeeder extends Seeder
                 'pmb_period_id' => 1,
                 'registration_number' => 'PMB-2026-0001',
                 'full_name' => 'Muhammad Rizky Pratama',
+                'mother_name' => 'Siti Khodijah',
                 'nik' => '3203011204040001',
                 'phone_number' => '081234567890',
                 'email' => 'rizky.pratama@gmail.com',
@@ -501,6 +502,7 @@ class DatabaseSeeder extends Seeder
                 'birth_date' => '2004-04-12',
                 'address' => 'Jl. Raya Cipanas No. 45 Cianjur',
                 'previous_school' => 'MAN 1 Cianjur',
+                'nisn' => '0041234567',
                 'first_choice_program_id' => 1, // PAI
                 'second_choice_program_id' => 2, // MPI
                 'pathway' => 'REGULER',
@@ -513,6 +515,7 @@ class DatabaseSeeder extends Seeder
                 'pmb_period_id' => 1,
                 'registration_number' => 'PMB-2026-0002',
                 'full_name' => 'Nurul Aisyah Zahra',
+                'mother_name' => 'Hj. Halimah',
                 'nik' => '3203015508050002',
                 'phone_number' => '085721345678',
                 'email' => 'nurul.zahra@gmail.com',
@@ -521,6 +524,7 @@ class DatabaseSeeder extends Seeder
                 'birth_date' => '2005-08-15',
                 'address' => 'Komplek Griya Ittihad No. 12 Cianjur',
                 'previous_school' => 'SMA Plus Al-Ittihad',
+                'nisn' => '0059876543',
                 'first_choice_program_id' => 2, // MPI
                 'second_choice_program_id' => 1, // PAI
                 'pathway' => 'TAHFIDZ',
@@ -533,6 +537,7 @@ class DatabaseSeeder extends Seeder
                 'pmb_period_id' => 1,
                 'registration_number' => 'PMB-2026-0003',
                 'full_name' => 'Fajar Hidayatullah',
+                'mother_name' => 'Maryam Sulaeman',
                 'nik' => '3203012211040003',
                 'phone_number' => '087899887766',
                 'email' => 'fajar.hidayat@gmail.com',
@@ -541,6 +546,7 @@ class DatabaseSeeder extends Seeder
                 'birth_date' => '2004-11-22',
                 'address' => 'Kp. Cijedil RT 02/04 Cugenang Cianjur',
                 'previous_school' => 'SMA Negeri 2 Cianjur',
+                'nisn' => '0045566778',
                 'first_choice_program_id' => 3, // HES
                 'second_choice_program_id' => 5, // ESY
                 'pathway' => 'REGULER',

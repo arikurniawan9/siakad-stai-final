@@ -111,10 +111,10 @@ export default function CourseCurriculumIndex({
                                 onChange={(e) => handleProgramChange(e.target.value)}
                                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-violet-500 focus:bg-white transition"
                             >
-                                <option value="">-- Pilih Program Studi (Otomatis) --</option>
+                                <option value="">-- Pilih Program Studi --</option>
                                 {studyPrograms.map((p) => (
                                     <option key={p.id} value={p.id}>
-                                        {p.national_code ? `${p.national_code} - ` : ''}{p.name} {p.degree ? `(${p.degree})` : ''}
+                                        {p.code} - {p.name} {p.degree ? `(${p.degree})` : ''}
                                     </option>
                                 ))}
                             </select>

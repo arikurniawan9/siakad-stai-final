@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '../../../Layouts/AppLayout';
-import { Settings, ShieldAlert, Database, Server, Save, CheckCircle2, RefreshCw } from 'lucide-react';
+import WinpayConfigModal from '../../../Components/WinpayConfigModal';
+import { Settings, ShieldAlert, Database, Server, Save, CheckCircle2, RefreshCw, CreditCard, Sliders } from 'lucide-react';
 
 export default function SettingsIndex({ settings, isMaintenance }) {
+    const { auth } = usePage().props;
+    const isSuperadmin = auth?.user?.role === 'superadmin';
+    const [isWinpayModalOpen, setIsWinpayModalOpen] = useState(false);
+
     const { data, setData, post, processing } = useForm({
         institution_name: settings?.institution_name?.value || 'Sekolah Tinggi Agama Islam (STAI) Al-Ittihad Cianjur',
         institution_code: settings?.institution_code?.value || '213042',
@@ -139,6 +144,38 @@ export default function SettingsIndex({ settings, isMaintenance }) {
                             />
                         </div>
 
+                        {/* 4. WINPAY PAYMENT GATEWAY (KHUSUS SUPERADMIN) */}
+                        {isSuperadmin && (
+                            <>
+                                <h3 className="text-xs font-black text-indigo-700 uppercase tracking-wider border-b border-indigo-100 pb-2 pt-2 flex items-center justify-between">
+                                    <span className="flex items-center space-x-1.5">
+                                        <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
+                                        <span>4. Integrasi Winpay Payment Gateway</span>
+                                    </span>
+                                    <span className="px-2 py-0.2 bg-amber-100 text-amber-900 rounded font-black text-[9px]">
+                                        SUPERADMIN ONLY
+                                    </span>
+                                </h3>
+
+                                <div className="p-4 bg-indigo-950 text-white rounded-2xl border border-indigo-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div>
+                                        <h4 className="font-black text-white text-xs">Pusat Konfigurasi & Webhook Simulator Winpay</h4>
+                                        <p className="text-[11px] text-indigo-200 mt-0.5 max-w-xl">
+                                            Pengaturan kredensial Merchant ID, Secret Key HMAC-SHA256, multi-channel VA, serta pengujian koneksi dan simulator pembayaran tagihan mahasiswa.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsWinpayModalOpen(true)}
+                                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow flex items-center space-x-1.5 cursor-pointer shrink-0"
+                                    >
+                                        <Sliders className="w-3.5 h-3.5" />
+                                        <span>Kelola Winpay →</span>
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
                         <div className="pt-3 border-t border-slate-100 flex justify-end">
                             <button
                                 type="submit"
@@ -152,6 +189,12 @@ export default function SettingsIndex({ settings, isMaintenance }) {
                     </form>
                 </div>
             </div>
+
+            {/* Winpay Modal */}
+            <WinpayConfigModal
+                isOpen={isWinpayModalOpen}
+                onClose={() => setIsWinpayModalOpen(false)}
+            />
         </AppLayout>
     );
 }

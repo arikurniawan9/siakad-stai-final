@@ -84,12 +84,28 @@ export default function AppLayout({ title, children }) {
                 activeItemBg: 'bg-indigo-950/40 text-indigo-200 border-l-2 border-indigo-400'
             };
         }
-        if (href.includes('/students')) {
+        if (href.includes('/users')) {
             return {
                 boxBg: isActive 
                     ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' 
                     : 'bg-indigo-500/15 text-indigo-400 ring-1 ring-indigo-500/30 group-hover:bg-indigo-500 group-hover:text-white',
                 activeItemBg: 'bg-indigo-950/40 text-indigo-200 border-l-2 border-indigo-400'
+            };
+        }
+        if (href.includes('/study-programs')) {
+            return {
+                boxBg: isActive 
+                    ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' 
+                    : 'bg-indigo-500/15 text-indigo-400 ring-1 ring-indigo-500/30 group-hover:bg-indigo-500 group-hover:text-white',
+                activeItemBg: 'bg-indigo-950/40 text-indigo-200 border-l-2 border-indigo-400'
+            };
+        }
+        if (href.includes('/students')) {
+            return {
+                boxBg: isActive 
+                    ? 'bg-teal-500 text-white shadow-md shadow-teal-500/30' 
+                    : 'bg-teal-500/15 text-teal-400 ring-1 ring-teal-500/30 group-hover:bg-teal-500 group-hover:text-white',
+                activeItemBg: 'bg-teal-950/40 text-teal-200 border-l-2 border-teal-400'
             };
         }
         if (href.includes('/lecturers')) {
@@ -204,6 +220,14 @@ export default function AppLayout({ title, children }) {
                 activeItemBg: 'bg-cyan-950/40 text-cyan-200 border-l-2 border-cyan-400'
             };
         }
+        if (href.includes('/database')) {
+            return {
+                boxBg: isActive 
+                    ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' 
+                    : 'bg-indigo-500/15 text-indigo-400 ring-1 ring-indigo-500/30 group-hover:bg-indigo-500 group-hover:text-white',
+                activeItemBg: 'bg-indigo-950/40 text-indigo-200 border-l-2 border-indigo-400'
+            };
+        }
         if (href.includes('/settings')) {
             return {
                 boxBg: isActive 
@@ -232,6 +256,8 @@ export default function AppLayout({ title, children }) {
     const getSuperadminNav = () => [
         { label: 'Dasbor Developer', href: '/dashboard', icon: Activity },
         { header: 'KESEHATAN & SISTEM' },
+        { label: 'BSI Smart Billing H2H', href: '/admin/bsi-gateway', icon: Landmark, highlight: true },
+        { label: 'Backup & Seeder Database', href: '/admin/database', icon: Database },
         { label: 'Diagnostik Server & DB', href: '/admin/settings', icon: HardDrive },
         { label: 'Keuangan, Setup Tarif & VA', href: '/admin/finance', icon: CreditCard },
         { label: 'Integrasi SALAM LMS', href: '/admin/lms-sync', icon: RefreshCw },
@@ -242,6 +268,7 @@ export default function AppLayout({ title, children }) {
         { label: 'Data Dosen & Pengajar', href: '/admin/lecturers', icon: Users },
         { label: 'Semua Akun (Portal Menyamar)', href: '/admin/users', icon: ShieldCheck, highlight: true },
         { header: 'STRUKTUR KURIKULUM' },
+        { label: 'Program Studi & Fakultas', href: '/admin/study-programs', icon: GraduationCap },
         { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
         { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
         { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
@@ -266,6 +293,7 @@ export default function AppLayout({ title, children }) {
         { label: 'Data Mahasiswa (Angkatan)', href: '/admin/students', icon: GraduationCap },
         { label: 'Data Dosen & Pengajar', href: '/admin/lecturers', icon: Users },
         { header: 'STRUKTUR KURIKULUM' },
+        { label: 'Program Studi & Fakultas', href: '/admin/study-programs', icon: GraduationCap },
         { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
         { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
         { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
@@ -294,6 +322,7 @@ export default function AppLayout({ title, children }) {
             return [
                 { label: 'Dasbor Keuangan', href: '/dashboard', icon: LayoutDashboard },
                 { header: 'BILLING & PERBANKAN BSI' },
+                { label: 'BSI Smart Billing H2H', href: '/admin/bsi-gateway', icon: Landmark, highlight: true },
                 { label: 'Tagihan SPP Massal & VA', href: '/admin/finance', icon: CreditCard },
                 { label: 'Verifikasi PMB Billing', href: '/admin/finance', icon: UserCheck2 },
             ];

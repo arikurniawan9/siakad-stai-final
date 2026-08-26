@@ -27,6 +27,7 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('registration_number', 32)->unique(); // e.g. PMB-2026-0001
             $table->string('full_name', 150);
+            $table->string('mother_name', 150)->nullable();
             $table->string('nik', 20)->index();
             $table->string('phone_number', 24);
             $table->string('email', 100);
@@ -35,6 +36,7 @@ return new class extends Migration
             $table->date('birth_date')->nullable();
             $table->text('address')->nullable();
             $table->string('previous_school', 150)->nullable(); // SMA / MA / SMK / Pesantren
+            $table->string('nisn', 20)->nullable();
             $table->foreignId('first_choice_program_id')->constrained('study_programs');
             $table->foreignId('second_choice_program_id')->nullable()->constrained('study_programs');
             $table->string('pathway', 32)->default('REGULER'); // REGULER, BEASISWA, TAHFIDZ, PINDAHAN

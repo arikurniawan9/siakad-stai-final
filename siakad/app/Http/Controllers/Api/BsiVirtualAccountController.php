@@ -16,10 +16,14 @@ class BsiVirtualAccountController extends Controller
      */
     public function inquiry(Request $request): JsonResponse
     {
-        $vaNumber = $request->input('va_number');
+        $vaNumber = $request->input('va_number') 
+            ?? $request->input('vaNumber') 
+            ?? $request->input('virtualAccountNo');
 
         if (!$vaNumber) {
             return response()->json([
+                'responseCode' => '4002400',
+                'responseMessage' => 'Nomor Virtual Account wajib dikirimkan.',
                 'response_code' => '400',
                 'response_message' => 'Nomor Virtual Account wajib dikirimkan.',
             ], 400);
@@ -31,28 +35,64 @@ class BsiVirtualAccountController extends Controller
 
         if (!$vaTx) {
             return response()->json([
+                'responseCode' => '4042412',
+                'responseMessage' => 'Nomor Virtual Account tidak ditemukan.',
                 'response_code' => '404',
                 'response_message' => 'Nomor Virtual Account tidak ditemukan.',
             ], 404);
         }
 
         $invoice = DB::table('student_invoices')->find($vaTx->student_invoice_id);
+        $feeType = DB::table('fee_types')->find($invoice->fee_type_id);
         
         $customerName = 'Mahasiswa STAI Al-Ittihad';
+        $customerNo = '-';
         if ($invoice->user_id) {
             $user = DB::table('users')->find($invoice->user_id);
             $customerName = $user ? $user->name : $customerName;
+            $customerNo = $user ? $user->identity_number : $customerNo;
         } elseif ($invoice->pmb_applicant_id) {
             $applicant = DB::table('pmb_applicants')->find($invoice->pmb_applicant_id);
             $customerName = $applicant ? $applicant->full_name : $customerName;
+            $customerNo = $applicant ? $applicant->registration_number : $customerNo;
         }
 
+        $formattedAmount = number_format((float) $invoice->final_amount, 2, '.', '');
+
         return response()->json([
+            'responseCode' => '2002400',
+            'responseMessage' => 'Successful',
             'response_code' => '0000',
             'response_message' => 'Inquiry VA Berhasil',
+            'virtualAccountData' => [
+                'partnerServiceId' => substr($vaNumber, 0, 4),
+                'customerNo' => $customerNo,
+                'virtualAccountNo' => $vaTx->va_number,
+                'virtualAccountName' => $customerName,
+                'virtualAccountEmail' => 'keuangan@staialittihad.ac.id',
+                'inquiryRequestId' => 'INQ-BSI-' . date('YmdHis') . '-' . rand(1000, 9999),
+                'totalAmount' => [
+                    'value' => $formattedAmount,
+                    'currency' => 'IDR',
+                ],
+                'billDetails' => [
+                    [
+                        'billCode' => $feeType ? $feeType->va_bill_code : '02',
+                        'billName' => $feeType ? $feeType->name : 'Tagihan Akademik',
+                        'billAmount' => [
+                            'value' => $formattedAmount,
+                            'currency' => 'IDR',
+                        ],
+                    ]
+                ],
+                'billDescription' => $invoice->notes ?? ($feeType ? $feeType->name : 'Tagihan Mahasiswa'),
+                'inquiryStatus' => $invoice->status === 'LUNAS' ? 'PAID' : 'UNPAID',
+                'expiredDate' => $invoice->due_date,
+            ],
             'data' => [
                 'va_number' => $vaTx->va_number,
                 'customer_name' => $customerName,
+                'customer_no' => $customerNo,
                 'amount' => (float) $invoice->final_amount,
                 'bill_description' => $invoice->notes,
                 'status' => $invoice->status,
@@ -68,9 +108,24 @@ class BsiVirtualAccountController extends Controller
     public function paymentCallback(Request $request): JsonResponse
     {
         $payload = $request->all();
-        $vaNumber = $request->input('va_number');
-        $amount = (float) $request->input('amount');
-        $bsiRefNo = $request->input('bsi_reference_no') ?? 'BSI-' . date('YmdHis') . '-' . rand(1000, 9999);
+        $vaNumber = $request->input('va_number') 
+            ?? $request->input('vaNumber') 
+            ?? $request->input('virtualAccountNo');
+            
+        $amount = (float) ($request->input('amount') 
+            ?? $request->input('paidAmount.value') 
+            ?? $request->input('paidAmount') 
+            ?? 0);
+
+        $bsiRefNo = $request->input('bsi_reference_no') 
+            ?? $request->input('bankReference') 
+            ?? $request->input('paymentRequestId') 
+            ?? 'BSI-' . date('YmdHis') . '-' . rand(1000, 9999);
+            
+        $channel = $request->input('channel') 
+            ?? $request->input('sourceChannel') 
+            ?? 'BSI_MOBILE';
+
         $signature = $request->header('X-BSI-Signature');
 
         Log::info('BSI VA Payment Callback Received', ['payload' => $payload]);
@@ -81,6 +136,8 @@ class BsiVirtualAccountController extends Controller
 
         if (!$vaTx) {
             return response()->json([
+                'responseCode' => '4042512',
+                'responseMessage' => 'Transaksi VA tidak ditemukan.',
                 'response_code' => '404',
                 'response_message' => 'Transaksi VA tidak ditemukan.',
             ], 404);
@@ -90,6 +147,8 @@ class BsiVirtualAccountController extends Controller
 
         if ($invoice->status === 'LUNAS') {
             return response()->json([
+                'responseCode' => '2002500',
+                'responseMessage' => 'Successful (Already Paid)',
                 'response_code' => '0000',
                 'response_message' => 'Tagihan sudah berstatus lunas sebelumnya.',
                 'data' => [
@@ -152,6 +211,8 @@ class BsiVirtualAccountController extends Controller
         });
 
         return response()->json([
+            'responseCode' => '2002500',
+            'responseMessage' => 'Successful',
             'response_code' => '0000',
             'response_message' => 'Pelunasan Virtual Account BSI Berhasil Diverifikasi.',
             'data' => [

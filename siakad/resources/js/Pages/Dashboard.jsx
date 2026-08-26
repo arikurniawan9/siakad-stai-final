@@ -9,7 +9,7 @@ import {
     Sparkles, Star, School, FileText, Activity, 
     HardDrive, Cpu, Radio, ShieldCheck, Database,
     Server, Terminal, AlertOctagon, Check, Play,
-    Megaphone, TrendingUp, Award, FileCheck
+    Megaphone, TrendingUp, Award, FileCheck, Sliders, Send, Key, Landmark
 } from 'lucide-react';
 
 export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = [] }) {
@@ -17,6 +17,7 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
     const user = auth?.user || {};
     const role = user.role || 'mahasiswa';
     const [simulatingBsi, setSimulatingBsi] = useState(false);
+    const [testingBsi, setTestingBsi] = useState(false);
 
     // Dynamic Time Greeting (Pagi / Siang / Sore / Malam)
     const getTimeGreeting = () => {
@@ -70,6 +71,31 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
             alert('Kesalahan jaringan.');
         } finally {
             setSimulatingBsi(false);
+        }
+    };
+
+    const handleQuickTestBsi = async () => {
+        setTestingBsi(true);
+        try {
+            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const res = await fetch('/admin/bsi-gateway/test-connection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token || '',
+                },
+            });
+            const result = await res.json();
+            if (result.success || result.status === 'ONLINE') {
+                alert(`✅ BSI Smart Billing H2H: ${result.status} (${result.latency_ms} ms)\n\n• Pesan: ${result.message}\n• Biller Code: ${result.details?.institution_code}\n• Environment: ${result.details?.environment}\n• Routing: ${result.details?.routing_network}\n• Spesifikasi: ${result.details?.auth_spec}`);
+            } else {
+                alert('Response BSI: ' + result.message);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Kesalahan jaringan: ' + err.message);
+        } finally {
+            setTestingBsi(false);
         }
     };
 
@@ -131,14 +157,29 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                     </p>
                                 </div>
 
-                                <div className="flex items-center space-x-2 self-start md:self-auto">
-                                    <button
-                                        onClick={handleTestBsiWebhook}
-                                        disabled={simulatingBsi}
-                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1 cursor-pointer"
+                                <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+                                    <Link
+                                        href="/admin/bsi-gateway"
+                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1.5 cursor-pointer border border-emerald-400/40"
                                     >
-                                        <Radio className={`w-3 h-3 ${simulatingBsi ? 'animate-spin' : ''}`} />
-                                        <span>{simulatingBsi ? 'Menguji...' : 'Test H2H BSI'}</span>
+                                        <Landmark className="w-3.5 h-3.5 text-emerald-300" />
+                                        <span>🏦 BSI Smart Billing H2H</span>
+                                    </Link>
+                                    <Link
+                                        href="/admin/database"
+                                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-black transition shadow flex items-center space-x-1"
+                                    >
+                                        <Database className="w-3 h-3" />
+                                        <span>Backup & Seeder DB</span>
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        onClick={handleQuickTestBsi}
+                                        disabled={testingBsi}
+                                        className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1 cursor-pointer"
+                                    >
+                                        <Radio className={`w-3 h-3 ${testingBsi ? 'animate-spin' : ''}`} />
+                                        <span>{testingBsi ? 'Menguji...' : 'Uji BSI H2H'}</span>
                                     </button>
                                     <Link
                                         href="/admin/users"
@@ -153,30 +194,36 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                         {/* Telemetry Health Grid (Compact) */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             {/* DB Health */}
-                            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                            <Link 
+                                href="/admin/database"
+                                className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs hover:border-indigo-400 hover:bg-indigo-50/30 transition group block"
+                            >
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500">Database Engine</span>
-                                    <span className="p-1 bg-emerald-100 text-emerald-800 rounded-md"><Database className="w-3.5 h-3.5" /></span>
+                                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-indigo-900">Database Engine</span>
+                                    <span className="p-1 bg-emerald-100 text-emerald-800 rounded-md group-hover:bg-indigo-100 group-hover:text-indigo-800"><Database className="w-3.5 h-3.5" /></span>
                                 </div>
-                                <p className="text-sm font-black text-slate-900 mt-1.5">PostgreSQL 16</p>
+                                <p className="text-sm font-black text-slate-900 mt-1.5 group-hover:text-indigo-950">PostgreSQL 16</p>
                                 <p className="text-[10px] font-semibold text-emerald-600 flex items-center space-x-1 mt-0.5">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span>siakad_stai_db (Online)</span>
+                                    <span>Backup & Seeder Ready ⚙️</span>
                                 </p>
-                            </div>
+                            </Link>
 
-                            {/* BSI VA Health */}
-                            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                            {/* BSI Smart Billing Gateway Health */}
+                            <Link 
+                                href="/admin/bsi-gateway"
+                                className="bg-white p-3 rounded-xl border border-emerald-200 shadow-2xs hover:border-emerald-400 hover:bg-emerald-50/40 transition group block"
+                            >
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500">Host-to-Host VA BSI</span>
-                                    <span className="p-1 bg-blue-100 text-blue-800 rounded-md"><Radio className="w-3.5 h-3.5" /></span>
+                                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-emerald-900">BSI Smart Billing</span>
+                                    <span className="p-1 bg-emerald-100 text-emerald-800 rounded-md group-hover:bg-emerald-200"><Landmark className="w-3.5 h-3.5" /></span>
                                 </div>
-                                <p className="text-sm font-black text-slate-900 mt-1.5">Prefix: 9928</p>
+                                <p className="text-sm font-black text-slate-900 mt-1.5 group-hover:text-emerald-950">BI-SNAP (H2H Direct)</p>
                                 <p className="text-[10px] font-semibold text-emerald-600 flex items-center space-x-1 mt-0.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                    <span>HMAC-SHA256 Ready</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span>Biller 8891 Sandbox Active ⚙️</span>
                                 </p>
-                            </div>
+                            </Link>
 
                             {/* LMS Health */}
                             <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
@@ -184,7 +231,7 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                     <span className="text-[10px] font-bold text-slate-500">SALAM LMS Gateway</span>
                                     <span className="p-1 bg-purple-100 text-purple-800 rounded-md"><RefreshCw className="w-3.5 h-3.5" /></span>
                                 </div>
-                                <p className="text-sm font-black text-slate-900 mt-1.5">Port 3001 (Node)</p>
+                                <p className="text-sm font-black text-slate-900 mt-1.5">Port 5000 (Node)</p>
                                 <p className="text-[10px] font-semibold text-purple-600 flex items-center space-x-1 mt-0.5">
                                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
                                     <span>Sync Bridge Active</span>
@@ -199,6 +246,66 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                 </div>
                                 <p className="text-sm font-black text-slate-900 mt-1.5">Laravel 13 + PHP 8.4</p>
                                 <p className="text-[10px] font-semibold text-slate-500 mt-0.5">Inertia.js React SPA</p>
+                            </div>
+                        </div>
+
+                        {/* BSI SMART BILLING & BI-SNAP H2H GATEWAY CONTROL CARD (SUPERADMIN ONLY) */}
+                        <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 p-4 sm:p-5 rounded-2xl border border-emerald-800/50 shadow-sm text-white space-y-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-900/60 pb-2.5">
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-2 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-500/30">
+                                        <Landmark className="w-4 h-4 text-emerald-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center space-x-2">
+                                            <span>Pusat Integrasi Bank Syariah Indonesia (BSI) Smart Billing</span>
+                                            <span className="px-2 py-0.2 bg-amber-400 text-slate-950 rounded text-[9px] font-black">
+                                                BI-SNAP Direct H2H
+                                            </span>
+                                        </h3>
+                                        <p className="text-[10px] text-emerald-200 mt-0.5">
+                                            Koneksi langsung Host-to-Host (H2H) dengan core banking BSI. Mendukung otentikasi BI-SNAP Service Code 73, inquiry otomatis Service Code 24, push callback pelunasan Service Code 25, dan saldo rekening giro penampung.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleQuickTestBsi}
+                                        disabled={testingBsi}
+                                        className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-emerald-200 hover:text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer"
+                                    >
+                                        <Radio className={`w-3 h-3 ${testingBsi ? 'animate-spin' : ''}`} />
+                                        <span>{testingBsi ? 'Menguji...' : 'Uji Ping H2H'}</span>
+                                    </button>
+                                    <Link
+                                        href="/admin/bsi-gateway"
+                                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold transition shadow flex items-center space-x-1 cursor-pointer"
+                                    >
+                                        <Sliders className="w-3 h-3" />
+                                        <span>Buka Pusat Kontrol BSI →</span>
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+                                    <span className="text-slate-400">Institusi Biller:</span>
+                                    <p className="font-mono font-bold text-amber-300 mt-0.5">8891 - BI-SNAP-DEV</p>
+                                </div>
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+                                    <span className="text-slate-400">Mode Server:</span>
+                                    <p className="font-bold text-emerald-400 mt-0.5">🟡 BSI Sandbox (Dev Ready)</p>
+                                </div>
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+                                    <span className="text-slate-400">Routing Network:</span>
+                                    <p className="font-bold text-white mt-0.5 truncate">Zone-A (NTT / Telkom)</p>
+                                </div>
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+                                    <span className="text-slate-400">H2H Inbound Endpoint:</span>
+                                    <p className="font-mono text-[9px] text-emerald-300 mt-0.5 truncate">/api/v1/bsi/va/inquiry & payment</p>
+                                </div>
                             </div>
                         </div>
 

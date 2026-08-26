@@ -3,9 +3,11 @@
 use App\Http\Controllers\Admin\AcademicPeriodController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\BsiGatewayController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseCurriculumController;
 use App\Http\Controllers\Admin\CurriculumController;
+use App\Http\Controllers\Admin\DatabaseController;
 use App\Http\Controllers\Admin\EdomAdminController;
 use App\Http\Controllers\Admin\FacilityController;
 use App\Http\Controllers\Admin\FinanceController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\Admin\PmbAdminController;
 use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\StudentAdminController;
+use App\Http\Controllers\Admin\StudyProgramController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\YudisiumController;
 use App\Http\Controllers\Api\BsiVirtualAccountController;
@@ -61,6 +64,9 @@ Route::prefix('api/v1/bsi/va')->group(function () {
     Route::post('/payment', [BsiVirtualAccountController::class, 'paymentCallback']);
     Route::post('/simulate-payment', [BsiVirtualAccountController::class, 'simulatePayment']);
 });
+
+// Winpay Payment Gateway Webhook
+Route::post('/api/v1/winpay/callback', [WinpayController::class, 'receiveCallback']);
 
 // LMS Inbound Webhook API
 Route::post('/api/v1/lms/webhook', [LmsSyncController::class, 'receiveLmsWebhook']);
@@ -155,9 +161,19 @@ Route::middleware('auth')->group(function () {
         Route::post('/academic-periods/periods', [AcademicPeriodController::class, 'storePeriod'])->name('academic_periods.periods.store');
         Route::post('/academic-periods/{id}/activate', [AcademicPeriodController::class, 'activate'])->name('academic_periods.activate');
 
+        // Master Program Studi & Fakultas
+        Route::get('/study-programs', [StudyProgramController::class, 'index'])->name('study_programs.index');
+        Route::post('/study-programs', [StudyProgramController::class, 'store'])->name('study_programs.store');
+        Route::put('/study-programs/{id}', [StudyProgramController::class, 'update'])->name('study_programs.update');
+        Route::delete('/study-programs/{id}', [StudyProgramController::class, 'destroy'])->name('study_programs.destroy');
+        Route::post('/faculties', [StudyProgramController::class, 'storeFaculty'])->name('faculties.store');
+        Route::put('/faculties/{id}', [StudyProgramController::class, 'updateFaculty'])->name('faculties.update');
+        Route::delete('/faculties/{id}', [StudyProgramController::class, 'destroyFaculty'])->name('faculties.destroy');
+
         // 1. Data Kurikulum
         Route::get('/curricula', [CurriculumController::class, 'index'])->name('curricula.index');
         Route::post('/curricula', [CurriculumController::class, 'store'])->name('curricula.store');
+        Route::put('/curricula/{id}', [CurriculumController::class, 'update'])->name('curricula.update');
         Route::delete('/curricula/{id}', [CurriculumController::class, 'destroy'])->name('curricula.destroy');
 
         // 2. Data Matakuliah
@@ -199,6 +215,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/lms-sync/test-connection', [LmsSyncController::class, 'testConnection'])->name('lms_sync.test_connection');
         Route::post('/lms-sync/push', [LmsSyncController::class, 'pushMasterToLms'])->name('lms_sync.push');
         Route::post('/lms-sync/pull-grades', [LmsSyncController::class, 'pullGradesFromLms'])->name('lms_sync.pull_grades');
+
+        // Gateway BSI Smart Billing H2H Direct (Khusus Superadmin)
+        Route::get('/bsi-gateway', [BsiGatewayController::class, 'index'])->name('bsi_gateway.index');
+        Route::post('/bsi-gateway/config', [BsiGatewayController::class, 'updateConfig'])->name('bsi_gateway.config.update');
+        Route::post('/bsi-gateway/test-connection', [BsiGatewayController::class, 'testConnection'])->name('bsi_gateway.test_connection');
+        Route::post('/bsi-gateway/simulate-inquiry', [BsiGatewayController::class, 'simulateInquiry'])->name('bsi_gateway.simulate_inquiry');
+        Route::post('/bsi-gateway/simulate-payment', [BsiGatewayController::class, 'simulatePayment'])->name('bsi_gateway.simulate_payment');
+        Route::get('/bsi-gateway/export-reconciliation', [BsiGatewayController::class, 'exportReconciliation'])->name('bsi_gateway.export_reconciliation');
+
+        // Manajemen Database, Backup, Restore & Seeder (Khusus Superadmin)
+        Route::get('/database', [DatabaseController::class, 'index'])->name('database.index');
+        Route::post('/database/backup', [DatabaseController::class, 'createBackup'])->name('database.backup.create');
+        Route::get('/database/download/{filename}', [DatabaseController::class, 'downloadBackup'])->name('database.backup.download');
+        Route::delete('/database/backup/{filename}', [DatabaseController::class, 'deleteBackup'])->name('database.backup.delete');
+        Route::post('/database/restore', [DatabaseController::class, 'restoreBackup'])->name('database.restore');
+        Route::post('/database/seeder', [DatabaseController::class, 'runSeeder'])->name('database.seeder');
 
         // Pengaturan & Pemeliharaan
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');

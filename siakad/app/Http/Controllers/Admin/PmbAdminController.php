@@ -65,8 +65,10 @@ class PmbAdminController extends Controller
         if ($search) {
             $applicantsQuery->where(function ($sq) use ($search) {
                 $sq->where('pmb_applicants.full_name', 'ilike', "%{$search}%")
+                   ->orWhere('pmb_applicants.mother_name', 'ilike', "%{$search}%")
                    ->orWhere('pmb_applicants.registration_number', 'ilike', "%{$search}%")
                    ->orWhere('pmb_applicants.nik', 'ilike', "%{$search}%")
+                   ->orWhere('pmb_applicants.nisn', 'ilike', "%{$search}%")
                    ->orWhere('pmb_applicants.previous_school', 'ilike', "%{$search}%")
                    ->orWhere('pmb_applicants.phone_number', 'ilike', "%{$search}%");
             });
@@ -76,7 +78,7 @@ class PmbAdminController extends Controller
 
         // Statistik KPI PMB
         $totalApplicants = DB::table('pmb_applicants')->count();
-        $verifiedCount = DB::table('pmb_applicants')->whereIn('status', ['TERVERIFIKASI', 'LULUS_SELEKSI', 'SUDAH_DAFTAR_ULANG'])->count();
+        $verifiedCount = DB::table('pmb_applicants')->whereIn('status', ['TERVERIFIKASI', 'TERVERIFIKASI_BAYAR', 'LULUS_SELEKSI', 'SUDAH_DAFTAR_ULANG'])->count();
         $passedCount = DB::table('pmb_applicants')->whereIn('status', ['LULUS_SELEKSI', 'SUDAH_DAFTAR_ULANG'])->count();
         $pendingPaymentCount = DB::table('pmb_applicants')->where('status', 'MENUNGGU_PEMBAYARAN')->count();
 

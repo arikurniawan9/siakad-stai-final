@@ -82,7 +82,7 @@ export default function CoursesIndex({ studyPrograms = [], selectedProgramId = n
                     )}
                 </div>
 
-                {/* Filter Selector Bar: Program Studi (Auto Fetch) */}
+                {/* Filter Selector Bar: Program Studi */}
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
                     <div className="flex flex-col md:flex-row items-center gap-3">
                         <div className="flex items-center space-x-1.5 shrink-0 md:w-36">
@@ -97,18 +97,14 @@ export default function CoursesIndex({ studyPrograms = [], selectedProgramId = n
                                 onChange={(e) => handleProgramChange(e.target.value)}
                                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
                             >
-                                <option value="">-- Pilih Program Studi (Otomatis Muncul) --</option>
+                                <option value="">-- Pilih Program Studi --</option>
                                 {studyPrograms.map((p) => (
                                     <option key={p.id} value={p.id}>
-                                        {p.national_code ? `${p.national_code} - ` : ''}{p.name} {p.degree ? `(${p.degree})` : ''}
+                                        {p.code} - {p.name} {p.degree ? `(${p.degree})` : ''}
                                     </option>
                                 ))}
                             </select>
                         </div>
-                        <span className="hidden md:inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 shrink-0">
-                            <Sparkles className="w-3 h-3 text-emerald-500" />
-                            <span>Otomatis Dimuat</span>
-                        </span>
                     </div>
                 </div>
 
@@ -119,7 +115,7 @@ export default function CoursesIndex({ studyPrograms = [], selectedProgramId = n
                             <div className="text-xs">
                                 <span className="text-slate-500 font-medium">Katalog Mata Kuliah untuk: </span>
                                 <strong className="text-slate-900 font-black">
-                                    {selectedProdiObj?.national_code ? `${selectedProdiObj.national_code} - ` : ''}
+                                    {selectedProdiObj?.code ? `${selectedProdiObj.code} - ` : ''}
                                     {selectedProdiObj?.name}
                                 </strong>
                             </div>

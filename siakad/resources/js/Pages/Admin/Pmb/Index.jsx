@@ -181,7 +181,7 @@ export default function PmbIndex({
                                         type="text"
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
-                                        placeholder="Cari nama, no. pendaftaran, NIK, atau asal sekolah..."
+                                        placeholder="Cari nama, ibu kandung, no. pendaftaran, NIK, NISN, atau asal sekolah..."
                                         className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                     />
                                 </div>
@@ -229,7 +229,7 @@ export default function PmbIndex({
                                             <th className="py-3 px-4">No. Pendaftaran</th>
                                             <th className="py-3 px-4">Nama Calon Mahasiswa</th>
                                             <th className="py-3 px-4">Pilihan Prodi & Jalur</th>
-                                            <th className="py-3 px-4">Asal Sekolah</th>
+                                            <th className="py-3 px-4">Asal Sekolah & NISN</th>
                                             <th className="py-3 px-4">VA BSI (992801)</th>
                                             <th className="py-3 px-4 text-center">Status PMB</th>
                                             <th className="py-3 px-4 text-right">Aksi Kelola</th>
@@ -256,6 +256,9 @@ export default function PmbIndex({
                                                         <td className="py-3 px-4">
                                                             <p className="font-black text-slate-900">{app.full_name}</p>
                                                             <p className="text-[11px] font-mono text-slate-500">NIK: {app.nik} • {app.phone_number}</p>
+                                                            {app.mother_name && (
+                                                                <p className="text-[10px] text-slate-500 font-medium">Ibu: <span className="font-bold text-slate-700">{app.mother_name}</span></p>
+                                                            )}
                                                         </td>
                                                         <td className="py-3 px-4">
                                                             <p className="font-bold text-slate-800">{app.first_choice_name}</p>
@@ -264,7 +267,8 @@ export default function PmbIndex({
                                                             </span>
                                                         </td>
                                                         <td className="py-3 px-4 text-slate-600">
-                                                            {app.previous_school}
+                                                            <p className="font-bold text-slate-800">{app.previous_school}</p>
+                                                            <p className="text-[10px] font-mono text-slate-500">NISN: <span className="font-bold text-slate-700">{app.nisn || '-'}</span></p>
                                                         </td>
                                                         <td className="py-3 px-4">
                                                             <span className="font-mono font-bold text-slate-800">{app.va_number || '-'}</span>
