@@ -156,6 +156,14 @@ export default function AppLayout({ title, children }) {
                 activeItemBg: 'bg-cyan-950/40 text-cyan-200 border-l-2 border-cyan-400'
             };
         }
+        if (href.includes('/bsi-gateway')) {
+            return {
+                boxBg: isActive 
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30' 
+                    : 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30 group-hover:bg-emerald-500 group-hover:text-white',
+                activeItemBg: 'bg-emerald-950/40 text-emerald-200 border-l-2 border-emerald-400'
+            };
+        }
         if (href.includes('/finance') || href.includes('/student/bills')) {
             return {
                 boxBg: isActive 
@@ -255,18 +263,21 @@ export default function AppLayout({ title, children }) {
     // MENU KHUSUS SUPERADMIN (TIM DEVELOPER & SYSADMIN)
     const getSuperadminNav = () => [
         { label: 'Dasbor Developer', href: '/dashboard', icon: Activity },
-        { header: 'KESEHATAN & SISTEM' },
+        { header: 'PERBANKAN & BILLING BSI' },
         { label: 'BSI Smart Billing H2H', href: '/admin/bsi-gateway', icon: Landmark, highlight: true },
+        { label: 'Keuangan & Setup Tarif VA', href: '/admin/finance', icon: CreditCard },
+        { label: 'Penerimaan Mahasiswa (PMB)', href: '/admin/pmb', icon: UserCheck2 },
+        { header: 'KESEHATAN & DATABASE' },
         { label: 'Backup & Seeder Database', href: '/admin/database', icon: Database },
-        { label: 'Diagnostik Server & DB', href: '/admin/settings', icon: HardDrive },
-        { label: 'Keuangan, Setup Tarif & VA', href: '/admin/finance', icon: CreditCard },
-        { label: 'Integrasi SALAM LMS', href: '/admin/lms-sync', icon: RefreshCw },
-        { label: 'Neo Feeder PDDIKTI', href: '/admin/pddikti', icon: Database },
-        { label: 'Audit Log & Security', href: '/admin/audit-logs', icon: ShieldAlert },
-        { header: 'DATA CIVITAS & AUDIT' },
+        { label: 'Diagnostik Server & Sistem', href: '/admin/settings', icon: HardDrive },
+        { label: 'Audit Log & Keamanan', href: '/admin/audit-logs', icon: ShieldAlert },
+        { header: 'INTEGRASI SERVER & LMS' },
+        { label: 'Sinkronisasi SALAM LMS', href: '/admin/lms-sync', icon: RefreshCw },
+        { label: 'Neo Feeder PDDIKTI', href: '/admin/pddikti', icon: Server },
+        { header: 'DATA CIVITAS & PENGGUNA' },
+        { label: 'Semua Akun (Portal Menyamar)', href: '/admin/users', icon: ShieldCheck, highlight: true },
         { label: 'Data Mahasiswa', href: '/admin/students', icon: GraduationCap },
         { label: 'Data Dosen & Pengajar', href: '/admin/lecturers', icon: Users },
-        { label: 'Semua Akun (Portal Menyamar)', href: '/admin/users', icon: ShieldCheck, highlight: true },
         { header: 'STRUKTUR KURIKULUM' },
         { label: 'Program Studi & Fakultas', href: '/admin/study-programs', icon: GraduationCap },
         { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
@@ -279,11 +290,10 @@ export default function AppLayout({ title, children }) {
         { label: 'Evaluasi Dosen (EDOM)', href: '/admin/edom', icon: Star },
         { label: 'Skrining Yudisium', href: '/admin/yudisium', icon: FileCheck },
         { label: 'Surat Keterangan Aktif', href: '/admin/letters', icon: FileText },
-        { header: 'PENGATURAN GLOBAL' },
+        { header: 'MASTER & FASILITAS' },
         { label: 'Master Gedung & Ruang', href: '/admin/facilities', icon: Building2 },
         { label: 'Plotting & Anti-Clash Jadwal', href: '/admin/schedules', icon: BookOpen },
         { label: 'Tahun & Periode Semester', href: '/admin/academic-periods', icon: School },
-        { label: 'Konfigurasi & Maintenance', href: '/admin/settings', icon: Settings },
     ];
 
     // MENU KHUSUS ADMIN (ADMIN BAAK / OPERASIONAL AKADEMIK)

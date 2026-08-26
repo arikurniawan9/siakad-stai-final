@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\YudisiumController;
 use App\Http\Controllers\Api\BsiVirtualAccountController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CaptchaController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\PmbController;
 use App\Http\Controllers\PublicVerificationController;
@@ -76,9 +77,7 @@ Route::post('/api/v1/lms/webhook', [LmsSyncController::class, 'receiveLmsWebhook
 // =========================================================================
 Route::middleware('auth')->group(function () {
     // Dashboard Utama
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Impersonation Engine (Mode Menyamar)
     Route::post('/impersonate/stop', [ImpersonationController::class, 'stopImpersonating'])->name('impersonate.stop');

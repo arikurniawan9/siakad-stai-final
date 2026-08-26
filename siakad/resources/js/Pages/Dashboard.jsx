@@ -12,12 +12,21 @@ import {
     Megaphone, TrendingUp, Award, FileCheck, Sliders, Send, Key, Landmark
 } from 'lucide-react';
 
-export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = [] }) {
+export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = [], recentBsiTransactions = [] }) {
     const { auth, academic } = usePage().props;
     const user = auth?.user || {};
     const role = user.role || 'mahasiswa';
     const [simulatingBsi, setSimulatingBsi] = useState(false);
     const [testingBsi, setTestingBsi] = useState(false);
+
+    // Format currency IDR
+    const formatRp = (val) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0
+        }).format(val || 0);
+    };
 
     // Dynamic Time Greeting (Pagi / Siang / Sore / Malam)
     const getTimeGreeting = () => {
@@ -141,13 +150,13 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                 </div>
                 {role === 'superadmin' && (
                     <>
-                        {/* Compact Header Banner Developer */}
+                        {/* 1. Header Banner Developer */}
                         <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-indigo-950 rounded-2xl p-4 sm:p-5 text-white shadow-md relative overflow-hidden border border-purple-800/40">
                             <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                 <div>
                                     <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-black mb-1">
                                         <Activity className="w-3 h-3 text-purple-400 animate-pulse" />
-                                        <span>PUSAT KONTROL DEVELOPER & PEMELIHARAAN</span>
+                                        <span>PUSAT KONTROL DEVELOPER & PEMELIHARAAN SISTEM</span>
                                     </div>
                                     <h2 className="text-base sm:text-lg font-black tracking-tight">
                                         {greeting.text}, Tim Developer ({user.name}) {greeting.emoji}
@@ -160,7 +169,7 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                 <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
                                     <Link
                                         href="/admin/bsi-gateway"
-                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1.5 cursor-pointer border border-emerald-400/40"
+                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1.5 cursor-pointer border border-emerald-400/40"
                                     >
                                         <Landmark className="w-3.5 h-3.5 text-emerald-300" />
                                         <span>🏦 BSI Smart Billing H2H</span>
@@ -172,15 +181,13 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                         <Database className="w-3 h-3" />
                                         <span>Backup & Seeder DB</span>
                                     </Link>
-                                    <button
-                                        type="button"
-                                        onClick={handleQuickTestBsi}
-                                        disabled={testingBsi}
-                                        className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1 cursor-pointer"
+                                    <Link
+                                        href="/admin/settings"
+                                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1 border border-slate-700"
                                     >
-                                        <Radio className={`w-3 h-3 ${testingBsi ? 'animate-spin' : ''}`} />
-                                        <span>{testingBsi ? 'Menguji...' : 'Uji BSI H2H'}</span>
-                                    </button>
+                                        <HardDrive className="w-3 h-3 text-cyan-400" />
+                                        <span>Diagnostik</span>
+                                    </Link>
                                     <Link
                                         href="/admin/users"
                                         className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg text-[11px] font-black transition shadow flex items-center space-x-1"
@@ -191,65 +198,125 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                             </div>
                         </div>
 
-                        {/* Telemetry Health Grid (Compact) */}
+                        {/* 2. Statistik Utama Kampus & Perbankan (6 KPI Cards) */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-[10px] font-bold">Mahasiswa</span>
+                                    <span className="p-1 rounded-lg bg-teal-50 text-teal-700"><GraduationCap className="w-3.5 h-3.5" /></span>
+                                </div>
+                                <p className="text-lg font-black text-slate-900 mt-1">{stats.total_students ?? 1248}</p>
+                                <p className="text-[9px] text-teal-600 font-semibold mt-0.5">Siswa Terdaftar</p>
+                            </div>
+
+                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-[10px] font-bold">Dosen Pengajar</span>
+                                    <span className="p-1 rounded-lg bg-indigo-50 text-indigo-700"><Users className="w-3.5 h-3.5" /></span>
+                                </div>
+                                <p className="text-lg font-black text-slate-900 mt-1">{stats.total_lecturers ?? 42}</p>
+                                <p className="text-[9px] text-indigo-600 font-semibold mt-0.5">Tenaga Pengajar</p>
+                            </div>
+
+                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-[10px] font-bold">Program Studi</span>
+                                    <span className="p-1 rounded-lg bg-purple-50 text-purple-700"><School className="w-3.5 h-3.5" /></span>
+                                </div>
+                                <p className="text-lg font-black text-slate-900 mt-1">{stats.total_study_programs ?? 5}</p>
+                                <p className="text-[9px] text-purple-600 font-semibold mt-0.5">Jurusan S1 Aktif</p>
+                            </div>
+
+                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-[10px] font-bold">Penerimaan VA BSI</span>
+                                    <span className="p-1 rounded-lg bg-emerald-50 text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" /></span>
+                                </div>
+                                <p className="text-sm font-black text-emerald-600 mt-1 font-mono truncate">{formatRp(stats.total_va_paid_amount ?? 2500000)}</p>
+                                <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">{stats.total_va_paid_count ?? 1} Setoran Lunas</p>
+                            </div>
+
+                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-[10px] font-bold">Tagihan Pending</span>
+                                    <span className="p-1 rounded-lg bg-amber-50 text-amber-700"><Clock className="w-3.5 h-3.5" /></span>
+                                </div>
+                                <p className="text-sm font-black text-amber-600 mt-1 font-mono truncate">{formatRp(stats.total_va_pending_amount ?? 0)}</p>
+                                <p className="text-[9px] text-amber-600 font-semibold mt-0.5">{stats.total_va_pending_count ?? 0} VA Menunggu</p>
+                            </div>
+
+                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-[10px] font-bold">Pendaftar PMB</span>
+                                    <span className="p-1 rounded-lg bg-cyan-50 text-cyan-700"><UserCheck2 className="w-3.5 h-3.5" /></span>
+                                </div>
+                                <p className="text-lg font-black text-slate-900 mt-1">{stats.total_pmb_applicants ?? 2}</p>
+                                <p className="text-[9px] text-cyan-600 font-semibold mt-0.5">PMB 2026/2027</p>
+                            </div>
+                        </div>
+
+                        {/* 3. Telemetry Health Grid (Compact) */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             {/* DB Health */}
                             <Link 
                                 href="/admin/database"
-                                className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs hover:border-indigo-400 hover:bg-indigo-50/30 transition group block"
+                                className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs hover:border-indigo-400 hover:bg-indigo-50/30 transition group block"
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-bold text-slate-500 group-hover:text-indigo-900">Database Engine</span>
                                     <span className="p-1 bg-emerald-100 text-emerald-800 rounded-md group-hover:bg-indigo-100 group-hover:text-indigo-800"><Database className="w-3.5 h-3.5" /></span>
                                 </div>
-                                <p className="text-sm font-black text-slate-900 mt-1.5 group-hover:text-indigo-950">PostgreSQL 16</p>
+                                <p className="text-sm font-black text-slate-900 mt-1 group-hover:text-indigo-950">{systemMetrics.db_engine || 'PostgreSQL 16'}</p>
                                 <p className="text-[10px] font-semibold text-emerald-600 flex items-center space-x-1 mt-0.5">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span>Backup & Seeder Ready ⚙️</span>
+                                    <span>Kapasitas: {systemMetrics.db_size || '14.2 MB'} ⚙️</span>
                                 </p>
                             </Link>
 
                             {/* BSI Smart Billing Gateway Health */}
                             <Link 
                                 href="/admin/bsi-gateway"
-                                className="bg-white p-3 rounded-xl border border-emerald-200 shadow-2xs hover:border-emerald-400 hover:bg-emerald-50/40 transition group block"
+                                className="bg-white p-3.5 rounded-2xl border border-emerald-200 shadow-2xs hover:border-emerald-400 hover:bg-emerald-50/40 transition group block"
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-bold text-slate-500 group-hover:text-emerald-900">BSI Smart Billing</span>
                                     <span className="p-1 bg-emerald-100 text-emerald-800 rounded-md group-hover:bg-emerald-200"><Landmark className="w-3.5 h-3.5" /></span>
                                 </div>
-                                <p className="text-sm font-black text-slate-900 mt-1.5 group-hover:text-emerald-950">BI-SNAP (H2H Direct)</p>
+                                <p className="text-sm font-black text-slate-900 mt-1 group-hover:text-emerald-950">BI-SNAP (H2H Direct)</p>
                                 <p className="text-[10px] font-semibold text-emerald-600 flex items-center space-x-1 mt-0.5">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span>Biller 8891 Sandbox Active ⚙️</span>
+                                    <span>{systemMetrics.bsi_biller_code || 'Biller 8891 Sandbox Active'}</span>
                                 </p>
                             </Link>
 
                             {/* LMS Health */}
-                            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                            <Link
+                                href="/admin/lms-sync"
+                                className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs hover:border-purple-300 hover:bg-purple-50/30 transition group block"
+                            >
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500">SALAM LMS Gateway</span>
-                                    <span className="p-1 bg-purple-100 text-purple-800 rounded-md"><RefreshCw className="w-3.5 h-3.5" /></span>
+                                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-purple-900">SALAM LMS Gateway</span>
+                                    <span className="p-1 bg-purple-100 text-purple-800 rounded-md group-hover:bg-purple-200"><RefreshCw className="w-3.5 h-3.5" /></span>
                                 </div>
-                                <p className="text-sm font-black text-slate-900 mt-1.5">Port 5000 (Node)</p>
+                                <p className="text-sm font-black text-slate-900 mt-1 group-hover:text-purple-950">Node.js Express Bridge</p>
                                 <p className="text-[10px] font-semibold text-purple-600 flex items-center space-x-1 mt-0.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                                    <span>Sync Bridge Active</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
+                                    <span>Port 5000 Sync Active</span>
                                 </p>
-                            </div>
+                            </Link>
 
                             {/* Runtime Engine */}
-                            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500">Framework</span>
+                                    <span className="text-[10px] font-bold text-slate-500">Framework Runtime</span>
                                     <span className="p-1 bg-amber-100 text-amber-800 rounded-md"><Cpu className="w-3.5 h-3.5" /></span>
                                 </div>
-                                <p className="text-sm font-black text-slate-900 mt-1.5">Laravel 13 + PHP 8.4</p>
-                                <p className="text-[10px] font-semibold text-slate-500 mt-0.5">Inertia.js React SPA</p>
+                                <p className="text-sm font-black text-slate-900 mt-1">Laravel 13 • PHP {systemMetrics.php_version || '8.4'}</p>
+                                <p className="text-[10px] font-semibold text-slate-500 mt-0.5">Memori: {systemMetrics.server_memory || '24.5 MB'}</p>
                             </div>
                         </div>
 
-                        {/* BSI SMART BILLING & BI-SNAP H2H GATEWAY CONTROL CARD (SUPERADMIN ONLY) */}
+                        {/* 4. BSI SMART BILLING & BI-SNAP H2H GATEWAY CONTROL CARD */}
                         <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 p-4 sm:p-5 rounded-2xl border border-emerald-800/50 shadow-sm text-white space-y-3">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-900/60 pb-2.5">
                                 <div className="flex items-center space-x-2">
@@ -257,19 +324,21 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                         <Landmark className="w-4 h-4 text-emerald-400" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center space-x-2">
-                                            <span>Pusat Integrasi Bank Syariah Indonesia (BSI) Smart Billing</span>
+                                        <div className="flex items-center space-x-2">
+                                            <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                                                Pusat Integrasi Bank Syariah Indonesia (BSI) Smart Billing
+                                            </h3>
                                             <span className="px-2 py-0.2 bg-amber-400 text-slate-950 rounded text-[9px] font-black">
                                                 BI-SNAP Direct H2H
                                             </span>
-                                        </h3>
+                                        </div>
                                         <p className="text-[10px] text-emerald-200 mt-0.5">
-                                            Koneksi langsung Host-to-Host (H2H) dengan core banking BSI. Mendukung otentikasi BI-SNAP Service Code 73, inquiry otomatis Service Code 24, push callback pelunasan Service Code 25, dan saldo rekening giro penampung.
+                                            Koneksi langsung Host-to-Host (H2H) dengan core banking BSI. Otentikasi Service Code 73, inquiry otomatis Code 24, push callback pelunasan Code 25, dan rekening giro penampung.
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 shrink-0">
                                     <button
                                         type="button"
                                         onClick={handleQuickTestBsi}
@@ -284,7 +353,7 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                         className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold transition shadow flex items-center space-x-1 cursor-pointer"
                                     >
                                         <Sliders className="w-3 h-3" />
-                                        <span>Buka Pusat Kontrol BSI →</span>
+                                        <span>Pusat Kontrol BSI →</span>
                                     </Link>
                                 </div>
                             </div>
@@ -303,173 +372,344 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                     <p className="font-bold text-white mt-0.5 truncate">Zone-A (NTT / Telkom)</p>
                                 </div>
                                 <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                                    <span className="text-slate-400">H2H Inbound Endpoint:</span>
+                                    <span className="text-slate-400">Inbound Endpoints:</span>
                                     <p className="font-mono text-[9px] text-emerald-300 mt-0.5 truncate">/api/v1/bsi/va/inquiry & payment</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 1-CLICK ROLE IMPERSONATION HUB (COMPACT) */}
-                        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-purple-200 shadow-2xs space-y-3">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-100 pb-2">
-                                <div className="flex items-center space-x-1.5">
-                                    <span className="text-base">🎭</span>
-                                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                        Portal Uji Coba Mode Menyamar (Role Impersonation)
-                                    </h3>
+                        {/* 5. DUA KOLOM UTAMA SUPERADMIN: NAVIGASI MODUL & AUDIT TRAIL */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                            {/* KOLOM KIRI (LEBAR 8): MODUL AKSES CEPAT & TRANSAKSI VA TERKINI */}
+                            <div className="lg:col-span-8 space-y-4">
+                                {/* Grid Akses Cepat Modul Superadmin */}
+                                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3.5">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center space-x-1.5">
+                                            <Sliders className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>Pusat Manajemen & Modul Superadmin</span>
+                                        </h3>
+                                        <span className="text-[10px] text-slate-400 font-semibold">Tersusun Berdasarkan Kategori</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {/* Kategori 1: Perbankan & Kas */}
+                                        <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200/80 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-emerald-950 flex items-center space-x-1.5">
+                                                    <Landmark className="w-3.5 h-3.5 text-emerald-600" />
+                                                    <span>Perbankan & Kas Kampus</span>
+                                                </span>
+                                            </div>
+                                            <div className="space-y-1 text-xs">
+                                                <Link href="/admin/bsi-gateway" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-emerald-100/70 text-emerald-900 font-medium transition">
+                                                    <span>🏦 Pusat BSI Smart Billing H2H</span>
+                                                    <ChevronRight className="w-3 h-3 text-emerald-600" />
+                                                </Link>
+                                                <Link href="/admin/finance" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-emerald-100/70 text-emerald-900 font-medium transition">
+                                                    <span>💳 Setup Tarif SPP, UKT & VA</span>
+                                                    <ChevronRight className="w-3 h-3 text-emerald-600" />
+                                                </Link>
+                                                <Link href="/admin/pmb" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-emerald-100/70 text-emerald-900 font-medium transition">
+                                                    <span>📝 Verifikasi Keuangan PMB</span>
+                                                    <ChevronRight className="w-3 h-3 text-emerald-600" />
+                                                </Link>
+                                            </div>
+                                        </div>
+
+                                        {/* Kategori 2: Kesehatan & Database */}
+                                        <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200/80 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-indigo-950 flex items-center space-x-1.5">
+                                                    <Database className="w-3.5 h-3.5 text-indigo-600" />
+                                                    <span>Kesehatan & Keamanan Sistem</span>
+                                                </span>
+                                            </div>
+                                            <div className="space-y-1 text-xs">
+                                                <Link href="/admin/database" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
+                                                    <span>💾 Backup, Restore & Seeder DB</span>
+                                                    <ChevronRight className="w-3 h-3 text-indigo-600" />
+                                                </Link>
+                                                <Link href="/admin/settings" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
+                                                    <span>⚙️ Diagnostik & Maintenance Mode</span>
+                                                    <ChevronRight className="w-3 h-3 text-indigo-600" />
+                                                </Link>
+                                                <Link href="/admin/audit-logs" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
+                                                    <span>🛡️ Visual Audit Log & Security</span>
+                                                    <ChevronRight className="w-3 h-3 text-indigo-600" />
+                                                </Link>
+                                            </div>
+                                        </div>
+
+                                        {/* Kategori 3: Integrasi Eksternal */}
+                                        <div className="p-3.5 rounded-xl bg-purple-50/60 border border-purple-200/80 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-purple-950 flex items-center space-x-1.5">
+                                                    <RefreshCw className="w-3.5 h-3.5 text-purple-600" />
+                                                    <span>Integrasi Eksternal & Feeder</span>
+                                                </span>
+                                            </div>
+                                            <div className="space-y-1 text-xs">
+                                                <Link href="/admin/lms-sync" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-purple-100/70 text-purple-900 font-medium transition">
+                                                    <span>💻 Bridge Sinkronisasi SALAM LMS</span>
+                                                    <ChevronRight className="w-3 h-3 text-purple-600" />
+                                                </Link>
+                                                <Link href="/admin/pddikti" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-purple-100/70 text-purple-900 font-medium transition">
+                                                    <span>🏛️ Integrasi Neo Feeder PDDIKTI</span>
+                                                    <ChevronRight className="w-3 h-3 text-purple-600" />
+                                                </Link>
+                                            </div>
+                                        </div>
+
+                                        {/* Kategori 4: Civitas & Kurikulum */}
+                                        <div className="p-3.5 rounded-xl bg-teal-50/60 border border-teal-200/80 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-teal-950 flex items-center space-x-1.5">
+                                                    <GraduationCap className="w-3.5 h-3.5 text-teal-600" />
+                                                    <span>Civitas & Manajemen Studi</span>
+                                                </span>
+                                            </div>
+                                            <div className="space-y-1 text-xs">
+                                                <Link href="/admin/users" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-teal-100/70 text-teal-900 font-medium transition">
+                                                    <span>👥 Semua Akun Pengguna Civitas</span>
+                                                    <ChevronRight className="w-3 h-3 text-teal-600" />
+                                                </Link>
+                                                <Link href="/admin/curricula" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-teal-100/70 text-teal-900 font-medium transition">
+                                                    <span>📚 Master Kurikulum & Matakuliah</span>
+                                                    <ChevronRight className="w-3 h-3 text-teal-600" />
+                                                </Link>
+                                                <Link href="/admin/schedules" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-teal-100/70 text-teal-900 font-medium transition">
+                                                    <span>📅 Plotting Jadwal Anti-Bentrok</span>
+                                                    <ChevronRight className="w-3 h-3 text-teal-600" />
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <Link href="/admin/users" className="text-[11px] font-black text-purple-700 hover:underline">
-                                    Semua Pengguna →
-                                </Link>
+
+                                {/* Transaksi Virtual Account BSI Terkini */}
+                                <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+                                    <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center space-x-1.5">
+                                            <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>Transaksi Virtual Account BSI Terkini</span>
+                                        </h3>
+                                        <Link href="/admin/bsi-gateway" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center space-x-1">
+                                            <span>Lihat Semua Transaksi</span>
+                                            <ChevronRight className="w-3 h-3" />
+                                        </Link>
+                                    </div>
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px]">
+                                                <tr>
+                                                    <th className="px-4 py-2.5">No. VA BSI</th>
+                                                    <th className="px-4 py-2.5">Mahasiswa / Pendaftar</th>
+                                                    <th className="px-4 py-2.5">Pos Tagihan</th>
+                                                    <th className="px-4 py-2.5">Nominal</th>
+                                                    <th className="px-4 py-2.5">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {recentBsiTransactions && recentBsiTransactions.length > 0 ? (
+                                                    recentBsiTransactions.map((tx) => (
+                                                        <tr key={tx.id} className="hover:bg-slate-50/70 transition">
+                                                            <td className="px-4 py-2.5 font-mono font-bold text-slate-900">
+                                                                {tx.va_number}
+                                                            </td>
+                                                            <td className="px-4 py-2.5">
+                                                                <p className="font-bold text-slate-900">{tx.customer_name}</p>
+                                                            </td>
+                                                            <td className="px-4 py-2.5 text-slate-600">
+                                                                {tx.fee_name}
+                                                            </td>
+                                                            <td className="px-4 py-2.5 font-mono font-bold text-slate-900">
+                                                                {formatRp(tx.amount)}
+                                                            </td>
+                                                            <td className="px-4 py-2.5">
+                                                                {tx.status === 'PAID' ? (
+                                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                                                                        LUNAS
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                                                                        PENDING
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={5} className="px-4 py-6 text-center text-slate-400 italic">
+                                                            Belum ada data transaksi VA BSI tercatat.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                                <button
-                                    type="button"
-                                    onClick={() => openImpersonateModal({
-                                        id: 2,
-                                        name: 'Budi Santoso, S.Kom',
-                                        role: 'admin_akademik',
-                                        identity_number: '198504122010011002',
-                                        username: 'adminakademik',
-                                        email: 'budi.santoso@staialittihad.ac.id',
-                                        study_program: 'Biro Administrasi Akademik (BAAK)',
-                                    })}
-                                    className="p-2.5 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
-                                >
-                                    <div>
-                                        <p className="font-bold text-[11px] text-slate-900 group-hover:text-blue-900">🏛️ Admin BAAK</p>
-                                        <p className="text-[10px] text-slate-500 font-mono">adminakademik • Budi</p>
+                            {/* KOLOM KANAN (LEBAR 4): PORTAL MENYAMAR & AUDIT LOG FEED */}
+                            <div className="lg:col-span-4 space-y-4">
+                                {/* 1-Click Role Impersonation Hub */}
+                                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-purple-200 shadow-2xs space-y-3">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                        <div className="flex items-center space-x-1.5">
+                                            <span className="text-base">🎭</span>
+                                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                                Mode Menyamar (Impersonate)
+                                            </h3>
+                                        </div>
+                                        <Link href="/admin/users" className="text-[10px] font-bold text-purple-700 hover:underline">
+                                            Semua Akun →
+                                        </Link>
                                     </div>
-                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px] font-bold">Menyamar</span>
-                                </button>
 
-                                <button
-                                    type="button"
-                                    onClick={() => openImpersonateModal({
-                                        id: 3,
-                                        name: 'H. Ridwan Kamil, S.E.',
-                                        role: 'keuangan',
-                                        identity_number: '198203152008011003',
-                                        username: 'keuangan',
-                                        email: 'keuangan@staialittihad.ac.id',
-                                        study_program: 'Biro Keuangan & Perbankan BSI',
-                                    })}
-                                    className="p-2.5 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
-                                >
-                                    <div>
-                                        <p className="font-bold text-[11px] text-slate-900 group-hover:text-emerald-900">💳 Biro Keuangan</p>
-                                        <p className="text-[10px] text-slate-500 font-mono">keuangan • Ridwan</p>
+                                    <div className="space-y-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => openImpersonateModal({
+                                                id: 2,
+                                                name: 'Budi Santoso, S.Kom',
+                                                role: 'admin_akademik',
+                                                identity_number: '198504122010011002',
+                                                username: 'adminakademik',
+                                                email: 'budi.santoso@staialittihad.ac.id',
+                                                study_program: 'Biro Administrasi Akademik (BAAK)',
+                                            })}
+                                            className="w-full p-2 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
+                                        >
+                                            <div>
+                                                <p className="font-bold text-[11px] text-slate-900 group-hover:text-blue-900">🏛️ Admin BAAK</p>
+                                                <p className="text-[9px] text-slate-500 font-mono">adminakademik</p>
+                                            </div>
+                                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px] font-bold">Masuk</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => openImpersonateModal({
+                                                id: 3,
+                                                name: 'H. Ridwan Kamil, S.E.',
+                                                role: 'keuangan',
+                                                identity_number: '198203152008011003',
+                                                username: 'keuangan',
+                                                email: 'keuangan@staialittihad.ac.id',
+                                                study_program: 'Biro Keuangan & Perbankan BSI',
+                                            })}
+                                            className="w-full p-2 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
+                                        >
+                                            <div>
+                                                <p className="font-bold text-[11px] text-slate-900 group-hover:text-emerald-900">💳 Biro Keuangan</p>
+                                                <p className="text-[9px] text-slate-500 font-mono">keuangan</p>
+                                            </div>
+                                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[9px] font-bold">Masuk</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => openImpersonateModal({
+                                                id: 4,
+                                                name: "Dr. Ahmad Syafi'i, M.Ag",
+                                                role: 'kaprodi',
+                                                identity_number: '2118097201',
+                                                username: '2118097201',
+                                                email: 'kaprodi.pai@staialittihad.ac.id',
+                                                study_program: 'Program Studi S1 PAI',
+                                            })}
+                                            className="w-full p-2 bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
+                                        >
+                                            <div>
+                                                <p className="font-bold text-[11px] text-slate-900 group-hover:text-purple-900">🎓 Kaprodi PAI</p>
+                                                <p className="text-[9px] text-slate-500 font-mono">2118097201</p>
+                                            </div>
+                                            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded text-[9px] font-bold">Masuk</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => openImpersonateModal({
+                                                id: 5,
+                                                name: 'Dra. Hj. Siti Maryam, M.Pd.I',
+                                                role: 'dosen_pa',
+                                                identity_number: '2115047802',
+                                                username: '2115047802',
+                                                email: 'siti.maryam.pa@staialittihad.ac.id',
+                                                study_program: 'Fakultas Tarbiyah (Dosen PA)',
+                                            })}
+                                            className="w-full p-2 bg-slate-50 hover:bg-amber-50 hover:border-amber-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
+                                        >
+                                            <div>
+                                                <p className="font-bold text-[11px] text-slate-900 group-hover:text-amber-900">📋 Dosen PA</p>
+                                                <p className="text-[9px] text-slate-500 font-mono">2115047802</p>
+                                            </div>
+                                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-bold">Masuk</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => openImpersonateModal({
+                                                id: 7,
+                                                name: 'Ahmad Fauzi Rahman',
+                                                role: 'mahasiswa',
+                                                identity_number: '21.01.0042',
+                                                username: '21010042',
+                                                email: 'ahmad.fauzi@staialittihad.ac.id',
+                                                study_program: 'Pendidikan Agama Islam (S1)',
+                                            })}
+                                            className="w-full p-2 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
+                                        >
+                                            <div>
+                                                <p className="font-bold text-[11px] text-slate-900 group-hover:text-indigo-900">👨‍🎓 Mahasiswa (S1 PAI)</p>
+                                                <p className="text-[9px] text-slate-500 font-mono">21010042</p>
+                                            </div>
+                                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[9px] font-bold">Masuk</span>
+                                        </button>
                                     </div>
-                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[9px] font-bold">Menyamar</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => openImpersonateModal({
-                                        id: 4,
-                                        name: "Dr. Ahmad Syafi'i, M.Ag",
-                                        role: 'kaprodi',
-                                        identity_number: '2118097201',
-                                        username: '2118097201',
-                                        email: 'kaprodi.pai@staialittihad.ac.id',
-                                        study_program: 'Program Studi S1 PAI',
-                                    })}
-                                    className="p-2.5 bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
-                                >
-                                    <div>
-                                        <p className="font-bold text-[11px] text-slate-900 group-hover:text-purple-900">🎓 Kaprodi PAI</p>
-                                        <p className="text-[10px] text-slate-500 font-mono">2118097201 • Dr. Ahmad</p>
-                                    </div>
-                                    <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded text-[9px] font-bold">Menyamar</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => openImpersonateModal({
-                                        id: 5,
-                                        name: 'Dra. Hj. Siti Maryam, M.Pd.I',
-                                        role: 'dosen_pa',
-                                        identity_number: '2115047802',
-                                        username: '2115047802',
-                                        email: 'siti.maryam.pa@staialittihad.ac.id',
-                                        study_program: 'Fakultas Tarbiyah (Dosen Wali PA)',
-                                    })}
-                                    className="p-2.5 bg-slate-50 hover:bg-amber-50 hover:border-amber-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
-                                >
-                                    <div>
-                                        <p className="font-bold text-[11px] text-slate-900 group-hover:text-amber-900">📋 Dosen PA</p>
-                                        <p className="text-[10px] text-slate-500 font-mono">2115047802 • Dra. Siti</p>
-                                    </div>
-                                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-bold">Menyamar</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => openImpersonateModal({
-                                        id: 6,
-                                        name: 'Dr. H. M. Ridwan, M.Ag',
-                                        role: 'dosen',
-                                        identity_number: '2112087501',
-                                        username: '2112087501',
-                                        email: 'm.ridwan@staialittihad.ac.id',
-                                        study_program: 'Fakultas Tarbiyah / PAI',
-                                    })}
-                                    className="p-2.5 bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
-                                >
-                                    <div>
-                                        <p className="font-bold text-[11px] text-slate-900 group-hover:text-teal-900">👨‍🏫 Dosen Pengampu</p>
-                                        <p className="text-[10px] text-slate-500 font-mono">2112087501 • Dr. Ridwan</p>
-                                    </div>
-                                    <span className="px-2 py-0.5 bg-teal-100 text-teal-800 rounded text-[9px] font-bold">Menyamar</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => openImpersonateModal({
-                                        id: 7,
-                                        name: 'Ahmad Fauzi Rahman',
-                                        role: 'mahasiswa',
-                                        identity_number: '21.01.0042',
-                                        username: '21010042',
-                                        email: 'ahmad.fauzi@staialittihad.ac.id',
-                                        study_program: 'Pendidikan Agama Islam (S1)',
-                                    })}
-                                    className="p-2.5 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
-                                >
-                                    <div>
-                                        <p className="font-bold text-[11px] text-slate-900 group-hover:text-indigo-900">👨‍🎓 Mahasiswa (S1 PAI)</p>
-                                        <p className="text-[10px] text-slate-500 font-mono">21010042 • Ahmad Fauzi</p>
-                                    </div>
-                                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[9px] font-bold">Menyamar</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* AUDIT & ERROR LIVE TRACKER (COMPACT) */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                                <h3 className="text-xs font-black text-slate-900 uppercase">
-                                    Diagnostik Sistem Realtime
-                                </h3>
-                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                                    <span>Live</span>
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-[11px]">
-                                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                                    <p className="font-bold text-slate-700">Audit Log Terakhir</p>
-                                    <p className="text-[10px] text-slate-500 mt-0.5">✓ Login Superadmin (127.0.0.1)</p>
                                 </div>
-                                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                                    <p className="font-bold text-slate-700">Webhook VA BSI</p>
-                                    <p className="text-[10px] text-emerald-700 font-bold mt-0.5">✓ SHA256 Signature Valid</p>
-                                </div>
-                                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                                    <p className="font-bold text-slate-700">Status Error</p>
-                                    <p className="text-[10px] text-emerald-600 font-bold mt-0.5">✓ 0 Critical Error</p>
+
+                                {/* Live Activity & Audit Trail */}
+                                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2.5">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                        <h3 className="text-xs font-black text-slate-900 uppercase flex items-center space-x-1.5">
+                                            <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
+                                            <span>Aktivitas Sistem & Audit Trail</span>
+                                        </h3>
+                                        <Link href="/admin/audit-logs" className="text-[10px] font-bold text-slate-500 hover:text-slate-800">
+                                            Semua Log →
+                                        </Link>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {auditFeed && auditFeed.length > 0 ? (
+                                            auditFeed.map((item) => (
+                                                <div key={item.id} className="p-2 rounded-xl bg-slate-50 border border-slate-100 text-[10px] space-y-0.5">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-bold text-slate-800 truncate max-w-[120px]">
+                                                            {item.user_name || 'System / Guest'}
+                                                        </span>
+                                                        <span className="text-[9px] font-mono text-slate-400">
+                                                            {item.created_at}
+                                                        </span>
+                                                    </div>
+                                                    <p className="font-mono text-emerald-700 font-semibold truncate">
+                                                        {item.action}
+                                                    </p>
+                                                    <p className="text-slate-400 text-[9px]">
+                                                        IP: {item.ip_address || '127.0.0.1'} • {item.target_entity || 'System'}
+                                                    </p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-3 bg-slate-50 rounded-lg text-center text-slate-400 text-[10px]">
+                                                Belum ada rekam audit baru.
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
