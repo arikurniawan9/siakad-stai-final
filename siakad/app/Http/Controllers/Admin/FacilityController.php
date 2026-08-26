@@ -13,6 +13,72 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class FacilityController extends Controller
 {
     /**
+     * Master Data Tipe Ruangan Resmi (Standar PDDIKTI / Feeder)
+     */
+    public const ROOM_TYPES = [
+        '1' => 'Kuliah',
+        '2' => 'Laboratorium',
+        '3' => 'Studio',
+        '4' => 'Perpustakaan',
+        '5' => 'Dosen',
+        '6' => 'Administrasi/Kantor',
+        '7' => 'Seminar',
+        '8' => 'Gudang/Alat',
+        '9' => 'Kantin',
+        '10' => 'Ibadah',
+        '11' => 'Parkir',
+        '12' => 'Senat',
+        '13' => 'Hall/Lobby',
+        '14' => 'Bengkel/Workshop/Reparasi',
+        '15' => 'Dapur/Pantry',
+        '16' => 'Pengelola/Resepsionis',
+        '17' => 'Koridor/Selasar/Teras',
+        '18' => 'Tangga',
+        '19' => 'Tamu',
+        '20' => 'Komputer',
+        '21' => 'Panggung/Stage',
+        '22' => 'Toilet/Lavatory',
+        '23' => 'Asisten',
+        '24' => 'Praktikum',
+        '25' => 'Referensi/Buku/Literatur',
+        '26' => 'Ketua/Kepala',
+        '27' => 'Wakil',
+        '28' => 'Sekretaris',
+        '29' => 'Security/Kemanan/Satpam/Penjaga',
+        '30' => 'Garasi',
+        '31' => 'Istirahat/Tidur/Ganti',
+        '32' => 'Ahli',
+        '33' => 'Lift',
+        '34' => 'Koperasi',
+        '35' => 'Klinik/Kesehatan',
+        '36' => 'Ruang tak terdefinisi',
+        '37' => 'Di Luar Ruang',
+        '38' => 'Rapat',
+        '39' => 'Ujian Skripsi/Tesis/Disertasi',
+        '40' => 'Konseling',
+        '41' => 'Micro Teaching',
+        '42' => 'Unit Kegiatan Mahasiswa',
+    ];
+
+    /**
+     * Konversi kode tipe ruang ke nama label
+     */
+    public static function getRoomTypeName(?string $code): string
+    {
+        if (!$code) return 'Kuliah';
+        if (isset(self::ROOM_TYPES[$code])) {
+            return self::ROOM_TYPES[$code];
+        }
+        $legacy = [
+            'TEORI' => 'Kuliah',
+            'LAB_KOMPUTER' => 'Laboratorium',
+            'MICROTEACHING' => 'Micro Teaching',
+            'AUDITORIUM' => 'Seminar',
+        ];
+        return $legacy[$code] ?? $code;
+    }
+
+    /**
      * Tampilkan Daftar Gedung & Ruang Kelas dengan KPI & Pencarian
      */
     public function index(Request $request): Response
@@ -83,6 +149,7 @@ class FacilityController extends Controller
                 } else {
                     $r->facilities = [];
                 }
+                $r->room_type_name = self::getRoomTypeName($r->room_type);
                 return $r;
             });
 
@@ -96,6 +163,7 @@ class FacilityController extends Controller
         return Inertia::render('Admin/Facilities/Index', [
             'buildings' => $buildings,
             'rooms' => $rooms,
+            'roomTypes' => self::ROOM_TYPES,
             'stats' => [
                 'total_buildings' => $totalBuildings,
                 'total_rooms' => $totalRooms,
@@ -222,7 +290,8 @@ class FacilityController extends Controller
             'updated_at' => now(),
         ]);
 
-        return back()->with('success', "Ruang Kelas {$validated['name']} ({$validated['code']}) berhasil ditambahkan.");
+        $typeName = self::getRoomTypeName($validated['room_type']);
+        return back()->with('success', "Ruang {$validated['name']} ({$validated['code']} - {$typeName}) berhasil ditambahkan.");
     }
 
     /**
@@ -349,6 +418,7 @@ class FacilityController extends Controller
                 } else {
                     $r->facilities = [];
                 }
+                $r->room_type_name = self::getRoomTypeName($r->room_type);
                 return $r;
             });
 
@@ -357,6 +427,7 @@ class FacilityController extends Controller
         return Inertia::render('Admin/Facilities/Print', [
             'rooms' => $rooms,
             'buildings' => $buildings,
+            'roomTypes' => self::ROOM_TYPES,
             'activePeriod' => $activePeriod,
             'filters' => [
                 'building_id' => $buildingId,
@@ -414,6 +485,7 @@ class FacilityController extends Controller
                 } else {
                     $r->facilities = [];
                 }
+                $r->room_type_name = self::getRoomTypeName($r->room_type);
                 return $r;
             });
 
@@ -452,7 +524,7 @@ class FacilityController extends Controller
             echo '<th style="width:200px;">Nama Ruang Kelas</th>';
             echo '<th style="width:160px;">Gedung Kampus</th>';
             echo '<th style="width:70px;">Lantai</th>';
-            echo '<th style="width:130px;">Tipe Ruang</th>';
+            echo '<th style="width:140px;">Tipe Ruangan</th>';
             echo '<th style="width:100px;">Kapasitas Kuliah</th>';
             echo '<th style="width:100px;">Kapasitas Ujian</th>';
             echo '<th style="width:250px;">Fasilitas Ruang</th>';
@@ -473,7 +545,7 @@ class FacilityController extends Controller
                 echo "<td><strong>{$r->name}</strong></td>";
                 echo "<td>{$r->building_name} ({$r->building_code})</td>";
                 echo "<td class='text-center'>Lantai {$r->floor_number}</td>";
-                echo "<td class='text-center'>{$r->room_type}</td>";
+                echo "<td class='text-center'>{$r->room_type_name}</td>";
                 echo "<td class='text-center'>{$r->capacity} Kursi</td>";
                 echo "<td class='text-center'>{$r->exam_capacity} Kursi</td>";
                 echo "<td>{$facilitiesList}</td>";

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Printer, ArrowLeft, Download, Building2, QrCode, CheckCircle2, DoorOpen } from 'lucide-react';
+import { ROOM_TYPES, getRoomTypeName } from './Index';
 
 export default function FacilityPrint({ 
     rooms = [], 
@@ -117,11 +118,10 @@ export default function FacilityPrint({
                             onChange={(e) => handleFilterType(e.target.value)}
                             className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:bg-white"
                         >
-                            <option value="">Semua Tipe</option>
-                            <option value="TEORI">Teori Reguler</option>
-                            <option value="LAB_KOMPUTER">Lab Komputer / CBT</option>
-                            <option value="MICROTEACHING">Microteaching</option>
-                            <option value="AUDITORIUM">Auditorium / Aula</option>
+                            <option value="">Semua Tipe Ruang ({ROOM_TYPES.length})</option>
+                            {ROOM_TYPES.map((t) => (
+                                <option key={t.value} value={t.value}>{t.label}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -212,7 +212,7 @@ export default function FacilityPrint({
                                         <td className="py-2 px-2 text-center border-r border-slate-300 font-semibold text-slate-700">Lt. {r.floor_number}</td>
                                         <td className="py-2 px-2.5 text-center border-r border-slate-300">
                                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                                {r.room_type}
+                                                {r.room_type_name || getRoomTypeName(r.room_type)}
                                             </span>
                                         </td>
                                         <td className="py-2 px-2 text-center border-r border-slate-300 font-bold text-slate-900">{r.capacity}</td>

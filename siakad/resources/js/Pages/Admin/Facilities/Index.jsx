@@ -9,6 +9,72 @@ import {
     Eye, Power, Sparkles, MapPin, Armchair, GraduationCap
 } from 'lucide-react';
 
+export const ROOM_TYPES = [
+    { value: '1', label: 'Kuliah' },
+    { value: '2', label: 'Laboratorium' },
+    { value: '3', label: 'Studio' },
+    { value: '4', label: 'Perpustakaan' },
+    { value: '5', label: 'Dosen' },
+    { value: '6', label: 'Administrasi/Kantor' },
+    { value: '7', label: 'Seminar' },
+    { value: '8', label: 'Gudang/Alat' },
+    { value: '9', label: 'Kantin' },
+    { value: '10', label: 'Ibadah' },
+    { value: '11', label: 'Parkir' },
+    { value: '12', label: 'Senat' },
+    { value: '13', label: 'Hall/Lobby' },
+    { value: '14', label: 'Bengkel/Workshop/Reparasi' },
+    { value: '15', label: 'Dapur/Pantry' },
+    { value: '16', label: 'Pengelola/Resepsionis' },
+    { value: '17', label: 'Koridor/Selasar/Teras' },
+    { value: '18', label: 'Tangga' },
+    { value: '19', label: 'Tamu' },
+    { value: '20', label: 'Komputer' },
+    { value: '21', label: 'Panggung/Stage' },
+    { value: '22', label: 'Toilet/Lavatory' },
+    { value: '23', label: 'Asisten' },
+    { value: '24', label: 'Praktikum' },
+    { value: '25', label: 'Referensi/Buku/Literatur' },
+    { value: '26', label: 'Ketua/Kepala' },
+    { value: '27', label: 'Wakil' },
+    { value: '28', label: 'Sekretaris' },
+    { value: '29', label: 'Security/Kemanan/Satpam/Penjaga' },
+    { value: '30', label: 'Garasi' },
+    { value: '31', label: 'Istirahat/Tidur/Ganti' },
+    { value: '32', label: 'Ahli' },
+    { value: '33', label: 'Lift' },
+    { value: '34', label: 'Koperasi' },
+    { value: '35', label: 'Klinik/Kesehatan' },
+    { value: '36', label: 'Ruang tak terdefinisi' },
+    { value: '37', label: 'Di Luar Ruang' },
+    { value: '38', label: 'Rapat' },
+    { value: '39', label: 'Ujian Skripsi/Tesis/Disertasi' },
+    { value: '40', label: 'Konseling' },
+    { value: '41', label: 'Micro Teaching' },
+    { value: '42', label: 'Unit Kegiatan Mahasiswa' },
+];
+
+export const getRoomTypeName = (val) => {
+    if (!val) return 'Kuliah';
+    const match = ROOM_TYPES.find(t => String(t.value) === String(val) || t.label.toLowerCase() === String(val).toLowerCase());
+    if (match) return match.label;
+    if (val === 'TEORI') return 'Kuliah';
+    if (val === 'LAB_KOMPUTER') return 'Laboratorium';
+    if (val === 'MICROTEACHING') return 'Micro Teaching';
+    if (val === 'AUDITORIUM') return 'Seminar';
+    return val;
+};
+
+export const getRoomTypeBadgeClass = (val) => {
+    const str = String(val);
+    if (['1', 'Kuliah', 'TEORI'].includes(str)) return 'bg-emerald-50 text-emerald-800 border-emerald-300';
+    if (['2', '3', '20', '24', 'Laboratorium', 'Studio', 'Komputer', 'Praktikum'].includes(str)) return 'bg-blue-50 text-blue-800 border-blue-300';
+    if (['5', '6', '12', '26', '27', '28', '38', 'Dosen', 'Administrasi/Kantor', 'Rapat'].includes(str)) return 'bg-purple-50 text-purple-800 border-purple-300';
+    if (['7', '39', '41', 'Seminar', 'Ujian Skripsi/Tesis/Disertasi', 'Micro Teaching'].includes(str)) return 'bg-amber-50 text-amber-800 border-amber-300';
+    if (['4', '25', 'Perpustakaan', 'Referensi/Buku/Literatur'].includes(str)) return 'bg-teal-50 text-teal-800 border-teal-300';
+    return 'bg-slate-100 text-slate-700 border-slate-300';
+};
+
 export default function FacilitiesIndex({ 
     buildings = [], 
     rooms = [], 
@@ -57,7 +123,7 @@ export default function FacilitiesIndex({
         floor_number: 1,
         capacity: 35,
         exam_capacity: 20,
-        room_type: 'TEORI',
+        room_type: '1', // Default 1: Kuliah
         facilities: ['AC', 'Proyektor LCD', 'Whiteboard'],
         is_active: true,
     });
@@ -191,7 +257,7 @@ export default function FacilitiesIndex({
             floor_number: 1,
             capacity: 35,
             exam_capacity: 20,
-            room_type: 'TEORI',
+            room_type: '1', // Default: 1 (Kuliah)
             facilities: ['AC', 'Proyektor LCD', 'Whiteboard'],
             is_active: true,
         });
@@ -209,7 +275,7 @@ export default function FacilitiesIndex({
             floor_number: r.floor_number,
             capacity: r.capacity,
             exam_capacity: r.exam_capacity || Math.floor(r.capacity * 0.6),
-            room_type: r.room_type,
+            room_type: String(r.room_type || '1'),
             facilities: Array.isArray(r.facilities) ? r.facilities : [],
             is_active: Boolean(r.is_active),
         });
@@ -464,7 +530,7 @@ export default function FacilitiesIndex({
                                 </select>
                             </div>
 
-                            {/* Filter Tipe Ruangan */}
+                            {/* Filter Tipe Ruangan (42 Standar PDDIKTI) */}
                             <div>
                                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Tipe Ruangan:</label>
                                 <select
@@ -475,11 +541,10 @@ export default function FacilitiesIndex({
                                     }}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                                 >
-                                    <option value="">Semua Tipe Ruang</option>
-                                    <option value="TEORI">Teori Reguler</option>
-                                    <option value="LAB_KOMPUTER">Lab Komputer / CBT</option>
-                                    <option value="MICROTEACHING">Microteaching</option>
-                                    <option value="AUDITORIUM">Auditorium / Aula</option>
+                                    <option value="">Semua Tipe Ruang ({ROOM_TYPES.length})</option>
+                                    {ROOM_TYPES.map((t) => (
+                                        <option key={t.value} value={t.value}>{t.label}</option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -499,6 +564,7 @@ export default function FacilitiesIndex({
                                     <option value="2">Lantai 2</option>
                                     <option value="3">Lantai 3</option>
                                     <option value="4">Lantai 4</option>
+                                    <option value="5">Lantai 5</option>
                                 </select>
                             </div>
 
@@ -619,13 +685,8 @@ export default function FacilitiesIndex({
                                                             <span>{r.building_name} • Lantai {r.floor_number}</span>
                                                         </p>
                                                     </div>
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                                                        r.room_type === 'LAB_KOMPUTER' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                                                        r.room_type === 'AUDITORIUM' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
-                                                        r.room_type === 'MICROTEACHING' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                                                        'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                    }`}>
-                                                        {r.room_type}
+                                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border uppercase shadow-2xs ${getRoomTypeBadgeClass(r.room_type)}`}>
+                                                        {r.room_type_name || getRoomTypeName(r.room_type)}
                                                     </span>
                                                 </div>
 
@@ -664,15 +725,15 @@ export default function FacilitiesIndex({
                                                 <button
                                                     type="button"
                                                     onClick={() => handleToggleRoomStatus(r)}
-                                                    className={`px-2 py-1 rounded-lg text-[10px] font-black flex items-center space-x-1 transition cursor-pointer ${
+                                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center space-x-1 transition cursor-pointer ${
                                                         r.is_active
-                                                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                                                            : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                                                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                                                            : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
                                                     }`}
                                                     title="Klik untuk mengubah status operasional"
                                                 >
                                                     <Power className="w-3 h-3" />
-                                                    <span>{r.is_active ? 'Siap Pakai' : 'Perbaikan'}</span>
+                                                    <span>{r.is_active ? 'Siap Pakai' : 'Perawatan'}</span>
                                                 </button>
 
                                                 <div className="flex items-center space-x-1">
@@ -722,7 +783,7 @@ export default function FacilitiesIndex({
                                                 <th className="py-3 px-4">Nama Ruangan</th>
                                                 <th className="py-3 px-4">Gedung Kampus</th>
                                                 <th className="py-3 px-3 text-center">Lantai</th>
-                                                <th className="py-3 px-3 text-center">Tipe</th>
+                                                <th className="py-3 px-3 text-center">Tipe Ruangan</th>
                                                 <th className="py-3 px-3 text-center">Kuliah</th>
                                                 <th className="py-3 px-3 text-center">Ujian</th>
                                                 <th className="py-3 px-4">Fasilitas Inventaris</th>
@@ -739,8 +800,8 @@ export default function FacilitiesIndex({
                                                         <td className="py-3 px-4 text-slate-700">{r.building_name}</td>
                                                         <td className="py-3 px-3 text-center font-bold text-slate-700">Lt. {r.floor_number}</td>
                                                         <td className="py-3 px-3 text-center">
-                                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                                                {r.room_type}
+                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getRoomTypeBadgeClass(r.room_type)}`}>
+                                                                {r.room_type_name || getRoomTypeName(r.room_type)}
                                                             </span>
                                                         </td>
                                                         <td className="py-3 px-3 text-center font-black text-slate-900">{r.capacity} Kursi</td>
@@ -1083,10 +1144,9 @@ export default function FacilitiesIndex({
                                             onChange={(e) => roomForm.setData('room_type', e.target.value)}
                                             className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 font-bold"
                                         >
-                                            <option value="TEORI">Teori Reguler</option>
-                                            <option value="LAB_KOMPUTER">Lab Komputer / CBT</option>
-                                            <option value="MICROTEACHING">Microteaching</option>
-                                            <option value="AUDITORIUM">Auditorium / Aula</option>
+                                            {ROOM_TYPES.map((t) => (
+                                                <option key={t.value} value={t.value}>{t.label}</option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>
