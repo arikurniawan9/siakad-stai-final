@@ -478,120 +478,86 @@ export default function FacilitiesIndex({
                     </div>
                 </div>
 
-                {/* 2. Selector Pilih Gedung Kampus (Custom Premium Dropdown) */}
-                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center space-x-3.5">
-                        <div className="p-3 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-200/60 shadow-2xs">
-                            <Building2 className="w-6 h-6" />
+                {/* 2. Selector Pilih Gedung Kampus (Compact & Elegan) */}
+                <div className="bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center space-x-2.5">
+                        <div className="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100/80">
+                            <Building2 className="w-4 h-4" />
                         </div>
-                        <div>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                                Pilihan Gedung Kampus
-                            </span>
-                            <h3 className="text-base font-black text-slate-900 leading-snug">
-                                {activeBuildingObj ? `${activeBuildingObj.name}` : 'Silakan Pilih Gedung Kampus'}
-                            </h3>
+                        <div className="flex items-center space-x-2 flex-wrap">
+                            <span className="text-xs font-bold text-slate-700">Gedung Kampus:</span>
                             {activeBuildingObj ? (
-                                <p className="text-xs text-emerald-700 font-bold mt-0.5 flex items-center space-x-1.5">
-                                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span>{activeBuildingObj.code}</span>
-                                    <span>•</span>
-                                    <span>{activeBuildingObj.total_floors} Lantai</span>
-                                    <span>•</span>
-                                    <span>{rooms.length} Ruang Kelas Terdaftar</span>
-                                </p>
+                                <div className="inline-flex items-center space-x-1.5">
+                                    <span className="text-xs font-black text-slate-900">{activeBuildingObj.name}</span>
+                                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 border border-emerald-200">
+                                        {activeBuildingObj.code}
+                                    </span>
+                                    <span className="text-[11px] text-slate-500 font-medium">
+                                        ({activeBuildingObj.total_floors} Lt • {rooms.length} Ruang)
+                                    </span>
+                                </div>
                             ) : (
-                                <p className="text-xs text-slate-400 mt-0.5">
-                                    Pilih gedung untuk memuat seluruh denah ruang perkuliahan
-                                </p>
+                                <span className="text-xs text-slate-400 italic">Belum dipilih</span>
                             )}
                         </div>
                     </div>
 
-                    {/* Custom Dropdown Trigger & Popover */}
-                    <div ref={buildingDropdownRef} className="relative w-full sm:w-96">
+                    {/* Custom Compact Dropdown Trigger & Popover */}
+                    <div ref={buildingDropdownRef} className="relative w-full sm:w-72">
                         <button
                             type="button"
                             onClick={() => setIsBuildingDropdownOpen(prev => !prev)}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition shadow-2xs cursor-pointer text-left border ${
+                            className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition shadow-2xs cursor-pointer text-left border ${
                                 isBuildingDropdownOpen 
                                     ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-white' 
                                     : activeBuildingObj 
-                                        ? 'border-emerald-400/80 bg-emerald-50/40 hover:bg-emerald-50/70' 
-                                        : 'border-slate-300 bg-slate-50 hover:bg-slate-100/90'
+                                        ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 text-emerald-950 font-bold' 
+                                        : 'border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium'
                             }`}
                         >
-                            <div className="flex items-center space-x-3 truncate">
-                                <div className={`p-2 rounded-xl shrink-0 transition ${
-                                    activeBuildingObj ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-600'
-                                }`}>
-                                    <Building2 className="w-4 h-4" />
-                                </div>
-                                <div className="truncate">
-                                    {activeBuildingObj ? (
-                                        <div>
-                                            <div className="flex items-center space-x-2">
-                                                <span className="text-xs font-black text-slate-900 truncate">
-                                                    {activeBuildingObj.name}
-                                                </span>
-                                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 border border-emerald-200">
-                                                    {activeBuildingObj.code}
-                                                </span>
-                                            </div>
-                                            <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                                                {activeBuildingObj.total_floors} Lantai • {activeBuildingObj.total_rooms || 0} Ruangan
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <span className="text-xs font-bold text-slate-800">
-                                                -- Pilih Gedung Kampus --
-                                            </span>
-                                            <p className="text-[10px] text-slate-400">Klik untuk melihat pilihan gedung</p>
-                                        </div>
-                                    )}
-                                </div>
+                            <div className="flex items-center space-x-2 truncate">
+                                <Building2 className={`w-3.5 h-3.5 shrink-0 ${activeBuildingObj ? 'text-emerald-700' : 'text-slate-400'}`} />
+                                <span className="truncate">
+                                    {activeBuildingObj ? activeBuildingObj.name : 'Pilih Gedung Kampus...'}
+                                </span>
                             </div>
 
-                            <div className="flex items-center space-x-2 shrink-0 ml-2">
+                            <div className="flex items-center space-x-1 shrink-0 ml-1.5">
                                 {buildingId && (
-                                    <button
-                                        type="button"
+                                    <span
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleBuildingChange('');
                                             setIsBuildingDropdownOpen(false);
                                         }}
-                                        className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition cursor-pointer"
-                                        title="Reset Pilihan Gedung"
+                                        className="p-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded transition cursor-pointer"
+                                        title="Reset Pilihan"
                                     >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
+                                        <X className="w-3 h-3" />
+                                    </span>
                                 )}
-                                <div className={`p-1 rounded-lg transition-transform duration-200 ${
-                                    isBuildingDropdownOpen ? 'rotate-180 bg-emerald-100 text-emerald-700' : 'text-slate-400'
-                                }`}>
-                                    <ChevronDown className="w-4 h-4" />
-                                </div>
+                                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                                    isBuildingDropdownOpen ? 'rotate-180 text-emerald-600' : ''
+                                }`} />
                             </div>
                         </button>
 
                         {/* Popover Dropdown Menu */}
                         {isBuildingDropdownOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-full sm:w-[420px] bg-white rounded-2xl border border-slate-200/90 shadow-2xl z-50 overflow-hidden animate-fadeIn">
+                            <div className="absolute right-0 top-full mt-1.5 w-full sm:w-84 bg-white rounded-xl border border-slate-200 shadow-xl z-50 overflow-hidden animate-fadeIn">
                                 {/* Header Popover */}
-                                <div className="px-4 py-3 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center space-x-1.5">
-                                        <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-                                        <span>PILIH GEDUNG PERKULIAHAN ({buildings.length})</span>
+                                <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center space-x-1">
+                                        <Building2 className="w-3 h-3 text-emerald-600" />
+                                        <span>PILIH GEDUNG ({buildings.length})</span>
                                     </span>
-                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-200/60 px-1.5 py-0.5 rounded">
+                                    <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-200/60 px-1 py-0.2 rounded">
                                         ESC
                                     </span>
                                 </div>
 
                                 {/* List Gedung */}
-                                <div className="p-2 space-y-1.5 max-h-80 overflow-y-auto divide-y divide-slate-100/60">
+                                <div className="p-1.5 space-y-1 max-h-72 overflow-y-auto divide-y divide-slate-100/60">
                                     {buildings.map((b) => {
                                         const isSelected = String(b.id) === String(buildingId);
                                         return (
@@ -601,50 +567,40 @@ export default function FacilitiesIndex({
                                                     handleBuildingChange(String(b.id));
                                                     setIsBuildingDropdownOpen(false);
                                                 }}
-                                                className={`p-3 rounded-xl transition cursor-pointer flex items-center justify-between group ${
+                                                className={`p-2 rounded-lg transition cursor-pointer flex items-center justify-between group ${
                                                     isSelected
-                                                        ? 'bg-emerald-50/90 border border-emerald-300 shadow-2xs'
+                                                        ? 'bg-emerald-50 border border-emerald-300'
                                                         : 'hover:bg-slate-50 border border-transparent hover:border-slate-200'
                                                 }`}
                                             >
-                                                <div className="flex items-center space-x-3 min-w-0">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition ${
+                                                <div className="flex items-center space-x-2.5 min-w-0">
+                                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition ${
                                                         isSelected 
-                                                            ? 'bg-emerald-600 text-white shadow-xs' 
+                                                            ? 'bg-emerald-600 text-white' 
                                                             : 'bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-800'
                                                     }`}>
-                                                        <Building2 className="w-5 h-5" />
+                                                        <Building2 className="w-3.5 h-3.5" />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <div className="flex items-center space-x-2">
-                                                            <h4 className={`text-xs font-black truncate ${
-                                                                isSelected ? 'text-emerald-950' : 'text-slate-900 group-hover:text-emerald-700'
+                                                        <div className="flex items-center space-x-1.5">
+                                                            <h4 className={`text-xs font-bold truncate ${
+                                                                isSelected ? 'text-emerald-950 font-black' : 'text-slate-900 group-hover:text-emerald-700'
                                                             }`}>
                                                                 {b.name}
                                                             </h4>
-                                                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                                                                isSelected 
-                                                                    ? 'bg-emerald-200/80 text-emerald-900' 
-                                                                    : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
-                                                            }`}>
+                                                            <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-slate-100 text-slate-600">
                                                                 {b.code}
                                                             </span>
                                                         </div>
-                                                        <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-                                                            {b.total_floors} Lantai • <strong className="text-slate-700 font-bold">{b.total_rooms || 0} Ruang</strong> • {b.address || 'Kampus Utama'}
+                                                        <p className="text-[10px] text-slate-500 truncate">
+                                                            {b.total_floors} Lantai • {b.total_rooms || 0} Ruang Kelas
                                                         </p>
                                                     </div>
                                                 </div>
 
-                                                <div className="shrink-0 ml-3">
-                                                    {isSelected ? (
-                                                        <div className="p-1 rounded-full bg-emerald-600 text-white shadow-xs">
-                                                            <Check className="w-3.5 h-3.5" />
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-[10px] font-bold text-slate-400 group-hover:text-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            Pilih →
-                                                        </span>
+                                                <div className="shrink-0 ml-2">
+                                                    {isSelected && (
+                                                        <Check className="w-3.5 h-3.5 text-emerald-600" />
                                                     )}
                                                 </div>
                                             </div>
@@ -654,19 +610,19 @@ export default function FacilitiesIndex({
 
                                 {/* Footer Popover */}
                                 {buildingId && (
-                                    <div className="p-2.5 bg-slate-50/90 border-t border-slate-100 flex items-center justify-between">
+                                    <div className="p-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[10px]">
                                         <button
                                             type="button"
                                             onClick={() => {
                                                 handleBuildingChange('');
                                                 setIsBuildingDropdownOpen(false);
                                             }}
-                                            className="text-[11px] font-bold text-rose-600 hover:text-rose-700 cursor-pointer flex items-center space-x-1"
+                                            className="font-bold text-rose-600 hover:underline cursor-pointer flex items-center space-x-1"
                                         >
-                                            <X className="w-3.5 h-3.5" />
-                                            <span>Batal Pilih (Reset)</span>
+                                            <X className="w-3 h-3" />
+                                            <span>Reset Pilihan</span>
                                         </button>
-                                        <span className="text-[10px] text-slate-400">Menampilkan ruang gedung terpilih</span>
+                                        <span className="text-slate-400">Gedung aktif</span>
                                     </div>
                                 )}
                             </div>
