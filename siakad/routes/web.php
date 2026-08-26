@@ -154,8 +154,15 @@ Route::middleware('auth')->group(function () {
 
         // Master Infrastruktur: Gedung & Ruang
         Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities.index');
+        Route::get('/facilities/export-excel', [FacilityController::class, 'exportExcel'])->name('facilities.export_excel');
+        Route::get('/facilities/print-pdf', [FacilityController::class, 'printPdf'])->name('facilities.print_pdf');
         Route::post('/facilities/buildings', [FacilityController::class, 'storeBuilding'])->name('facilities.buildings.store');
+        Route::put('/facilities/buildings/{id}', [FacilityController::class, 'updateBuilding'])->name('facilities.buildings.update');
+        Route::delete('/facilities/buildings/{id}', [FacilityController::class, 'destroyBuilding'])->name('facilities.buildings.destroy');
         Route::post('/facilities/rooms', [FacilityController::class, 'storeRoom'])->name('facilities.rooms.store');
+        Route::put('/facilities/rooms/{id}', [FacilityController::class, 'updateRoom'])->name('facilities.rooms.update');
+        Route::delete('/facilities/rooms/{id}', [FacilityController::class, 'destroyRoom'])->name('facilities.rooms.destroy');
+        Route::patch('/facilities/rooms/{id}/toggle-status', [FacilityController::class, 'toggleRoomStatus'])->name('facilities.rooms.toggle_status');
 
         // Master Akademik: Tahun & Periode
         Route::get('/academic-periods', [AcademicPeriodController::class, 'index'])->name('academic_periods.index');
