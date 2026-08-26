@@ -103,8 +103,10 @@ Route::middleware('auth')->group(function () {
 
         // Data Mahasiswa (Berdasarkan Angkatan / Tahun Akademik)
         Route::get('/students', [StudentAdminController::class, 'index'])->name('students.index');
+        Route::get('/students/export', [StudentAdminController::class, 'export'])->name('students.export');
         Route::post('/students', [StudentAdminController::class, 'store'])->name('students.store');
         Route::put('/students/{id}', [StudentAdminController::class, 'update'])->name('students.update');
+        Route::delete('/students/{id}', [StudentAdminController::class, 'destroy'])->name('students.destroy');
         Route::post('/students/import-batch', [StudentAdminController::class, 'importBatch'])->name('students.import_batch');
 
         // Data Dosen & Tenaga Pengajar
