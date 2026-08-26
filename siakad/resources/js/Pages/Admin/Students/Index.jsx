@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../../Layouts/AppLayout';
 import ImpersonationModal from '../../../Components/ImpersonationModal';
@@ -7,7 +7,7 @@ import {
     Edit2, KeyRound, Trash2, CheckCircle2, ChevronRight,
     GraduationCap, Calendar, BookOpen, CreditCard, ShieldCheck,
     AlertCircle, X, FileSpreadsheet, Phone, Mail, Copy, Check,
-    RefreshCw, Layers, Clock
+    Printer, RefreshCw, AlertTriangle, Layers, Clock, Sparkles
 } from 'lucide-react';
 
 export default function StudentsIndex({ students, academicYears = [], studyPrograms = [], activePeriod, stats = {}, filters = {} }) {
@@ -46,10 +46,18 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
         is_active: true,
     });
 
-    // Import State
+    // Advanced Import State
     const [importRecords, setImportRecords] = useState([]);
+    const [importSummary, setImportSummary] = useState(null);
     const [importFileName, setImportFileName] = useState('');
     const [importError, setImportError] = useState('');
+    const [conflictMode, setConflictMode] = useState('skip'); // 'skip' atau 'overwrite'
+    const [isCheckingImport, setIsCheckingImport] = useState(false);
+    const [isProcessingImport, setIsProcessingImport] = useState(false);
+    const [importProgress, setImportProgress] = useState(0);
+    const [animatedRowIds, setAnimatedRowIds] = useState([]);
+    const [importResult, setImportResult] = useState(null);
+    const fileInputRef = useRef(null);
 
     const handleFilterChange = (newYear, newProdi, newStatus) => {
         router.get('/admin/students', { 
@@ -145,90 +153,161 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
         router.post(`/admin/users/${stu.id}/toggle-status`);
     };
 
-    // CSV File Reader for Real Batch Import
+    // CSV/Excel Reader with Duplicate Checking
     const handleFileUpload = (e) => {
         setImportError('');
+        setImportResult(null);
         const file = e.target.files[0];
         if (!file) return;
 
         setImportFileName(file.name);
         const reader = new FileReader();
 
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             try {
                 const text = event.target.result;
                 const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
                 if (lines.length <= 1) {
-                    setImportError('Berkas CSV kosong atau tidak memiliki baris data.');
+                    setImportError('Berkas kosong atau tidak memiliki baris data.');
                     return;
                 }
 
-                // Ambil header
-                const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-                const records = [];
-
+                const rawRecords = [];
                 for (let i = 1; i < lines.length; i++) {
-                    const row = lines[i].split(',').map(item => item.trim().replace(/"/g, ''));
+                    const line = lines[i];
+                    // Dukung pemisah koma, titik-koma, atau tab
+                    let row = [];
+                    if (line.includes('\t')) {
+                        row = line.split('\t');
+                    } else if (line.includes(';')) {
+                        row = line.split(';');
+                    } else {
+                        row = line.split(',');
+                    }
+
+                    row = row.map(item => item.trim().replace(/^["']|["']$/g, ''));
                     if (row.length < 2) continue;
 
-                    // Mapping fleksibel
                     const name = row[0] || '';
                     const identity_number = row[1] || '';
-                    const email = row[2] || `${identity_number}@staialittihad.ac.id`;
-                    const study_program = row[3] || 'Pendidikan Agama Islam (S1)';
-                    const gender = (row[4] && row[4].toUpperCase() === 'P') ? 'P' : 'L';
+                    const study_program = row[2] || 'Pendidikan Agama Islam (S1)';
+                    const gender = (row[3] && row[3].toUpperCase() === 'P') ? 'P' : 'L';
+                    const email = row[4] || (identity_number ? `${identity_number}@staialittihad.ac.id` : '');
                     const phone_number = row[5] || '';
 
                     if (name && identity_number) {
-                        records.push({ name, identity_number, email, study_program, gender, phone_number });
+                        rawRecords.push({ name, identity_number, study_program, gender, email, phone_number });
                     }
                 }
 
-                if (records.length === 0) {
-                    setImportError('Tidak ada baris data valid yang terbaca. Pastikan format kolom: Nama, NIM, Email, Prodi, Gender(L/P), NoHP');
-                } else {
-                    setImportRecords(records);
+                if (rawRecords.length === 0) {
+                    setImportError('Tidak ada baris data valid yang terbaca. Gunakan template resmi.');
+                    return;
                 }
+
+                // Kirim ke server untuk pengecekan duplikasi
+                await verifyRecordsAgainstDb(rawRecords);
             } catch (err) {
-                setImportError('Gagal memproses berkas CSV: ' + err.message);
+                setImportError('Gagal memproses berkas: ' + err.message);
             }
         };
 
         reader.readAsText(file);
     };
 
-    const handleDownloadTemplate = () => {
-        const csvContent = "data:text/csv;charset=utf-8,\uFEFFNama Lengkap,NIM,Email,Program Studi,Jenis Kelamin (L/P),Nomor Telepon\nMuhammad Rizky Pratama,26010001,rizky.pratama@staialittihad.ac.id,Pendidikan Agama Islam (S1),L,081234567890\nNabila Nur Azizah,26010002,nabila.azizah@staialittihad.ac.id,Pendidikan Agama Islam (S1),P,081234567891\nSiti Sarah Rahmawati,26020001,siti.sarah@staialittihad.ac.id,Pendidikan Islam Anak Usia Dini (S1),P,081234567892";
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "template_impor_mahasiswa_siakad.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const verifyRecordsAgainstDb = async (records) => {
+        setIsCheckingImport(true);
+        setImportError('');
+        try {
+            const res = await fetch('/admin/students/check-import', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ records }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setImportRecords(data.analyzed);
+                setImportSummary(data.summary);
+            } else {
+                setImportError(data.message || 'Gagal memeriksa duplikasi data.');
+            }
+        } catch (err) {
+            setImportError('Terjadi kesalahan jaringan saat verifikasi data.');
+        } finally {
+            setIsCheckingImport(false);
+        }
     };
 
-    const handleGenerateMockImport = () => {
+    const handleGenerateMockImport = async () => {
         const mockData = [
             { name: 'Muhammad Farhan Al-Ghifari', identity_number: '26010011', email: 'farhan.ghifari@staialittihad.ac.id', study_program: 'Pendidikan Agama Islam (S1)', gender: 'L', phone_number: '085712345678' },
-            { name: 'Aisyah Putri Humaira', identity_number: '26010012', email: 'aisyah.humaira@staialittihad.ac.id', study_program: 'Pendidikan Agama Islam (S1)', gender: 'P', phone_number: '085712345679' },
+            { name: 'Ahmad Fauzi Rahman', identity_number: '21010042', email: 'ahmad.fauzi@staialittihad.ac.id', study_program: 'Pendidikan Agama Islam (S1)', gender: 'L', phone_number: '081298765432' },
+            { name: 'Nabila Nur Azizah', identity_number: '26010012', email: 'nabila.azizah@staialittihad.ac.id', study_program: 'Pendidikan Agama Islam (S1)', gender: 'P', phone_number: '085712345679' },
             { name: 'Bilal Ahmad Zulfikar', identity_number: '26020015', email: 'bilal.zulfikar@staialittihad.ac.id', study_program: 'Pendidikan Islam Anak Usia Dini (S1)', gender: 'L', phone_number: '085712345680' },
         ];
-        setImportRecords(mockData);
-        setImportFileName('contoh_data_mahasiswa_angkatan2026.csv');
+        setImportFileName('contoh_data_mahasiswa_angkatan2026.xls');
+        await verifyRecordsAgainstDb(mockData);
     };
 
-    const handleImportSubmit = () => {
-        router.post('/admin/students/import-batch', { records: importRecords }, {
-            onSuccess: () => {
-                setIsImportOpen(false);
-                setImportRecords([]);
-                setImportFileName('');
-            },
-        });
+    // Eksekusi Impor Massal dengan Animasi Hijau Berjalan
+    const handleExecuteImport = async () => {
+        if (importRecords.length === 0) return;
+        setIsProcessingImport(true);
+        setImportProgress(10);
+        setAnimatedRowIds([]);
+
+        try {
+            // Simulasi step progress bar
+            const stepInterval = setInterval(() => {
+                setImportProgress(prev => (prev < 85 ? prev + 15 : prev));
+            }, 200);
+
+            const res = await fetch('/admin/students/process-import', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    records: importRecords,
+                    conflict_mode: conflictMode 
+                }),
+            });
+
+            clearInterval(stepInterval);
+            setImportProgress(100);
+
+            const data = await res.json();
+            if (data.success) {
+                // Efek animasi hijau baris per baris
+                const rowIds = importRecords.map(r => r.row_id);
+                setAnimatedRowIds(rowIds);
+                setImportResult(data);
+            } else {
+                setImportError(data.message || 'Gagal mengeksekusi impor mahasiswa.');
+            }
+        } catch (err) {
+            setImportError('Gagal memproses impor: ' + err.message);
+        } finally {
+            setIsProcessingImport(false);
+        }
     };
 
-    // Angkatan cepat
+    const handleFinishImport = () => {
+        setIsImportOpen(false);
+        setImportRecords([]);
+        setImportSummary(null);
+        setImportResult(null);
+        setAnimatedRowIds([]);
+        setImportFileName('');
+        router.reload();
+    };
+
     const batchList = ['2026', '2025', '2024', '2023', '2022', '2021'];
 
     return (
@@ -243,7 +322,7 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
             />
 
             <div className="space-y-4">
-                {/* 1. Header Banner & Quick Actions */}
+                {/* 1. Header Banner & Action Center */}
                 <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-2xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                         <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black mb-1">
@@ -254,33 +333,47 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                             Direktori & Data Induk Mahasiswa
                         </h2>
                         <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
-                            Kelola data mahasiswa seluruh angkatan, filter program studi, pemantauan status persetujuan KRS, pelunasan SPP BSI, dan mode akses menyamar.
+                            Kelola data mahasiswa seluruh angkatan, pemantauan status studi & KRS, ekspor berkas Excel/PDF resmi, serta impor massal cerdas.
                         </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <a
-                            href={`/admin/students/export?search=${encodeURIComponent(search)}&academic_year=${encodeURIComponent(year)}&study_program=${encodeURIComponent(prodi)}&status=${encodeURIComponent(status)}`}
-                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 border border-slate-200 cursor-pointer"
+                        {/* Tombol Cetak PDF Resmi Berkop Surat */}
+                        <Link
+                            href={`/admin/students/print-pdf?academic_year=${encodeURIComponent(year)}&study_program=${encodeURIComponent(prodi)}&status=${encodeURIComponent(status)}`}
+                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 border border-slate-300 shadow-2xs cursor-pointer"
                         >
-                            <Download className="w-3.5 h-3.5 text-slate-600" />
-                            <span>Ekspor CSV</span>
+                            <Printer className="w-3.5 h-3.5 text-slate-700" />
+                            <span>Cetak PDF Resmi</span>
+                        </Link>
+
+                        {/* Tombol Ekspor Excel Mewah */}
+                        <a
+                            href={`/admin/students/export-excel?search=${encodeURIComponent(search)}&academic_year=${encodeURIComponent(year)}&study_program=${encodeURIComponent(prodi)}&status=${encodeURIComponent(status)}`}
+                            className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                        >
+                            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+                            <span>Unduh Excel</span>
                         </a>
 
+                        {/* Tombol Impor Excel Cerdas */}
                         <button
                             type="button"
                             onClick={() => {
                                 setImportRecords([]);
+                                setImportSummary(null);
+                                setImportResult(null);
                                 setImportFileName('');
                                 setImportError('');
                                 setIsImportOpen(true);
                             }}
-                            className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
                         >
                             <Upload className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Impor Excel / CSV</span>
+                            <span>Impor Excel</span>
                         </button>
 
+                        {/* Tombol Tambah Mahasiswa Baru */}
                         <button
                             type="button"
                             onClick={() => {
@@ -290,7 +383,7 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                             className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
                         >
                             <UserPlus className="w-3.5 h-3.5" />
-                            <span>Tambah Mahasiswa</span>
+                            <span>Tambah Baru</span>
                         </button>
                     </div>
                 </div>
@@ -368,7 +461,7 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                                     year === b
                                         ? 'bg-emerald-600 text-white shadow-xs'
                                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                    }`}
+                                }`}
                             >
                                 {b} {b === '2026' ? '(Baru)' : ''}
                             </button>
@@ -671,7 +764,7 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                                     </div>
                                     <h3 className="text-sm font-black text-slate-900 uppercase">Tambah Mahasiswa Baru</h3>
                                 </div>
-                                <button onClick={() => setIsCreateOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <button onClick={() => setIsCreateOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                                     <X className="w-4 h-4" />
                                 </button>
                             </div>
@@ -764,8 +857,8 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                                 </div>
 
                                 <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-                                    <button type="button" onClick={() => setIsCreateOpen(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition">Batal</button>
-                                    <button type="submit" disabled={createForm.processing} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition">Simpan Mahasiswa</button>
+                                    <button type="button" onClick={() => setIsCreateOpen(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition cursor-pointer">Batal</button>
+                                    <button type="submit" disabled={createForm.processing} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition cursor-pointer">Simpan Mahasiswa</button>
                                 </div>
                             </form>
                         </div>
@@ -783,7 +876,7 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                                     </div>
                                     <h3 className="text-sm font-black text-slate-900 uppercase">Edit Data Mahasiswa</h3>
                                 </div>
-                                <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                                     <X className="w-4 h-4" />
                                 </button>
                             </div>
@@ -873,109 +966,321 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                                 </div>
 
                                 <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-                                    <button type="button" onClick={() => setIsEditOpen(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition">Batal</button>
-                                    <button type="submit" disabled={editForm.processing} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition">Simpan Perubahan</button>
+                                    <button type="button" onClick={() => setIsEditOpen(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition cursor-pointer">Batal</button>
+                                    <button type="submit" disabled={editForm.processing} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition cursor-pointer">Simpan Perubahan</button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 )}
 
-                {/* MODAL 3: IMPOR MASSAL EXCEL / CSV */}
+                {/* MODAL 3: IMPOR MASSAL CERDAS DENGAN DETEKSI DUPLIKASI & ANIMASI HIJAU */}
                 {isImportOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-                        <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                                <div className="flex items-center space-x-2">
-                                    <div className="p-1.5 bg-emerald-100 text-emerald-800 rounded-lg">
-                                        <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                        <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] flex flex-col">
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+                                <div className="flex items-center space-x-2.5">
+                                    <div className="p-2 bg-emerald-100 text-emerald-800 rounded-xl">
+                                        <FileSpreadsheet className="w-5 h-5 text-emerald-700" />
                                     </div>
-                                    <h3 className="text-sm font-black text-slate-900 uppercase">Impor Massal Mahasiswa Baru</h3>
+                                    <div>
+                                        <h3 className="text-sm font-black text-slate-900 uppercase">
+                                            Pusat Impor Data Mahasiswa (Excel)
+                                        </h3>
+                                        <p className="text-[11px] text-slate-500">Dengan validasi otomatis duplikasi NIM & resolusi konflik</p>
+                                    </div>
                                 </div>
-                                <button onClick={() => setIsImportOpen(false)} className="text-slate-400 hover:text-slate-600">
-                                    <X className="w-4 h-4" />
+                                <button 
+                                    onClick={() => !isProcessingImport && setIsImportOpen(false)} 
+                                    disabled={isProcessingImport}
+                                    className="text-slate-400 hover:text-slate-600 cursor-pointer disabled:opacity-30"
+                                >
+                                    <X className="w-5 h-5" />
                                 </button>
                             </div>
 
-                            <div className="space-y-3.5 text-xs">
-                                {/* Template download & Mock button */}
-                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            {/* Modal Body (Scrollable) */}
+                            <div className="space-y-4 text-xs overflow-y-auto pr-1 flex-1">
+                                {/* Template Download & Mock Data Bar */}
+                                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                                     <div>
-                                        <p className="font-bold text-slate-800">Format Template Berkas CSV</p>
-                                        <p className="text-[11px] text-slate-500">Kolom: Nama, NIM, Email, Prodi, Gender (L/P), NoHP</p>
+                                        <p className="font-bold text-slate-900 flex items-center space-x-1.5">
+                                            <span>Format Berkas Excel Resmi</span>
+                                            <span className="px-2 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[9px] font-black">.xls / .csv</span>
+                                        </p>
+                                        <p className="text-[10px] text-slate-500 mt-0.5">
+                                            Kolom urut: Nama Lengkap, NIM, Program Studi, Jenis Kelamin (L/P), Email, No. Telepon
+                                        </p>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                        <button
-                                            type="button"
-                                            onClick={handleDownloadTemplate}
-                                            className="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg font-bold transition flex items-center space-x-1 cursor-pointer"
+                                        <a
+                                            href="/admin/students/template-excel"
+                                            className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-xl font-bold transition flex items-center space-x-1 cursor-pointer shadow-2xs text-[11px]"
                                         >
-                                            <Download className="w-3 h-3 text-slate-500" />
-                                            <span>Unduh Template</span>
-                                        </button>
+                                            <Download className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>Unduh Template Excel</span>
+                                        </a>
                                         <button
                                             type="button"
                                             onClick={handleGenerateMockImport}
-                                            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-lg font-bold transition cursor-pointer"
+                                            disabled={isCheckingImport || isProcessingImport}
+                                            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl font-bold transition cursor-pointer text-[11px]"
                                         >
-                                            Muat Contoh Data
+                                            Uji Contoh Data
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* Real File Input */}
-                                <div>
-                                    <label className="font-bold text-slate-700 block mb-1">Unggah Berkas CSV:</label>
-                                    <input
-                                        type="file"
-                                        accept=".csv,.txt"
-                                        onChange={handleFileUpload}
-                                        className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-white hover:file:bg-slate-700 border border-slate-200 rounded-xl p-1 bg-slate-50 cursor-pointer"
-                                    />
-                                    {importFileName && (
-                                        <p className="text-[11px] text-emerald-600 font-bold mt-1">
-                                            ✓ Berkas terpilih: {importFileName}
-                                        </p>
-                                    )}
-                                    {importError && (
-                                        <p className="text-[11px] text-rose-600 font-bold mt-1">
-                                            ⚠️ {importError}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Preview Data */}
-                                {importRecords.length > 0 && (
-                                    <div className="border border-slate-200 rounded-xl overflow-hidden">
-                                        <div className="p-2.5 bg-slate-100 font-black text-[10px] uppercase text-slate-700 flex items-center justify-between">
-                                            <span>Pratinjau Data ({importRecords.length} Mahasiswa)</span>
-                                            <span className="text-emerald-700 font-bold">Siap Diproses</span>
+                                {/* File Upload Box */}
+                                {!importResult && (
+                                    <div className="space-y-2">
+                                        <label className="font-bold text-slate-700 block">Pilih Berkas Excel / CSV dari Komputer:</label>
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept=".xls,.xlsx,.csv,.txt"
+                                                onChange={handleFileUpload}
+                                                disabled={isCheckingImport || isProcessingImport}
+                                                className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-slate-800 border border-slate-200 rounded-2xl p-1 bg-slate-50 cursor-pointer disabled:opacity-50"
+                                            />
                                         </div>
-                                        <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
-                                            {importRecords.map((r, idx) => (
-                                                <div key={idx} className="p-2.5 flex items-center justify-between text-[11px] hover:bg-slate-50">
-                                                    <div>
-                                                        <span className="font-bold text-slate-900">{r.name}</span>
-                                                        <span className="text-slate-400 font-mono ml-2 font-bold">({r.identity_number})</span>
-                                                    </div>
-                                                    <span className="text-slate-600 text-[10px]">{r.study_program}</span>
+                                        {importFileName && (
+                                            <p className="text-[11px] text-emerald-700 font-bold flex items-center space-x-1">
+                                                <Check className="w-3.5 h-3.5" />
+                                                <span>Berkas siap: {importFileName}</span>
+                                            </p>
+                                        )}
+                                        {importError && (
+                                            <div className="p-3 bg-rose-50 text-rose-800 rounded-xl border border-rose-200 flex items-start space-x-2">
+                                                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                                                <span>{importError}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Checking Loader */}
+                                {isCheckingImport && (
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
+                                        <RefreshCw className="w-6 h-6 text-emerald-600 animate-spin mx-auto" />
+                                        <p className="font-bold text-slate-800 text-xs">Memeriksa Duplikasi di Database...</p>
+                                        <p className="text-[11px] text-slate-500">Mencocokkan NIM dan Email dengan data civitas yang sudah terdaftar.</p>
+                                    </div>
+                                )}
+
+                                {/* Preview Table with Conflict Resolution Radio */}
+                                {!isCheckingImport && importRecords.length > 0 && !importResult && (
+                                    <div className="space-y-3">
+                                        {/* Status Bar: Ringkasan Duplikat & Baru */}
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                            <div className="p-2.5 bg-slate-100 rounded-xl border border-slate-200">
+                                                <span className="text-[10px] text-slate-500 font-bold uppercase">Total Data</span>
+                                                <p className="text-sm font-black text-slate-900">{importSummary?.total || importRecords.length}</p>
+                                            </div>
+                                            <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                                                <span className="text-[10px] text-emerald-700 font-bold uppercase">Mahasiswa Baru</span>
+                                                <p className="text-sm font-black text-emerald-800">{importSummary?.new_count || 0}</p>
+                                            </div>
+                                            <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200">
+                                                <span className="text-[10px] text-amber-700 font-bold uppercase">Data Duplikat</span>
+                                                <p className="text-sm font-black text-amber-800">{importSummary?.duplicate_count || 0}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Conflict Resolution Selector */}
+                                        {importSummary?.duplicate_count > 0 && (
+                                            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 space-y-2">
+                                                <div className="flex items-center space-x-1.5 text-amber-900 font-bold text-xs">
+                                                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                                                    <span>Ditemukan {importSummary.duplicate_count} data yang sudah ada di sistem:</span>
                                                 </div>
-                                            ))}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                                                    <label className={`p-2.5 rounded-xl border flex items-center space-x-2 cursor-pointer transition ${
+                                                        conflictMode === 'skip' 
+                                                            ? 'bg-white border-amber-400 ring-2 ring-amber-400 font-bold text-slate-900' 
+                                                            : 'bg-white/60 border-slate-200 text-slate-700'
+                                                    }`}>
+                                                        <input
+                                                            type="radio"
+                                                            name="conflict"
+                                                            value="skip"
+                                                            checked={conflictMode === 'skip'}
+                                                            onChange={() => setConflictMode('skip')}
+                                                            className="text-emerald-600"
+                                                        />
+                                                        <div>
+                                                            <p>⏭️ Lewati Data Duplikat</p>
+                                                            <p className="text-[10px] text-slate-500 font-normal">Hanya menambahkan mahasiswa baru yang belum ada.</p>
+                                                        </div>
+                                                    </label>
+
+                                                    <label className={`p-2.5 rounded-xl border flex items-center space-x-2 cursor-pointer transition ${
+                                                        conflictMode === 'overwrite' 
+                                                            ? 'bg-white border-indigo-400 ring-2 ring-indigo-400 font-bold text-slate-900' 
+                                                            : 'bg-white/60 border-slate-200 text-slate-700'
+                                                    }`}>
+                                                        <input
+                                                            type="radio"
+                                                            name="conflict"
+                                                            value="overwrite"
+                                                            checked={conflictMode === 'overwrite'}
+                                                            onChange={() => setConflictMode('overwrite')}
+                                                            className="text-emerald-600"
+                                                        />
+                                                        <div>
+                                                            <p>🔄 Timpa & Perbarui Data</p>
+                                                            <p className="text-[10px] text-slate-500 font-normal">Update nama, prodi, no. HP data yang sudah ada.</p>
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Progress Bar saat proses impor berjalan */}
+                                        {isProcessingImport && (
+                                            <div className="space-y-1.5 p-3 bg-emerald-50 rounded-2xl border border-emerald-200">
+                                                <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                                                    <span className="flex items-center space-x-1.5">
+                                                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-700" />
+                                                        <span>Sedang Memproses Impor ke Database...</span>
+                                                    </span>
+                                                    <span>{importProgress}%</span>
+                                                </div>
+                                                <div className="w-full bg-emerald-200 rounded-full h-2 overflow-hidden">
+                                                    <div 
+                                                        className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
+                                                        style={{ width: `${importProgress}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Preview Data Table */}
+                                        <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-60 overflow-y-auto">
+                                            <table className="w-full text-left text-xs border-collapse">
+                                                <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[9.5px] sticky top-0 border-b border-slate-200">
+                                                    <tr>
+                                                        <th className="py-2.5 px-3">Status</th>
+                                                        <th className="py-2.5 px-3">NIM</th>
+                                                        <th className="py-2.5 px-3">Nama Mahasiswa</th>
+                                                        <th className="py-2.5 px-3">Program Studi</th>
+                                                        <th className="py-2.5 px-3">Email</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {importRecords.map((r) => {
+                                                        const isSuccessAnimated = animatedRowIds.includes(r.row_id);
+                                                        return (
+                                                            <tr 
+                                                                key={r.row_id} 
+                                                                className={`transition-all duration-500 ${
+                                                                    isSuccessAnimated 
+                                                                        ? 'bg-emerald-100/90 text-emerald-950 font-bold ring-1 ring-emerald-400' 
+                                                                        : r.status === 'DUPLICATE' 
+                                                                        ? 'bg-amber-50/60' 
+                                                                        : 'hover:bg-slate-50'
+                                                                }`}
+                                                            >
+                                                                <td className="py-2 px-3">
+                                                                    {isSuccessAnimated ? (
+                                                                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-600 text-white shadow-2xs">
+                                                                            <CheckCircle2 className="w-2.5 h-2.5" />
+                                                                            <span>Terimpor</span>
+                                                                        </span>
+                                                                    ) : r.status === 'DUPLICATE' ? (
+                                                                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-200 text-amber-900" title={r.duplicate_reason}>
+                                                                            <span>DUPLIKAT</span>
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800">
+                                                                            <span>BARU</span>
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="py-2 px-3 font-mono font-bold">{r.identity_number}</td>
+                                                                <td className="py-2 px-3 font-bold">{r.name}</td>
+                                                                <td className="py-2 px-3 text-slate-600">{r.study_program}</td>
+                                                                <td className="py-2 px-3 text-slate-500 font-mono text-[10px]">{r.email}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-                                    <button type="button" onClick={() => setIsImportOpen(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold transition">Batal</button>
+                                {/* Success Result Summary Card */}
+                                {importResult && (
+                                    <div className="p-5 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl border border-emerald-200 text-center space-y-3">
+                                        <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+                                            <Sparkles className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-base font-black text-emerald-950">Impor Mahasiswa Berhasil!</h4>
+                                            <p className="text-xs text-emerald-800 mt-0.5">{importResult.message}</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-2 max-w-md mx-auto pt-1">
+                                            <div className="p-2.5 bg-white rounded-xl border border-emerald-200">
+                                                <span className="text-[10px] text-slate-500 font-bold uppercase">Mahasiswa Baru</span>
+                                                <p className="text-lg font-black text-emerald-700">+{importResult.summary.created_count}</p>
+                                            </div>
+                                            <div className="p-2.5 bg-white rounded-xl border border-emerald-200">
+                                                <span className="text-[10px] text-slate-500 font-bold uppercase">Data Diperbarui</span>
+                                                <p className="text-lg font-black text-indigo-700">{importResult.summary.updated_count}</p>
+                                            </div>
+                                            <div className="p-2.5 bg-white rounded-xl border border-emerald-200">
+                                                <span className="text-[10px] text-slate-500 font-bold uppercase">Dilewati</span>
+                                                <p className="text-lg font-black text-amber-700">{importResult.summary.skipped_count}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100 shrink-0">
+                                {!importResult ? (
+                                    <>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setIsImportOpen(false)} 
+                                            disabled={isProcessingImport}
+                                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition cursor-pointer disabled:opacity-50"
+                                        >
+                                            Batal
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleExecuteImport}
+                                            disabled={importRecords.length === 0 || isProcessingImport || isCheckingImport}
+                                            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+                                        >
+                                            {isProcessingImport ? (
+                                                <>
+                                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                                    <span>Memproses...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Check className="w-3.5 h-3.5" />
+                                                    <span>Mulai Proses Impor ({importRecords.length})</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </>
+                                ) : (
                                     <button
                                         type="button"
-                                        onClick={handleImportSubmit}
-                                        disabled={importRecords.length === 0}
-                                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition disabled:opacity-50 cursor-pointer shadow-xs"
+                                        onClick={handleFinishImport}
+                                        className="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer"
                                     >
-                                        Proses Impor {importRecords.length > 0 ? `(${importRecords.length})` : ''} Mahasiswa
+                                        <span>Selesai & Lihat Data Baru →</span>
                                     </button>
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>

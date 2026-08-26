@@ -103,11 +103,14 @@ Route::middleware('auth')->group(function () {
 
         // Data Mahasiswa (Berdasarkan Angkatan / Tahun Akademik)
         Route::get('/students', [StudentAdminController::class, 'index'])->name('students.index');
-        Route::get('/students/export', [StudentAdminController::class, 'export'])->name('students.export');
+        Route::get('/students/export-excel', [StudentAdminController::class, 'exportExcel'])->name('students.export_excel');
+        Route::get('/students/template-excel', [StudentAdminController::class, 'templateExcel'])->name('students.template_excel');
+        Route::get('/students/print-pdf', [StudentAdminController::class, 'printPdf'])->name('students.print_pdf');
+        Route::post('/students/check-import', [StudentAdminController::class, 'checkImport'])->name('students.check_import');
+        Route::post('/students/process-import', [StudentAdminController::class, 'processImport'])->name('students.process_import');
         Route::post('/students', [StudentAdminController::class, 'store'])->name('students.store');
         Route::put('/students/{id}', [StudentAdminController::class, 'update'])->name('students.update');
         Route::delete('/students/{id}', [StudentAdminController::class, 'destroy'])->name('students.destroy');
-        Route::post('/students/import-batch', [StudentAdminController::class, 'importBatch'])->name('students.import_batch');
 
         // Data Dosen & Tenaga Pengajar
         Route::get('/lecturers', [LecturerAdminController::class, 'index'])->name('lecturers.index');
