@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../../Layouts/AppLayout';
 import ImpersonationModal from '../../../Components/ImpersonationModal';
@@ -15,6 +15,31 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
     const [year, setYear] = useState(filters.academic_year || '');
     const [prodi, setProdi] = useState(filters.study_program || '');
     const [status, setStatus] = useState(filters.status || '');
+    const [krsStatus, setKrsStatus] = useState(filters.krs_status || '');
+    const [invoiceStatus, setInvoiceStatus] = useState(filters.invoice_status || '');
+    const [showFilters, setShowFilters] = useState(Boolean(filters.academic_year || filters.study_program || filters.status || filters.krs_status || filters.invoice_status));
+    const isFirstRender = useRef(true);
+
+    // Live search debounce otomatis tanpa harus klik tombol cari atau tekan enter
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            router.get('/admin/students', { 
+                search, 
+                academic_year: year, 
+                study_program: prodi,
+                status,
+                krs_status: krsStatus,
+                invoice_status: invoiceStatus 
+            }, { preserveState: true, replace: true, preserveScroll: true });
+        }, 350);
+
+        return () => clearTimeout(timer);
+    }, [search]);
 
     // Modals
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -59,23 +84,15 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
     const [importResult, setImportResult] = useState(null);
     const fileInputRef = useRef(null);
 
-    const handleFilterChange = (newYear, newProdi, newStatus) => {
+    const handleFilterChange = (newYear, newProdi, newStatus, newKrs, newInvoice) => {
         router.get('/admin/students', { 
             search, 
             academic_year: newYear, 
             study_program: newProdi,
-            status: newStatus 
-        }, { preserveState: true });
-    };
-
-    const handleSearch = (e) => {
-        e.preventDefault();
-        router.get('/admin/students', { 
-            search, 
-            academic_year: year, 
-            study_program: prodi,
-            status 
-        }, { preserveState: true });
+            status: newStatus,
+            krs_status: newKrs,
+            invoice_status: newInvoice
+        }, { preserveState: true, replace: true, preserveScroll: true });
     };
 
     const handleResetFilter = () => {
@@ -83,6 +100,8 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
         setYear('');
         setProdi('');
         setStatus('');
+        setKrsStatus('');
+        setInvoiceStatus('');
         router.get('/admin/students', {}, { preserveState: true });
     };
 
@@ -308,7 +327,7 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
         router.reload();
     };
 
-    const batchList = ['2026', '2025', '2024', '2023', '2022', '2021'];
+    const activeFilterCount = [year, prodi, status, krsStatus, invoiceStatus].filter(Boolean).length;
 
     return (
         <AppLayout title="Direktori Data Mahasiswa">
@@ -388,104 +407,159 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                     </div>
                 </div>
 
-                {/* 2. Filter Controls & Search Bar */}
-                <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5">
-                        {/* Angkatan Selector (Select Option) */}
-                        <div className="lg:col-span-3">
-                            <select
-                                value={year}
-                                onChange={(e) => {
-                                    setYear(e.target.value);
-                                    handleFilterChange(e.target.value, prodi, status);
-                                }}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            >
-                                <option value="">Semua Angkatan</option>
-                                <option value="2026">Angkatan 2026 (Baru)</option>
-                                <option value="2025">Angkatan 2025</option>
-                                <option value="2024">Angkatan 2024</option>
-                                <option value="2023">Angkatan 2023</option>
-                                <option value="2022">Angkatan 2022</option>
-                                <option value="2021">Angkatan 2021</option>
-                            </select>
-                        </div>
-
-                        {/* Prodi Selector */}
-                        <div className="lg:col-span-3">
-                            <select
-                                value={prodi}
-                                onChange={(e) => {
-                                    setProdi(e.target.value);
-                                    handleFilterChange(year, e.target.value, status);
-                                }}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            >
-                                <option value="">Semua Program Studi</option>
-                                {studyPrograms.map((p) => (
-                                    <option key={p.id} value={p.name}>{p.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Status Akun Selector */}
-                        <div className="lg:col-span-2">
-                            <select
-                                value={status}
-                                onChange={(e) => {
-                                    setStatus(e.target.value);
-                                    handleFilterChange(year, prodi, e.target.value);
-                                }}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            >
-                                <option value="">Semua Status</option>
-                                <option value="active">● Aktif Saja</option>
-                                <option value="inactive">○ Nonaktif Saja</option>
-                            </select>
-                        </div>
-
-                        {/* Search Input Form */}
-                        <form onSubmit={handleSearch} className="lg:col-span-4 flex items-center gap-2">
-                            <div className="relative flex-1">
-                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Cari nama, NIM, email, atau no. telepon..."
-                                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                />
-                                {search && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSearch('');
-                                            router.get('/admin/students', { academic_year: year, study_program: prodi, status }, { preserveState: true });
-                                        }}
-                                        className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
-                            </div>
-                            <button
-                                type="submit"
-                                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition shrink-0 cursor-pointer"
-                            >
-                                Cari
-                            </button>
-                            {(search || year || prodi || status) && (
+                {/* 2. Filter & Live Search Controls */}
+                <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                        {/* Auto Live Search Bar (Automatic on typing) */}
+                        <div className="relative flex-1 w-full">
+                            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Ketik nama mahasiswa, NIM, email, atau no. telepon..."
+                                className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                            />
+                            {search && (
                                 <button
                                     type="button"
-                                    onClick={handleResetFilter}
-                                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer"
-                                    title="Reset Semua Filter"
+                                    onClick={() => setSearch('')}
+                                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                                    title="Hapus kata kunci pencarian"
                                 >
-                                    Reset
+                                    <X className="w-3.5 h-3.5" />
                                 </button>
                             )}
-                        </form>
+                        </div>
+
+                        {/* Tombol Tampil Filter Data (Menggantikan tombol Cari) */}
+                        <button
+                            type="button"
+                            onClick={() => setShowFilters(prev => !prev)}
+                            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer ${
+                                showFilters || activeFilterCount > 0
+                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                            }`}
+                            title="Tampilkan / Sembunyikan Filter Data Mahasiswa"
+                        >
+                            <Filter className="w-3.5 h-3.5" />
+                            <span>{showFilters ? 'Sembunyikan Filter' : 'Tampil Filter Data'}</span>
+                            {activeFilterCount > 0 && (
+                                <span className="px-1.5 py-0.2 bg-white text-emerald-800 text-[10px] font-black rounded-full shadow-2xs">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Tombol Reset Filter */}
+                        {(search || activeFilterCount > 0) && (
+                            <button
+                                type="button"
+                                onClick={handleResetFilter}
+                                className="w-full sm:w-auto px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer"
+                                title="Reset Semua Filter & Pencarian"
+                            >
+                                Reset
+                            </button>
+                        )}
                     </div>
+
+                    {/* Panel Dropdown Filter Data (Bisa di-toggle oleh tombol Tampil Filter Data) */}
+                    {showFilters && (
+                        <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 animate-fadeIn">
+                            {/* 1. Pilih Angkatan (Select Option) */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Angkatan:</label>
+                                <select
+                                    value={year}
+                                    onChange={(e) => {
+                                        setYear(e.target.value);
+                                        handleFilterChange(e.target.value, prodi, status, krsStatus, invoiceStatus);
+                                    }}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                                >
+                                    <option value="">Semua Angkatan</option>
+                                    <option value="2026">Angkatan 2026 (Baru)</option>
+                                    <option value="2025">Angkatan 2025</option>
+                                    <option value="2024">Angkatan 2024</option>
+                                    <option value="2023">Angkatan 2023</option>
+                                    <option value="2022">Angkatan 2022</option>
+                                    <option value="2021">Angkatan 2021</option>
+                                </select>
+                            </div>
+
+                            {/* 2. Program Studi */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Program Studi:</label>
+                                <select
+                                    value={prodi}
+                                    onChange={(e) => {
+                                        setProdi(e.target.value);
+                                        handleFilterChange(year, e.target.value, status, krsStatus, invoiceStatus);
+                                    }}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                                >
+                                    <option value="">Semua Program Studi</option>
+                                    {studyPrograms.map((p) => (
+                                        <option key={p.id} value={p.name}>{p.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* 3. Status Akun */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Status Akun:</label>
+                                <select
+                                    value={status}
+                                    onChange={(e) => {
+                                        setStatus(e.target.value);
+                                        handleFilterChange(year, prodi, e.target.value, krsStatus, invoiceStatus);
+                                    }}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                                >
+                                    <option value="">Semua Status Akun</option>
+                                    <option value="active">● Aktif Saja</option>
+                                    <option value="inactive">○ Nonaktif Saja</option>
+                                </select>
+                            </div>
+
+                            {/* 4. Status KRS */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Status KRS:</label>
+                                <select
+                                    value={krsStatus}
+                                    onChange={(e) => {
+                                        setKrsStatus(e.target.value);
+                                        handleFilterChange(year, prodi, status, e.target.value, invoiceStatus);
+                                    }}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                                >
+                                    <option value="">Semua Status KRS</option>
+                                    <option value="DISETUJUI">DISETUJUI</option>
+                                    <option value="DIAJUKAN">DIAJUKAN</option>
+                                    <option value="BELUM_KRS">BELUM KRS</option>
+                                </select>
+                            </div>
+
+                            {/* 5. Status VA SPP BSI */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Status VA SPP:</label>
+                                <select
+                                    value={invoiceStatus}
+                                    onChange={(e) => {
+                                        setInvoiceStatus(e.target.value);
+                                        handleFilterChange(year, prodi, status, krsStatus, e.target.value);
+                                    }}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                                >
+                                    <option value="">Semua Tagihan</option>
+                                    <option value="LUNAS">Lunas</option>
+                                    <option value="BELUM_LUNAS">Belum Lunas</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* 4. Main Students Table */}

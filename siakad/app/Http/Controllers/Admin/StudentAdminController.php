@@ -25,6 +25,8 @@ class StudentAdminController extends Controller
         $yearFilter = $request->input('academic_year'); // e.g. 2026, 2025, 2024, 2023
         $prodiFilter = $request->input('study_program');
         $statusFilter = $request->input('status'); // all, active, inactive
+        $krsFilter = $request->input('krs_status'); // DISETUJUI, DIAJUKAN, BELUM_KRS
+        $invoiceFilter = $request->input('invoice_status'); // LUNAS, BELUM_LUNAS
 
         $academicYears = DB::table('academic_years')->orderBy('code', 'desc')->get();
         $studyPrograms = DB::table('study_programs')->get();
@@ -55,6 +57,35 @@ class StudentAdminController extends Controller
                     $q->where('is_active', true);
                 } elseif ($statusFilter === 'inactive') {
                     $q->where('is_active', false);
+                }
+            })
+            ->when($krsFilter, function ($q) use ($krsFilter, $activePeriod) {
+                if ($krsFilter === 'BELUM_KRS') {
+                    $submittedIds = DB::table('krs_submissions')
+                        ->where('academic_period_id', $activePeriod?->id ?? 1)
+                        ->pluck('student_id');
+                    $q->whereNotIn('id', $submittedIds);
+                } else {
+                    $targetIds = DB::table('krs_submissions')
+                        ->where('academic_period_id', $activePeriod?->id ?? 1)
+                        ->where('status', $krsFilter)
+                        ->pluck('student_id');
+                    $q->whereIn('id', $targetIds);
+                }
+            })
+            ->when($invoiceFilter, function ($q) use ($invoiceFilter, $activePeriod) {
+                if ($invoiceFilter === 'LUNAS') {
+                    $paidIds = DB::table('student_invoices')
+                        ->where('academic_period_id', $activePeriod?->id ?? 1)
+                        ->where('status', 'PAID')
+                        ->pluck('user_id');
+                    $q->whereIn('id', $paidIds);
+                } elseif ($invoiceFilter === 'BELUM_LUNAS') {
+                    $paidIds = DB::table('student_invoices')
+                        ->where('academic_period_id', $activePeriod?->id ?? 1)
+                        ->where('status', 'PAID')
+                        ->pluck('user_id');
+                    $q->whereNotIn('id', $paidIds);
                 }
             });
 
@@ -119,6 +150,8 @@ class StudentAdminController extends Controller
                 'academic_year' => $yearFilter,
                 'study_program' => $prodiFilter,
                 'status' => $statusFilter,
+                'krs_status' => $krsFilter,
+                'invoice_status' => $invoiceFilter,
             ],
         ]);
     }
