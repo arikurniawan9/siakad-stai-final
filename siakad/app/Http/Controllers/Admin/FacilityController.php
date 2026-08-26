@@ -83,11 +83,7 @@ class FacilityController extends Controller
      */
     public function index(Request $request): Response
     {
-        $search = $request->input('search');
         $buildingId = $request->input('building_id');
-        $roomType = $request->input('room_type');
-        $floor = $request->input('floor');
-        $status = $request->input('status'); // 'active', 'inactive', or null
 
         // Daftar Gedung beserta agregasi jumlah ruangan & kapasitas
         $buildings = DB::table('buildings')
@@ -108,35 +104,14 @@ class FacilityController extends Controller
         if ($buildingId) {
             $selectedBuilding = DB::table('buildings')->where('id', $buildingId)->first();
 
-            $roomsQuery = DB::table('rooms')
+            $rooms = DB::table('rooms')
                 ->join('buildings', 'rooms.building_id', '=', 'buildings.id')
                 ->where('rooms.building_id', $buildingId)
                 ->select(
                     'rooms.*',
                     'buildings.name as building_name',
                     'buildings.code as building_code'
-                );
-
-            if ($search) {
-                $roomsQuery->where(function ($q) use ($search) {
-                    $q->where('rooms.name', 'ilike', "%{$search}%")
-                      ->orWhere('rooms.code', 'ilike', "%{$search}%");
-                });
-            }
-
-            if ($roomType) {
-                $roomsQuery->where('rooms.room_type', $roomType);
-            }
-
-            if ($floor) {
-                $roomsQuery->where('rooms.floor_number', $floor);
-            }
-
-            if ($status !== null && $status !== '') {
-                $roomsQuery->where('rooms.is_active', $status === 'active');
-            }
-
-            $rooms = $roomsQuery
+                )
                 ->orderBy('rooms.floor_number', 'asc')
                 ->orderBy('rooms.code', 'asc')
                 ->get()
@@ -159,13 +134,7 @@ class FacilityController extends Controller
             'selectedBuilding' => $selectedBuilding,
             'rooms' => $rooms,
             'roomTypes' => self::ROOM_TYPES,
-            'filters' => [
-                'search' => $search,
-                'building_id' => $buildingId,
-                'room_type' => $roomType,
-                'floor' => $floor,
-                'status' => $status,
-            ],
+            'buildingId' => $buildingId,
         ]);
     }
 

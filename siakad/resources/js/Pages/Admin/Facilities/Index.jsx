@@ -1,13 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../../Layouts/AppLayout';
 import { 
     Building2, DoorOpen, Plus, CheckCircle2, ShieldCheck, 
-    Layers, Users, Tv, Check, Search, Filter, X, 
-    Printer, FileSpreadsheet, Edit2, Trash2, MoreVertical,
-    AlertCircle, RefreshCw, LayoutGrid, List, CheckSquare,
-    Eye, Power, Sparkles, MapPin, Armchair, GraduationCap,
-    ChevronDown, Lock
+    Layers, Users, Tv, Check, X, Printer, FileSpreadsheet, 
+    Edit2, Trash2, AlertCircle, RefreshCw, LayoutGrid, List, 
+    Power, MapPin, Armchair, GraduationCap, ChevronDown, Lock 
 } from 'lucide-react';
 
 export const ROOM_TYPE_GROUPS = [
@@ -154,18 +152,12 @@ export default function FacilitiesIndex({
     buildings = [], 
     selectedBuilding = null,
     rooms = [], 
-    filters = {} 
+    buildingId: initialBuildingId = ''
 }) {
     const [activeTab, setActiveTab] = useState('rooms'); // 'rooms' | 'buildings'
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
-    const [search, setSearch] = useState(filters.search || '');
-    const [buildingId, setBuildingId] = useState(filters.building_id || '');
-    const [roomType, setRoomType] = useState(filters.room_type || '');
-    const [floor, setFloor] = useState(filters.floor || '');
-    const [status, setStatus] = useState(filters.status || '');
-    const [showFilters, setShowFilters] = useState(Boolean(filters.room_type || filters.floor || filters.status));
+    const [buildingId, setBuildingId] = useState(initialBuildingId || '');
     const [isMobileFabOpen, setIsMobileFabOpen] = useState(false);
-    const isFirstRender = useRef(true);
 
     // Modals
     const [showBuildingModal, setShowBuildingModal] = useState(false);
@@ -205,26 +197,6 @@ export default function FacilitiesIndex({
         is_active: true,
     });
 
-    // Auto Live Search Debounce
-    useEffect(() => {
-        if (isFirstRender.current) {
-            isFirstRender.current = false;
-            return;
-        }
-
-        const timer = setTimeout(() => {
-            router.get('/admin/facilities', {
-                building_id: buildingId,
-                search,
-                room_type: roomType,
-                floor,
-                status,
-            }, { preserveState: true, replace: true, preserveScroll: true });
-        }, 350);
-
-        return () => clearTimeout(timer);
-    }, [search]);
-
     // Close active modal or FAB on ESC key press
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -249,36 +221,12 @@ export default function FacilitiesIndex({
 
     const handleBuildingChange = (newBId) => {
         setBuildingId(newBId);
-        router.get('/admin/facilities', {
-            building_id: newBId,
-            search,
-            room_type: roomType,
-            floor,
-            status,
-        }, { preserveState: true, replace: true, preserveScroll: true });
+        router.get('/admin/facilities', newBId ? { building_id: newBId } : {}, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
     };
-
-    const handleFilterChange = (newType, newFloor, newStatus) => {
-        router.get('/admin/facilities', {
-            building_id: buildingId,
-            search,
-            room_type: newType,
-            floor: newFloor,
-            status: newStatus,
-        }, { preserveState: true, replace: true, preserveScroll: true });
-    };
-
-    const handleResetFilter = () => {
-        setSearch('');
-        setRoomType('');
-        setFloor('');
-        setStatus('');
-        router.get('/admin/facilities', {
-            building_id: buildingId,
-        }, { preserveState: true, replace: true });
-    };
-
-    const activeFilterCount = [roomType, floor, status].filter(Boolean).length;
 
     // Available facilities checklist
     const availableFacilities = [
@@ -454,7 +402,7 @@ export default function FacilitiesIndex({
                         {/* 1. Tombol Cetak PDF Resmi */}
                         <div className="relative group">
                             <Link
-                                href={`/admin/facilities/print-pdf?building_id=${encodeURIComponent(buildingId)}&room_type=${encodeURIComponent(roomType)}&status=${encodeURIComponent(status)}`}
+                                href={buildingId ? `/admin/facilities/print-pdf?building_id=${encodeURIComponent(buildingId)}` : '/admin/facilities/print-pdf'}
                                 className="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl flex items-center justify-center border border-slate-300 shadow-2xs transition cursor-pointer"
                                 aria-label="Cetak PDF Resmi"
                             >
@@ -469,7 +417,7 @@ export default function FacilitiesIndex({
                         {/* 2. Tombol Unduh Excel */}
                         <div className="relative group">
                             <a
-                                href={`/admin/facilities/export-excel?building_id=${encodeURIComponent(buildingId)}&room_type=${encodeURIComponent(roomType)}&status=${encodeURIComponent(status)}`}
+                                href={buildingId ? `/admin/facilities/export-excel?building_id=${encodeURIComponent(buildingId)}` : '/admin/facilities/export-excel'}
                                 className="w-10 h-10 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center border border-emerald-200 shadow-2xs transition cursor-pointer"
                                 aria-label="Unduh Excel (.xls)"
                             >
@@ -515,190 +463,45 @@ export default function FacilitiesIndex({
                     </div>
                 </div>
 
-                {/* 2. Selector Pilih Gedung Kampus */}
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                {/* 2. Selector Pilih Gedung Kampus (Satu-satunya Kontrol Opsi yang Digunakan) */}
+                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center space-x-3">
-                        <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
-                            <Building2 className="w-5 h-5" />
+                        <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl">
+                            <Building2 className="w-6 h-6" />
                         </div>
                         <div>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                Filter Gedung Kampus
+                                Pilihan Gedung Kampus
                             </span>
-                            <h3 className="text-sm font-black text-slate-900">
-                                {activeBuildingObj ? `${activeBuildingObj.name} (${activeBuildingObj.code})` : 'Pilih Gedung untuk Menampilkan Ruangan'}
+                            <h3 className="text-base font-black text-slate-900">
+                                {activeBuildingObj ? `${activeBuildingObj.name} (${activeBuildingObj.code})` : 'Silakan Pilih Gedung Kampus'}
                             </h3>
                             {activeBuildingObj && (
-                                <p className="text-[11px] text-emerald-700 font-bold mt-0.5">
-                                    {activeBuildingObj.total_floors} Lantai • {rooms.length} Ruang Terdaftar
+                                <p className="text-xs text-emerald-700 font-bold mt-0.5">
+                                    {activeBuildingObj.total_floors} Lantai • {rooms.length} Ruang Perkuliahan
                                 </p>
                             )}
                         </div>
                     </div>
 
-                    <div className="relative w-full sm:w-80">
+                    <div className="relative w-full sm:w-84">
                         <select
                             value={buildingId}
                             onChange={(e) => handleBuildingChange(e.target.value)}
-                            className="w-full bg-slate-50 hover:bg-slate-100/80 border border-slate-300 rounded-xl pl-3.5 pr-9 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
+                            className="w-full bg-slate-50 hover:bg-slate-100/80 border border-slate-300 rounded-xl pl-4 pr-10 py-3 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
                         >
-                            <option value="">-- Silakan Pilih Gedung --</option>
+                            <option value="">-- Pilih Gedung Terlebih Dahulu --</option>
                             {buildings.map((b) => (
                                 <option key={b.id} value={b.id}>
                                     {b.name} ({b.code}) — {b.total_rooms || 0} Ruang
                                 </option>
                             ))}
                         </select>
-                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
                 </div>
 
-                {/* 3. Filter & Live Search Controls (Tampil Hanya Ketika Gedung Sudah Dipilih) */}
-                {buildingId && (
-                    <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3 animate-fadeIn">
-                        <div className="flex flex-col sm:flex-row items-center gap-2.5">
-                            {/* Auto Live Search Bar */}
-                            <div className="relative flex-1 w-full">
-                                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder={`Ketik nama atau kode ruang di ${activeBuildingObj?.name || 'gedung ini'}...`}
-                                    className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                                />
-                                {search && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSearch('')}
-                                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
-                                        title="Hapus pencarian"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Tombol Tampil Filter Data */}
-                            <button
-                                type="button"
-                                onClick={() => setShowFilters(prev => !prev)}
-                                className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer ${
-                                    showFilters || activeFilterCount > 0
-                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
-                                }`}
-                                title="Tampilkan / Sembunyikan Filter Tambahan"
-                            >
-                                <Filter className="w-3.5 h-3.5" />
-                                <span>{showFilters ? 'Sembunyikan Filter' : 'Tampil Filter Data'}</span>
-                                {activeFilterCount > 0 && (
-                                    <span className="px-1.5 py-0.2 bg-white text-emerald-800 text-[10px] font-black rounded-full shadow-2xs">
-                                        {activeFilterCount}
-                                    </span>
-                                )}
-                            </button>
-
-                            {/* Reset Filter Button */}
-                            {(search || activeFilterCount > 0) && (
-                                <button
-                                    type="button"
-                                    onClick={handleResetFilter}
-                                    className="w-full sm:w-auto px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer"
-                                    title="Reset Pencarian & Filter Ruangan"
-                                >
-                                    Reset
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Panel Dropdown Filter Data (Collapsible) */}
-                        {showFilters && (
-                            <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-2.5 animate-fadeIn">
-                                {/* Filter Tipe Ruangan (42 Standar PDDIKTI dengan Kategori Optgroup) */}
-                                <div>
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center space-x-1 mb-1">
-                                        <DoorOpen className="w-3 h-3 text-slate-400" />
-                                        <span>Tipe Ruangan:</span>
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={roomType}
-                                            onChange={(e) => {
-                                                setRoomType(e.target.value);
-                                                handleFilterChange(e.target.value, floor, status);
-                                            }}
-                                            className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
-                                        >
-                                            <option value="">Semua Tipe Ruang ({ROOM_TYPES.length})</option>
-                                            {ROOM_TYPE_GROUPS.map((group) => (
-                                                <optgroup key={group.category} label={`── ${group.category} ──`} className="font-black text-slate-900 bg-slate-100">
-                                                    {group.types.map((t) => (
-                                                        <option key={t.value} value={t.value} className="bg-white text-slate-800 font-medium py-1">
-                                                            {t.label}
-                                                        </option>
-                                                    ))}
-                                                </optgroup>
-                                            ))}
-                                        </select>
-                                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                    </div>
-                                </div>
-
-                                {/* Filter Lantai */}
-                                <div>
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center space-x-1 mb-1">
-                                        <Layers className="w-3 h-3 text-slate-400" />
-                                        <span>Nomor Lantai:</span>
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={floor}
-                                            onChange={(e) => {
-                                                setFloor(e.target.value);
-                                                handleFilterChange(roomType, e.target.value, status);
-                                            }}
-                                            className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
-                                        >
-                                            <option value="">Semua Lantai</option>
-                                            <option value="1">Lantai 1</option>
-                                            <option value="2">Lantai 2</option>
-                                            <option value="3">Lantai 3</option>
-                                            <option value="4">Lantai 4</option>
-                                            <option value="5">Lantai 5</option>
-                                        </select>
-                                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                    </div>
-                                </div>
-
-                                {/* Filter Status Operasional */}
-                                <div>
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center space-x-1 mb-1">
-                                        <ShieldCheck className="w-3 h-3 text-slate-400" />
-                                        <span>Status Operasional:</span>
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={status}
-                                            onChange={(e) => {
-                                                setStatus(e.target.value);
-                                                handleFilterChange(roomType, floor, e.target.value);
-                                            }}
-                                            className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
-                                        >
-                                            <option value="">Semua Status</option>
-                                            <option value="active">● Siap Pakai (Aktif)</option>
-                                            <option value="inactive">○ Perawatan (Nonaktif)</option>
-                                        </select>
-                                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* 4. Tab Navigation & View Mode Switcher */}
+                {/* 3. Tab Navigation & View Mode Switcher */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-1">
                     <div className="flex space-x-6">
                         <button
@@ -715,7 +518,7 @@ export default function FacilitiesIndex({
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                 activeTab === 'rooms' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
                             }`}>
-                                {buildingId ? rooms.length : 'Pilih Gedung'}
+                                {buildingId ? `${rooms.length} Ruang` : 'Pilih Gedung'}
                             </span>
                         </button>
 
@@ -780,7 +583,7 @@ export default function FacilitiesIndex({
                                 </div>
                                 <h3 className="text-base font-black text-slate-900">Pilih Gedung Terlebih Dahulu</h3>
                                 <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                                    Silakan pilih salah satu gedung kampus pada menu pilihan di atas untuk menampilkan seluruh data ruang kelas yang berada di gedung tersebut.
+                                    Silakan pilih salah satu gedung kampus pada menu pilihan di atas untuk menampilkan daftar ruang kelas yang berada di gedung tersebut.
                                 </p>
                                 <div className="pt-2">
                                     <button
@@ -1551,7 +1354,7 @@ export default function FacilitiesIndex({
 
                             {/* 3. Unduh Excel */}
                             <a
-                                href={`/admin/facilities/export-excel?building_id=${encodeURIComponent(buildingId)}&room_type=${encodeURIComponent(roomType)}&status=${encodeURIComponent(status)}`}
+                                href={buildingId ? `/admin/facilities/export-excel?building_id=${encodeURIComponent(buildingId)}` : '/admin/facilities/export-excel'}
                                 onClick={() => setIsMobileFabOpen(false)}
                                 className="flex items-center space-x-2 bg-white text-slate-800 pl-3 pr-2 py-1.5 rounded-full shadow-lg border border-slate-200 text-xs font-bold active:scale-95 transition cursor-pointer"
                             >
@@ -1563,7 +1366,7 @@ export default function FacilitiesIndex({
 
                             {/* 4. Cetak PDF Resmi */}
                             <Link
-                                href={`/admin/facilities/print-pdf?building_id=${encodeURIComponent(buildingId)}&room_type=${encodeURIComponent(roomType)}&status=${encodeURIComponent(status)}`}
+                                href={buildingId ? `/admin/facilities/print-pdf?building_id=${encodeURIComponent(buildingId)}` : '/admin/facilities/print-pdf'}
                                 onClick={() => setIsMobileFabOpen(false)}
                                 className="flex items-center space-x-2 bg-white text-slate-800 pl-3 pr-2 py-1.5 rounded-full shadow-lg border border-slate-200 text-xs font-bold active:scale-95 transition cursor-pointer"
                             >
