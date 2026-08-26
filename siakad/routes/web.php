@@ -66,8 +66,6 @@ Route::prefix('api/v1/bsi/va')->group(function () {
     Route::post('/simulate-payment', [BsiVirtualAccountController::class, 'simulatePayment']);
 });
 
-// Winpay Payment Gateway Webhook
-Route::post('/api/v1/winpay/callback', [WinpayController::class, 'receiveCallback']);
 
 // LMS Inbound Webhook API
 Route::post('/api/v1/lms/webhook', [LmsSyncController::class, 'receiveLmsWebhook']);
