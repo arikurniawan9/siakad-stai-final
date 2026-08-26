@@ -388,45 +388,6 @@ export default function StudentsIndex({ students, academicYears = [], studyProgr
                     </div>
                 </div>
 
-                {/* 2. KPI Summary Cards (4 Cards) */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-                        <div className="flex items-center justify-between text-slate-500">
-                            <span className="text-[10px] font-bold">Total Terdaftar</span>
-                            <span className="p-1 rounded-lg bg-teal-50 text-teal-700"><Users className="w-3.5 h-3.5" /></span>
-                        </div>
-                        <p className="text-xl font-black text-slate-900 mt-1">{stats.total ?? 0}</p>
-                        <p className="text-[10px] text-teal-600 font-semibold mt-0.5">Semua Angkatan & Prodi</p>
-                    </div>
-
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-                        <div className="flex items-center justify-between text-slate-500">
-                            <span className="text-[10px] font-bold">Akun Aktif</span>
-                            <span className="p-1 rounded-lg bg-emerald-50 text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" /></span>
-                        </div>
-                        <p className="text-xl font-black text-emerald-600 mt-1">{stats.active ?? 0}</p>
-                        <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Dapat Login ke Portal</p>
-                    </div>
-
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-                        <div className="flex items-center justify-between text-slate-500">
-                            <span className="text-[10px] font-bold">KRS Disetujui</span>
-                            <span className="p-1 rounded-lg bg-indigo-50 text-indigo-700"><BookOpen className="w-3.5 h-3.5" /></span>
-                        </div>
-                        <p className="text-xl font-black text-indigo-600 mt-1">{stats.krs_completed ?? 0}</p>
-                        <p className="text-[10px] text-indigo-600 font-semibold mt-0.5">Periode Akademik Aktif</p>
-                    </div>
-
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-                        <div className="flex items-center justify-between text-slate-500">
-                            <span className="text-[10px] font-bold">VA SPP Lunas</span>
-                            <span className="p-1 rounded-lg bg-cyan-50 text-cyan-700"><CreditCard className="w-3.5 h-3.5" /></span>
-                        </div>
-                        <p className="text-xl font-black text-cyan-600 mt-1">{stats.paid_invoices ?? 0}</p>
-                        <p className="text-[10px] text-cyan-600 font-semibold mt-0.5">Terverifikasi BSI H2H</p>
-                    </div>
-                </div>
-
                 {/* 3. Filter Controls & Search Bar */}
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
                     {/* Quick Angkatan Pills */}
