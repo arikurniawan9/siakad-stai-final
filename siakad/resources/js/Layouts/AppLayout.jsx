@@ -269,7 +269,6 @@ export default function AppLayout({ title, children }) {
         { label: 'Penerimaan Mahasiswa (PMB)', href: '/admin/pmb', icon: UserCheck2 },
         { header: 'KESEHATAN & DATABASE' },
         { label: 'Backup & Seeder Database', href: '/admin/database', icon: Database },
-        { label: 'Diagnostik Server & Sistem', href: '/admin/settings', icon: HardDrive },
         { label: 'Audit Log & Keamanan', href: '/admin/audit-logs', icon: ShieldAlert },
         { header: 'INTEGRASI SERVER & LMS' },
         { label: 'Sinkronisasi SALAM LMS', href: '/admin/lms-sync', icon: RefreshCw },

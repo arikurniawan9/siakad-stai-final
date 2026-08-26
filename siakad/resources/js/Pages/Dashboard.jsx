@@ -183,11 +183,11 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                         <span>Backup & Seeder DB</span>
                                     </Link>
                                     <Link
-                                        href="/admin/settings"
+                                        href="/admin/audit-logs"
                                         className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1 border border-slate-700"
                                     >
-                                        <HardDrive className="w-3 h-3 text-cyan-400" />
-                                        <span>Diagnostik</span>
+                                        <ShieldAlert className="w-3 h-3 text-red-400" />
+                                        <span>Audit Log</span>
                                     </Link>
                                     <Link
                                         href="/admin/users"
@@ -429,10 +429,6 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                             <div className="space-y-1 text-xs">
                                                 <Link href="/admin/database" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
                                                     <span>💾 Backup, Restore & Seeder DB</span>
-                                                    <ChevronRight className="w-3 h-3 text-indigo-600" />
-                                                </Link>
-                                                <Link href="/admin/settings" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
-                                                    <span>⚙️ Diagnostik & Maintenance Mode</span>
                                                     <ChevronRight className="w-3 h-3 text-indigo-600" />
                                                 </Link>
                                                 <Link href="/admin/audit-logs" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">

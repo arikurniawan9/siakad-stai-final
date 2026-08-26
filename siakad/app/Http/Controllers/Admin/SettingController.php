@@ -14,18 +14,11 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class SettingController extends Controller
 {
     /**
-     * Tampilan Halaman Pengaturan Sistem & Pemeliharaan
+     * Tampilan Halaman Pengaturan Sistem (Dialihkan ke Pusat BSI Gateway)
      */
-    public function index(): Response
+    public function index(): RedirectResponse
     {
-        $settings = DB::table('system_settings')->get()->keyBy('key');
-
-        $isMaintenance = app()->isDownForMaintenance();
-
-        return Inertia::render('Admin/Settings/Index', [
-            'settings' => $settings,
-            'isMaintenance' => $isMaintenance,
-        ]);
+        return redirect()->route('admin.bsi_gateway.index');
     }
 
     /**
