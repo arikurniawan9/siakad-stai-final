@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../../Layouts/AppLayout';
 import { 
     GraduationCap, Building2, Plus, Edit2, Trash2, Search, 
-    CheckCircle2, XCircle, ShieldCheck, Award, BookOpen, 
-    Users, School, X, Save, RefreshCw, Layers, Check, Filter
+    Award, Users, X, Save, Sparkles, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 export default function StudyProgramsIndex({ studyPrograms = [], faculties = [], lecturers = [] }) {
-    const [activeTab, setActiveTab] = useState('prodi'); // prodi | faculty
+    const [activeTab, setActiveTab] = useState('prodi'); // 'prodi' | 'faculty'
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedFacultyFilter, setSelectedFacultyFilter] = useState('');
     const [selectedDegreeFilter, setSelectedDegreeFilter] = useState('');
+
+    // Pagination untuk Program Studi
+    const [prodiPerPage, setProdiPerPage] = useState(10);
+    const [prodiCurrentPage, setProdiCurrentPage] = useState(1);
 
     // Modal State - Prodi
     const [isProdiModalOpen, setIsProdiModalOpen] = useState(false);
@@ -41,6 +44,22 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
         dean_name: '',
         is_active: true,
     });
+
+    // Close active modal on ESC key press
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+                if (isProdiModalOpen) {
+                    setIsProdiModalOpen(false);
+                } else if (isFacultyModalOpen) {
+                    setIsFacultyModalOpen(false);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isProdiModalOpen, isFacultyModalOpen]);
 
     // Open Prodi Modal
     const openProdiModal = (prodi = null) => {
@@ -150,14 +169,32 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
     };
 
     // Filter Prodi
-    const filteredProdi = studyPrograms.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              p.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              (p.national_code && p.national_code.includes(searchTerm));
-        const matchesFaculty = !selectedFacultyFilter || String(p.faculty_id) === String(selectedFacultyFilter);
-        const matchesDegree = !selectedDegreeFilter || p.degree === selectedDegreeFilter;
-        return matchesSearch && matchesFaculty && matchesDegree;
-    });
+    const filteredProdi = useMemo(() => {
+        return studyPrograms.filter(p => {
+            const query = searchTerm.toLowerCase().trim();
+            const matchesSearch = !query || 
+                p.name?.toLowerCase().includes(query) || 
+                p.code?.toLowerCase().includes(query) ||
+                (p.national_code && p.national_code.includes(query)) ||
+                (p.faculty_name && p.faculty_name.toLowerCase().includes(query)) ||
+                (p.head_of_program_name && p.head_of_program_name.toLowerCase().includes(query));
+            const matchesFaculty = !selectedFacultyFilter || String(p.faculty_id) === String(selectedFacultyFilter);
+            const matchesDegree = !selectedDegreeFilter || p.degree === selectedDegreeFilter;
+            return matchesSearch && matchesFaculty && matchesDegree;
+        });
+    }, [studyPrograms, searchTerm, selectedFacultyFilter, selectedDegreeFilter]);
+
+    const totalFilteredProdi = filteredProdi.length;
+    const totalProdiPages = Math.max(1, Math.ceil(totalFilteredProdi / prodiPerPage));
+    const safeProdiPage = Math.min(Math.max(1, prodiCurrentPage), totalProdiPages);
+
+    const paginatedProdi = useMemo(() => {
+        const start = (safeProdiPage - 1) * prodiPerPage;
+        return filteredProdi.slice(start, start + prodiPerPage);
+    }, [filteredProdi, safeProdiPage, prodiPerPage]);
+
+    const prodiFromIndex = totalFilteredProdi === 0 ? 0 : (safeProdiPage - 1) * prodiPerPage + 1;
+    const prodiToIndex = Math.min(safeProdiPage * prodiPerPage, totalFilteredProdi);
 
     // Stats calculations
     const totalProdi = studyPrograms.length;
@@ -167,137 +204,177 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
 
     return (
         <AppLayout title="Master Program Studi & Fakultas">
-            <Head title="Manajemen Program Studi — SIAKAD" />
+            <Head title="Program Studi & Fakultas — SIAKAD" />
 
-            <div className="space-y-6">
-                {/* HEADER BANNER */}
-                <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white shadow-md border border-indigo-900/50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex items-center space-x-3.5">
-                        <div className="p-3 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-2xl">
-                            <GraduationCap className="w-6 h-6 text-indigo-400" />
-                        </div>
+            <div className="space-y-3.5">
+                {/* 1. COMPACT HERO HEADER */}
+                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 rounded-2xl p-4 sm:p-5 text-white shadow-md relative border border-slate-700/50">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                         <div>
-                            <div className="flex items-center space-x-2">
-                                <span className="px-2.5 py-0.5 bg-indigo-500/30 text-indigo-300 rounded-full font-black text-[10px] uppercase tracking-wider border border-indigo-400/40">
-                                    STRUKTUR AKADEMIK
-                                </span>
-                                <span className="text-[11px] text-slate-400">STAI Al-Ittihad Cianjur</span>
+                            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black mb-1">
+                                <Sparkles className="w-3 h-3 text-emerald-400" />
+                                <span>STRUKTUR KURIKULUM & JURUSAN</span>
                             </div>
-                            <h2 className="text-xl font-black tracking-tight text-white mt-1">
-                                Manajemen Program Studi & Fakultas
+                            <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
+                                Program Studi & Fakultas
                             </h2>
-                            <p className="text-xs text-indigo-200 mt-0.5">
-                                Kelola struktur jurusan, jenjang studi, SK akreditasi BAN-PT/LAM, pimpinan Kaprodi, dan kode resmi PDDIKTI.
+                            <p className="text-[11px] text-slate-300 mt-0.5 max-w-xl">
+                                Kelola data jurusan, jenjang studi (D3/S1/S2), SK akreditasi BAN-PT/LAM, pimpinan Kaprodi, dan fakultas kampus.
                             </p>
                         </div>
-                    </div>
 
-                    <div className="flex items-center space-x-2 self-start md:self-auto">
-                        <button
-                            type="button"
-                            onClick={() => openFacultyModal()}
-                            className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer border border-white/10"
-                        >
-                            <Building2 className="w-3.5 h-3.5" />
-                            <span>+ Tambah Fakultas</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => openProdiModal()}
-                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition shadow-md flex items-center space-x-1.5 cursor-pointer"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>+ Tambah Program Studi</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* STATS METRIC GRID */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-500">Total Program Studi</span>
-                            <span className="p-1.5 bg-indigo-100 text-indigo-800 rounded-xl"><GraduationCap className="w-4 h-4" /></span>
-                        </div>
-                        <p className="text-2xl font-black text-slate-900 mt-2">{totalProdi}</p>
-                        <p className="text-[10px] text-indigo-600 font-bold mt-0.5">Aktif di Sistem Akademik</p>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-500">Fakultas / Jurusan</span>
-                            <span className="p-1.5 bg-blue-100 text-blue-800 rounded-xl"><Building2 className="w-4 h-4" /></span>
-                        </div>
-                        <p className="text-2xl font-black text-slate-900 mt-2">{totalFaculties}</p>
-                        <p className="text-[10px] text-blue-600 font-bold mt-0.5">Struktur Fakultas Resmi</p>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-500">Akreditasi Unggul / A</span>
-                            <span className="p-1.5 bg-emerald-100 text-emerald-800 rounded-xl"><Award className="w-4 h-4" /></span>
-                        </div>
-                        <p className="text-2xl font-black text-slate-900 mt-2">{unggulCount}</p>
-                        <p className="text-[10px] text-emerald-600 font-bold mt-0.5">Standar Mutu BAN-PT</p>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-500">Estimasi Mahasiswa</span>
-                            <span className="p-1.5 bg-amber-100 text-amber-800 rounded-xl"><Users className="w-4 h-4" /></span>
-                        </div>
-                        <p className="text-2xl font-black text-slate-900 mt-2">1,248</p>
-                        <p className="text-[10px] text-amber-600 font-bold mt-0.5">Mahasiswa Terdaftar</p>
-                    </div>
-                </div>
-
-                {/* TABS NAVIGATION & SEARCH CONTROLS */}
-                <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                        <div className="flex items-center space-x-2">
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
                             <button
                                 type="button"
-                                onClick={() => setActiveTab('prodi')}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                                    activeTab === 'prodi'
-                                        ? 'bg-indigo-600 text-white shadow-sm'
-                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                                }`}
+                                onClick={() => openFacultyModal()}
+                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-bold transition flex items-center space-x-1 shadow border border-slate-700 cursor-pointer"
                             >
-                                <GraduationCap className="w-3.5 h-3.5" />
-                                <span>Daftar Program Studi ({totalProdi})</span>
+                                <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>+ Fakultas</span>
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setActiveTab('faculty')}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                                    activeTab === 'faculty'
-                                        ? 'bg-indigo-600 text-white shadow-sm'
-                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                                }`}
+                                onClick={() => openProdiModal()}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-black transition flex items-center space-x-1 shadow cursor-pointer"
                             >
-                                <Building2 className="w-3.5 h-3.5" />
-                                <span>Daftar Fakultas ({totalFaculties})</span>
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>+ Program Studi</span>
                             </button>
                         </div>
+                    </div>
+                </div>
 
-                        {activeTab === 'prodi' && (
+                {/* 2. COMPACT STATS CARDS */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Program Studi</span>
+                            <span className="p-1 bg-emerald-100 text-emerald-800 rounded-md"><GraduationCap className="w-3.5 h-3.5" /></span>
+                        </div>
+                        <div className="mt-1.5">
+                            <p className="text-base font-black text-slate-900">{totalProdi} Prodi</p>
+                            <p className="text-[10px] text-slate-500">Jenjang D3, S1 & S2</p>
+                        </div>
+                        <div className="mt-2 pt-1.5 border-t border-slate-100 text-[9px] text-emerald-600 font-bold">
+                            Aktif di SIAKAD
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Fakultas Kampus</span>
+                            <span className="p-1 bg-blue-100 text-blue-800 rounded-md"><Building2 className="w-3.5 h-3.5" /></span>
+                        </div>
+                        <div className="mt-1.5">
+                            <p className="text-base font-black text-slate-900">{totalFaculties} Fakultas</p>
+                            <p className="text-[10px] text-slate-500">Struktur Naungan Resmi</p>
+                        </div>
+                        <div className="mt-2 pt-1.5 border-t border-slate-100 text-[9px] text-blue-600 font-bold">
+                            Terdaftar
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Akreditasi Unggul / A</span>
+                            <span className="p-1 bg-purple-100 text-purple-800 rounded-md"><Award className="w-3.5 h-3.5" /></span>
+                        </div>
+                        <div className="mt-1.5">
+                            <p className="text-base font-black text-slate-900">{unggulCount} Prodi</p>
+                            <p className="text-[10px] text-slate-500">Standar Mutu BAN-PT</p>
+                        </div>
+                        <div className="mt-2 pt-1.5 border-t border-slate-100 text-[9px] text-purple-600 font-bold">
+                            Akreditasi Tertinggi
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Mahasiswa Terdaftar</span>
+                            <span className="p-1 bg-amber-100 text-amber-800 rounded-md"><Users className="w-3.5 h-3.5" /></span>
+                        </div>
+                        <div className="mt-1.5">
+                            <p className="text-base font-black text-slate-900">{totalStudents.toLocaleString('id-ID')} Orang</p>
+                            <p className="text-[10px] text-slate-500">Di Seluruh Prodi</p>
+                        </div>
+                        <div className="mt-2 pt-1.5 border-t border-slate-100 text-[9px] text-amber-600 font-bold">
+                            Total Mahasiswa
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. TABS SWITCHER (Gaya Gedung & Ruang / Tahun & Periode Semester) */}
+                <div className="flex border-b border-slate-200 space-x-6">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('prodi')}
+                        className={`pb-3 text-xs font-bold border-b-2 transition flex items-center space-x-2 cursor-pointer ${
+                            activeTab === 'prodi'
+                                ? 'border-emerald-600 text-emerald-700'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        <GraduationCap className="w-4 h-4" />
+                        <span>Daftar Program Studi</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            activeTab === 'prodi' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                            {totalProdi} Prodi
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('faculty')}
+                        className={`pb-3 text-xs font-bold border-b-2 transition flex items-center space-x-2 cursor-pointer ${
+                            activeTab === 'faculty'
+                                ? 'border-emerald-600 text-emerald-700'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        <Building2 className="w-4 h-4" />
+                        <span>Daftar Fakultas Kampus</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            activeTab === 'faculty' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                            {totalFaculties}
+                        </span>
+                    </button>
+                </div>
+
+                {/* TAB 1: DAFTAR PROGRAM STUDI */}
+                {activeTab === 'prodi' && (
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden animate-fadeIn">
+                        {/* Filter & Per-Page Controls */}
+                        <div className="p-3 bg-slate-50/70 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                            <div className="flex items-center space-x-2">
+                                <span className="text-slate-600 text-[11px] font-bold">Tampilkan:</span>
+                                <select
+                                    value={prodiPerPage}
+                                    onChange={(e) => {
+                                        setProdiPerPage(Number(e.target.value));
+                                        setProdiCurrentPage(1);
+                                    }}
+                                    className="px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 shadow-2xs focus:outline-emerald-500 cursor-pointer"
+                                >
+                                    <option value={5}>5 baris</option>
+                                    <option value={10}>10 baris</option>
+                                    <option value={25}>25 baris</option>
+                                    <option value={50}>50 baris</option>
+                                </select>
+                                <span className="text-slate-500 text-[11px]">per halaman</span>
+                            </div>
+
                             <div className="flex flex-wrap items-center gap-2">
-                                <div className="relative">
-                                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                                    <input
-                                        type="text"
-                                        placeholder="Cari kode / nama prodi..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium w-48 sm:w-56 focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                </div>
-
+                                {/* Filter Fakultas */}
                                 <select
                                     value={selectedFacultyFilter}
-                                    onChange={(e) => setSelectedFacultyFilter(e.target.value)}
-                                    className="p-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+                                    onChange={(e) => {
+                                        setSelectedFacultyFilter(e.target.value);
+                                        setProdiCurrentPage(1);
+                                    }}
+                                    className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 shadow-2xs focus:outline-emerald-500 cursor-pointer font-medium"
                                 >
                                     <option value="">Semua Fakultas</option>
                                     {faculties.map(f => (
@@ -305,116 +382,141 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                     ))}
                                 </select>
 
+                                {/* Filter Jenjang */}
                                 <select
                                     value={selectedDegreeFilter}
-                                    onChange={(e) => setSelectedDegreeFilter(e.target.value)}
-                                    className="p-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+                                    onChange={(e) => {
+                                        setSelectedDegreeFilter(e.target.value);
+                                        setProdiCurrentPage(1);
+                                    }}
+                                    className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 shadow-2xs focus:outline-emerald-500 cursor-pointer font-medium"
                                 >
                                     <option value="">Semua Jenjang</option>
                                     <option value="S1">S1 (Sarjana)</option>
                                     <option value="S2">S2 (Magister)</option>
-                                    <option value="D3">D3 (Diploma)</option>
+                                    <option value="S3">S3 (Doktor)</option>
+                                    <option value="D3">D3 (Diploma Tiga)</option>
+                                    <option value="D4">D4 (Sarjana Terapan)</option>
                                     <option value="Profesi">Profesi</option>
                                 </select>
-                            </div>
-                        )}
-                    </div>
 
-                    {/* TAB 1: TABEL PROGRAM STUDI */}
-                    {activeTab === 'prodi' && (
+                                {/* Input Pencarian */}
+                                <div className="relative">
+                                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                    <input
+                                        type="text"
+                                        value={searchTerm}
+                                        onChange={(e) => {
+                                            setSearchTerm(e.target.value);
+                                            setProdiCurrentPage(1);
+                                        }}
+                                        placeholder="Cari kode / nama prodi..."
+                                        className="pl-8 pr-7 py-1 bg-white border border-slate-300 rounded-lg text-xs placeholder:text-slate-400 focus:outline-emerald-500 w-44 sm:w-52 shadow-2xs"
+                                    />
+                                    {searchTerm && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSearchTerm('');
+                                                setProdiCurrentPage(1);
+                                            }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Table */}
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs border-collapse">
+                            <table className="w-full text-left border-collapse text-[11px]">
                                 <thead>
-                                    <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase tracking-wider text-[10px]">
-                                        <th className="p-3">Kode Prodi</th>
-                                        <th className="p-3">Nama Program Studi</th>
-                                        <th className="p-3">Jenjang</th>
-                                        <th className="p-3">Fakultas</th>
-                                        <th className="p-3">Akreditasi</th>
-                                        <th className="p-3">Ketua Prodi (Kaprodi)</th>
-                                        <th className="p-3 text-center">Kurikulum</th>
-                                        <th className="p-3 text-center">Status</th>
-                                        <th className="p-3 text-right">Aksi</th>
+                                    <tr className="bg-slate-100/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[10px]">
+                                        <th className="py-2.5 px-3">Kode</th>
+                                        <th className="py-2.5 px-3">Nama Program Studi</th>
+                                        <th className="py-2.5 px-3 text-center">Jenjang</th>
+                                        <th className="py-2.5 px-3">Fakultas</th>
+                                        <th className="py-2.5 px-3">Akreditasi</th>
+                                        <th className="py-2.5 px-3">Ketua Prodi (Kaprodi)</th>
+                                        <th className="py-2.5 px-3 text-center">Kurikulum</th>
+                                        <th className="py-2.5 px-3 text-center">Status</th>
+                                        <th className="py-2.5 px-3 text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 font-medium">
-                                    {filteredProdi.length === 0 ? (
+                                    {paginatedProdi.length === 0 ? (
                                         <tr>
-                                            <td colSpan={9} className="p-8 text-center text-slate-400">
-                                                Tidak ada Program Studi yang cocok dengan pencarian.
+                                            <td colSpan={9} className="py-8 text-center text-slate-500">
+                                                <GraduationCap className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                                <p className="font-bold text-xs">Tidak ada program studi yang cocok.</p>
+                                                <p className="text-[11px] text-slate-400 mt-0.5">Coba ubah kata kunci pencarian atau filter fakultas/jenjang.</p>
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredProdi.map((prodi) => (
-                                            <tr key={prodi.id} className="hover:bg-indigo-50/30 transition">
-                                                <td className="p-3">
-                                                    <span className="font-mono font-black text-indigo-950 px-2.5 py-0.5 bg-indigo-50 border border-indigo-200 rounded-md">
+                                        paginatedProdi.map((prodi) => (
+                                            <tr key={prodi.id} className="hover:bg-slate-50/80 transition">
+                                                <td className="py-2.5 px-3">
+                                                    <span className="font-mono font-bold text-slate-800 px-2 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px]">
                                                         {prodi.code}
                                                     </span>
                                                 </td>
-
-                                                <td className="p-3">
-                                                    <p className="font-black text-slate-900">{prodi.name}</p>
+                                                <td className="py-2.5 px-3">
+                                                    <p className="font-bold text-slate-900">{prodi.name}</p>
                                                     {prodi.sk_number && (
                                                         <p className="text-[10px] text-slate-400">SK: {prodi.sk_number}</p>
                                                     )}
                                                 </td>
-
-                                                <td className="p-3">
+                                                <td className="py-2.5 px-3 text-center">
                                                     <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded font-black text-slate-800 text-[10px]">
                                                         {prodi.degree}
                                                     </span>
                                                 </td>
-
-                                                <td className="p-3 text-slate-700">
+                                                <td className="py-2.5 px-3 text-slate-700">
                                                     {prodi.faculty_name || '-'}
                                                 </td>
-
-                                                <td className="p-3">
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                                <td className="py-2.5 px-3">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
                                                         prodi.accreditation === 'Unggul' || prodi.accreditation === 'A'
-                                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                                                             : prodi.accreditation === 'Baik Sekali' || prodi.accreditation === 'B'
-                                                            ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                                                            : 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                            ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                                            : 'bg-amber-100 text-amber-800 border-amber-300'
                                                     }`}>
                                                         ★ {prodi.accreditation}
                                                     </span>
                                                 </td>
-
-                                                <td className="p-3">
+                                                <td className="py-2.5 px-3">
                                                     {prodi.head_of_program_name ? (
                                                         <div>
                                                             <p className="font-bold text-slate-900">{prodi.head_of_program_name}</p>
                                                             <p className="text-[10px] text-slate-400 font-mono">NIDN: {prodi.head_of_program_nidn || '-'}</p>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-slate-400 italic text-[11px]">- Belum Diplot -</span>
+                                                        <span className="text-slate-400 italic text-[10px]">- Belum Diplot -</span>
                                                     )}
                                                 </td>
-
-                                                <td className="p-3 text-center">
-                                                    <span className="font-bold text-slate-700">
+                                                <td className="py-2.5 px-3 text-center">
+                                                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full text-[10px] font-bold border border-slate-200">
                                                         {prodi.curricula_count || 0} Kurikulum
                                                     </span>
                                                 </td>
-
-                                                <td className="p-3 text-center">
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                <td className="py-2.5 px-3 text-center">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                                                         prodi.is_active 
-                                                            ? 'bg-emerald-100 text-emerald-800' 
-                                                            : 'bg-slate-100 text-slate-500'
+                                                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                                                            : 'bg-slate-100 text-slate-500 border-slate-200'
                                                     }`}>
                                                         {prodi.is_active ? 'Aktif' : 'Nonaktif'}
                                                     </span>
                                                 </td>
-
-                                                <td className="p-3 text-right">
-                                                    <div className="flex items-center justify-end space-x-1.5">
+                                                <td className="py-2.5 px-3 text-center">
+                                                    <div className="flex items-center justify-center space-x-1">
                                                         <button
                                                             type="button"
                                                             onClick={() => openProdiModal(prodi)}
-                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                                            className="p-1 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition cursor-pointer"
                                                             title="Edit Program Studi"
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" />
@@ -422,7 +524,7 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                                         <button
                                                             type="button"
                                                             onClick={() => handleDeleteProdi(prodi)}
-                                                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                                            className="p-1 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition cursor-pointer"
                                                             title="Hapus Program Studi"
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
@@ -435,107 +537,216 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                 </tbody>
                             </table>
                         </div>
-                    )}
 
-                    {/* TAB 2: TABEL FAKULTAS */}
-                    {activeTab === 'faculty' && (
+                        {/* Pagination Bar */}
+                        <div className="px-4 py-3 bg-slate-50/80 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                            <div className="text-slate-500 text-[11px]">
+                                Menampilkan <strong className="text-slate-800 font-bold">{prodiFromIndex}</strong> - <strong className="text-slate-800 font-bold">{prodiToIndex}</strong> dari <strong className="text-slate-800 font-bold">{totalFilteredProdi}</strong> program studi
+                                {totalFilteredProdi !== studyPrograms.length && (
+                                    <span className="text-slate-400 text-[10px] ml-1">(difilter dari total {studyPrograms.length})</span>
+                                )}
+                            </div>
+
+                            {totalProdiPages > 1 && (
+                                <div className="flex items-center space-x-1">
+                                    <button
+                                        type="button"
+                                        disabled={safeProdiPage === 1}
+                                        onClick={() => setProdiCurrentPage((p) => Math.max(1, p - 1))}
+                                        className={`px-2 py-1 rounded-lg border text-xs font-bold transition flex items-center space-x-1 ${
+                                            safeProdiPage === 1
+                                                ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white'
+                                                : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-100 cursor-pointer shadow-2xs'
+                                        }`}
+                                        title="Halaman Sebelumnya"
+                                    >
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                        <span className="hidden sm:inline text-[11px]">Sebelumnya</span>
+                                    </button>
+
+                                    <div className="flex items-center space-x-1">
+                                        {Array.from({ length: totalProdiPages }, (_, i) => i + 1).map((pageNum) => {
+                                            if (
+                                                pageNum === 1 ||
+                                                pageNum === totalProdiPages ||
+                                                (pageNum >= safeProdiPage - 1 && pageNum <= safeProdiPage + 1)
+                                            ) {
+                                                const isActive = pageNum === safeProdiPage;
+                                                return (
+                                                    <button
+                                                        key={pageNum}
+                                                        type="button"
+                                                        onClick={() => setProdiCurrentPage(pageNum)}
+                                                        className={`w-7 h-7 rounded-lg text-xs font-bold transition flex items-center justify-center cursor-pointer ${
+                                                            isActive
+                                                                ? 'bg-emerald-600 text-white shadow-xs'
+                                                                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                                                        }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            } else if (
+                                                (pageNum === 2 && safeProdiPage > 3) ||
+                                                (pageNum === totalProdiPages - 1 && safeProdiPage < totalProdiPages - 2)
+                                            ) {
+                                                return <span key={pageNum} className="text-slate-400 px-1">...</span>;
+                                            }
+                                            return null;
+                                        })}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        disabled={safeProdiPage === totalProdiPages}
+                                        onClick={() => setProdiCurrentPage((p) => Math.min(totalProdiPages, p + 1))}
+                                        className={`px-2 py-1 rounded-lg border text-xs font-bold transition flex items-center space-x-1 ${
+                                            safeProdiPage === totalProdiPages
+                                                ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white'
+                                                : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-100 cursor-pointer shadow-2xs'
+                                        }`}
+                                        title="Halaman Berikutnya"
+                                    >
+                                        <span className="hidden sm:inline text-[11px]">Berikutnya</span>
+                                        <ChevronRight className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* TAB 2: DAFTAR FAKULTAS */}
+                {activeTab === 'faculty' && (
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden animate-fadeIn">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs border-collapse">
+                            <table className="w-full text-left border-collapse text-[11px]">
                                 <thead>
-                                    <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase tracking-wider text-[10px]">
-                                        <th className="p-3">Kode</th>
-                                        <th className="p-3">Nama Fakultas</th>
-                                        <th className="p-3">Nama Dekan</th>
-                                        <th className="p-3 text-center">Jumlah Prodi</th>
-                                        <th className="p-3 text-center">Status</th>
-                                        <th className="p-3 text-right">Aksi</th>
+                                    <tr className="bg-slate-100/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[10px]">
+                                        <th className="py-2.5 px-3">Kode</th>
+                                        <th className="py-2.5 px-3">Nama Fakultas</th>
+                                        <th className="py-2.5 px-3">Nama Dekan</th>
+                                        <th className="py-2.5 px-3 text-center">Jumlah Prodi</th>
+                                        <th className="py-2.5 px-3 text-center">Status</th>
+                                        <th className="py-2.5 px-3 text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 font-medium">
-                                    {faculties.map((f) => (
-                                        <tr key={f.id} className="hover:bg-slate-50 transition">
-                                            <td className="p-3 font-mono font-bold text-slate-900">
-                                                {f.code}
-                                            </td>
-                                            <td className="p-3 font-bold text-slate-900">
-                                                {f.name}
-                                            </td>
-                                            <td className="p-3 text-slate-700">
-                                                {f.dean_name || '-'}
-                                            </td>
-                                            <td className="p-3 text-center font-bold text-indigo-700">
-                                                {f.prodi_count} Program Studi
-                                            </td>
-                                            <td className="p-3 text-center">
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                                    f.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
-                                                }`}>
-                                                    {f.is_active ? 'Aktif' : 'Nonaktif'}
-                                                </span>
-                                            </td>
-                                            <td className="p-3 text-right">
-                                                <div className="flex items-center justify-end space-x-1.5">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openFacultyModal(f)}
-                                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                                    >
-                                                        <Edit2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDeleteFaculty(f)}
-                                                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </div>
+                                    {faculties.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="py-8 text-center text-slate-500">
+                                                <Building2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                                <p className="font-bold text-xs">Belum ada data fakultas.</p>
                                             </td>
                                         </tr>
-                                    ))}
+                                    ) : (
+                                        faculties.map((f) => (
+                                            <tr key={f.id} className="hover:bg-slate-50/80 transition">
+                                                <td className="py-2.5 px-3">
+                                                    <span className="font-mono font-bold text-slate-800 px-2 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px]">
+                                                        {f.code}
+                                                    </span>
+                                                </td>
+                                                <td className="py-2.5 px-3 font-bold text-slate-900">
+                                                    {f.name}
+                                                </td>
+                                                <td className="py-2.5 px-3 text-slate-700">
+                                                    {f.dean_name || '-'}
+                                                </td>
+                                                <td className="py-2.5 px-3 text-center font-bold text-emerald-800">
+                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                                                        {f.prodi_count} Program Studi
+                                                    </span>
+                                                </td>
+                                                <td className="py-2.5 px-3 text-center">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                                        f.is_active 
+                                                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                                                            : 'bg-slate-100 text-slate-500 border-slate-200'
+                                                    }`}>
+                                                        {f.is_active ? 'Aktif' : 'Nonaktif'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-2.5 px-3 text-center">
+                                                    <div className="flex items-center justify-center space-x-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openFacultyModal(f)}
+                                                            className="p-1 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition cursor-pointer"
+                                                            title="Edit Fakultas"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDeleteFaculty(f)}
+                                                            className="p-1 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition cursor-pointer"
+                                                            title="Hapus Fakultas"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             {/* ========================================================================= */}
             {/* MODAL FORM: TAMBAH / EDIT PROGRAM STUDI */}
             {/* ========================================================================= */}
             {isProdiModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
-                    <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden max-h-[92vh] flex flex-col">
-                        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between shrink-0">
-                            <div className="flex items-center space-x-2.5">
-                                <div className="p-2 bg-indigo-500/20 text-indigo-300 rounded-xl">
-                                    <GraduationCap className="w-5 h-5" />
+                <div 
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsProdiModalOpen(false);
+                    }}
+                    className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
+                >
+                    <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150">
+                        <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between shrink-0">
+                            <div className="flex items-center space-x-2">
+                                <div className="p-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg border border-emerald-500/30">
+                                    <GraduationCap className="w-4 h-4" />
                                 </div>
                                 <div>
-                                    <h3 className="font-black text-sm text-white">
+                                    <h3 className="font-bold text-xs text-white">
                                         {editingProdi ? 'Edit Data Program Studi' : 'Tambah Program Studi Baru'}
                                     </h3>
-                                    <p className="text-[11px] text-slate-300">
+                                    <p className="text-[10px] text-slate-300">
                                         {editingProdi ? `Memperbarui rincian prodi ${editingProdi.name}` : 'Lengkapi informasi prodi, fakultas, dan akreditasi'}
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setIsProdiModalOpen(false)} className="text-slate-400 hover:text-white p-1">
-                                <X className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center space-x-1.5">
+                                <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
+                                    ESC
+                                </span>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsProdiModalOpen(false)} 
+                                    className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
 
-                        <form onSubmit={handleProdiSubmit} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
+                        <form onSubmit={handleProdiSubmit} className="p-5 overflow-y-auto space-y-3.5 text-xs flex-1">
                             {/* Fakultas & Jenjang */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                                 <div className="sm:col-span-2">
-                                    <label className="block font-bold text-slate-700 mb-1">
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">
                                         Fakultas Naungan <span className="text-rose-500">*</span>
                                     </label>
                                     <select
                                         value={prodiForm.data.faculty_id}
                                         onChange={(e) => prodiForm.setData('faculty_id', e.target.value)}
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900"
+                                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-emerald-500"
                                         required
                                     >
                                         <option value="">Pilih Fakultas...</option>
@@ -546,13 +757,13 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                 </div>
 
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1">
-                                        Jenjang Pendidikan <span className="text-rose-500">*</span>
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">
+                                        Jenjang <span className="text-rose-500">*</span>
                                     </label>
                                     <select
                                         value={prodiForm.data.degree}
                                         onChange={(e) => prodiForm.setData('degree', e.target.value)}
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900"
+                                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-emerald-500"
                                         required
                                     >
                                         <option value="S1">S1 — Sarjana</option>
@@ -566,9 +777,9 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                             </div>
 
                             {/* Kode Prodi & Akreditasi */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1">
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">
                                         Kode Singkat Prodi <span className="text-rose-500">*</span>
                                     </label>
                                     <input
@@ -576,19 +787,19 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                         placeholder="Contoh: PAI / MPI / HES"
                                         value={prodiForm.data.code}
                                         onChange={(e) => prodiForm.setData('code', e.target.value.toUpperCase())}
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold uppercase"
+                                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold uppercase focus:outline-emerald-500"
                                         required
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1">
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">
                                         Peringkat Akreditasi <span className="text-rose-500">*</span>
                                     </label>
                                     <select
                                         value={prodiForm.data.accreditation}
                                         onChange={(e) => prodiForm.setData('accreditation', e.target.value)}
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900"
+                                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-emerald-500"
                                         required
                                     >
                                         <option value="Unggul">Unggul (BAN-PT / LAM)</option>
@@ -603,7 +814,7 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                             </div>
 
                             <div>
-                                <label className="block font-bold text-slate-700 mb-1">
+                                <label className="block font-bold text-slate-700 mb-1 text-[11px]">
                                     Nama Lengkap Program Studi <span className="text-rose-500">*</span>
                                 </label>
                                 <input
@@ -611,14 +822,14 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                     placeholder="Contoh: Pendidikan Agama Islam"
                                     value={prodiForm.data.name}
                                     onChange={(e) => prodiForm.setData('name', e.target.value)}
-                                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold focus:outline-emerald-500"
                                     required
                                 />
                             </div>
 
                             {/* SK Number */}
                             <div>
-                                <label className="block font-bold text-slate-700 mb-1">
+                                <label className="block font-bold text-slate-700 mb-1 text-[11px]">
                                     Nomor SK Izin Operasional / Akreditasi
                                 </label>
                                 <input
@@ -626,18 +837,18 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                     placeholder="Contoh: SK-BAN-PT-PAI-2024 / Keputusan Dirjen Pendis"
                                     value={prodiForm.data.sk_number}
                                     onChange={(e) => prodiForm.setData('sk_number', e.target.value)}
-                                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+                                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500 text-xs"
                                 />
                             </div>
 
                             {/* Kaprodi & Sekretaris */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Ketua Program Studi (Kaprodi)</label>
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">Ketua Program Studi (Kaprodi)</label>
                                     <select
                                         value={prodiForm.data.head_of_program_id}
                                         onChange={(e) => prodiForm.setData('head_of_program_id', e.target.value)}
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium"
+                                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-medium focus:outline-emerald-500"
                                     >
                                         <option value="">-- Pilih Dosen Kaprodi --</option>
                                         {lecturers.map(l => (
@@ -647,11 +858,11 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                 </div>
 
                                 <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Sekretaris Program Studi</label>
+                                    <label className="block font-bold text-slate-700 mb-1 text-[11px]">Sekretaris Program Studi</label>
                                     <select
                                         value={prodiForm.data.secretary_id}
                                         onChange={(e) => prodiForm.setData('secretary_id', e.target.value)}
-                                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium"
+                                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-medium focus:outline-emerald-500"
                                     >
                                         <option value="">-- Pilih Dosen Sekretaris --</option>
                                         {lecturers.map(l => (
@@ -664,34 +875,34 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                             {/* Status Aktif */}
                             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
                                 <div>
-                                    <p className="font-bold text-slate-900">Status Operasional Prodi</p>
-                                    <p className="text-[10px] text-slate-500">Prodi aktif dapat dipilih mahasiswa untuk KRS dan penerimaan PMB.</p>
+                                    <p className="font-bold text-slate-900 text-xs">Status Operasional Prodi</p>
+                                    <p className="text-[10px] text-slate-500">Prodi aktif dapat dipilih mahasiswa untuk KRS dan PMB.</p>
                                 </div>
                                 <label className="flex items-center space-x-2 cursor-pointer">
                                     <input
                                         type="checkbox"
                                         checked={prodiForm.data.is_active}
                                         onChange={(e) => prodiForm.setData('is_active', e.target.checked)}
-                                        className="w-4 h-4 text-indigo-600 rounded"
+                                        className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
                                     />
                                     <span className="font-bold text-xs">{prodiForm.data.is_active ? 'Aktif' : 'Nonaktif'}</span>
                                 </label>
                             </div>
 
-                            <div className="pt-2 flex justify-end space-x-2">
+                            <div className="pt-2 flex justify-end space-x-2 border-t border-slate-100">
                                 <button
                                     type="button"
                                     onClick={() => setIsProdiModalOpen(false)}
-                                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={prodiForm.processing}
-                                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow flex items-center space-x-1.5"
+                                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-xs flex items-center space-x-1.5 cursor-pointer"
                                 >
-                                    <Save className="w-4 h-4" />
+                                    <Save className="w-3.5 h-3.5" />
                                     <span>{prodiForm.processing ? 'Menyimpan...' : 'Simpan Program Studi'}</span>
                                 </button>
                             </div>
@@ -704,25 +915,39 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
             {/* MODAL FORM: TAMBAH / EDIT FAKULTAS */}
             {/* ========================================================================= */}
             {isFacultyModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
-                    <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
-                        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between">
-                            <div className="flex items-center space-x-2.5">
-                                <div className="p-2 bg-indigo-500/20 text-indigo-300 rounded-xl">
-                                    <Building2 className="w-5 h-5" />
+                <div 
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsFacultyModalOpen(false);
+                    }}
+                    className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
+                >
+                    <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                        <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <div className="p-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg border border-emerald-500/30">
+                                    <Building2 className="w-4 h-4" />
                                 </div>
-                                <h3 className="font-black text-sm text-white">
+                                <h3 className="font-bold text-xs text-white">
                                     {editingFaculty ? 'Edit Data Fakultas' : 'Tambah Fakultas Baru'}
                                 </h3>
                             </div>
-                            <button onClick={() => setIsFacultyModalOpen(false)} className="text-slate-400 hover:text-white p-1">
-                                <X className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center space-x-1.5">
+                                <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
+                                    ESC
+                                </span>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsFacultyModalOpen(false)} 
+                                    className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
 
-                        <form onSubmit={handleFacultySubmit} className="p-6 space-y-4 text-xs">
+                        <form onSubmit={handleFacultySubmit} className="p-5 space-y-3.5 text-xs">
                             <div>
-                                <label className="block font-bold text-slate-700 mb-1">
+                                <label className="block font-bold text-slate-700 mb-1 text-[11px]">
                                     Kode Fakultas <span className="text-rose-500">*</span>
                                 </label>
                                 <input
@@ -730,13 +955,13 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                     placeholder="Contoh: TARBIYAH / SYARIAH"
                                     value={facultyForm.data.code}
                                     onChange={(e) => facultyForm.setData('code', e.target.value.toUpperCase())}
-                                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold uppercase"
+                                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold uppercase focus:outline-emerald-500"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block font-bold text-slate-700 mb-1">
+                                <label className="block font-bold text-slate-700 mb-1 text-[11px]">
                                     Nama Fakultas <span className="text-rose-500">*</span>
                                 </label>
                                 <input
@@ -744,36 +969,36 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
                                     placeholder="Contoh: Fakultas Tarbiyah dan Keguruan"
                                     value={facultyForm.data.name}
                                     onChange={(e) => facultyForm.setData('name', e.target.value)}
-                                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg font-bold focus:outline-emerald-500"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block font-bold text-slate-700 mb-1">Nama Dekan Fakultas</label>
+                                <label className="block font-bold text-slate-700 mb-1 text-[11px]">Nama Dekan Fakultas</label>
                                 <input
                                     type="text"
                                     placeholder="Contoh: Prof. Dr. KH. Abdul Halim, M.A."
                                     value={facultyForm.data.dean_name}
                                     onChange={(e) => facultyForm.setData('dean_name', e.target.value)}
-                                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+                                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-emerald-500"
                                 />
                             </div>
 
-                            <div className="pt-2 flex justify-end space-x-2">
+                            <div className="pt-2 flex justify-end space-x-2 border-t border-slate-100">
                                 <button
                                     type="button"
                                     onClick={() => setIsFacultyModalOpen(false)}
-                                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={facultyForm.processing}
-                                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow flex items-center space-x-1.5"
+                                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-xs flex items-center space-x-1.5 cursor-pointer"
                                 >
-                                    <Save className="w-4 h-4" />
+                                    <Save className="w-3.5 h-3.5" />
                                     <span>{facultyForm.processing ? 'Menyimpan...' : 'Simpan Fakultas'}</span>
                                 </button>
                             </div>
