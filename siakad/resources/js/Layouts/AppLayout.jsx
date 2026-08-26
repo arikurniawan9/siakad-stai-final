@@ -263,7 +263,10 @@ export default function AppLayout({ title, children }) {
     // MENU KHUSUS SUPERADMIN (TIM DEVELOPER & SYSADMIN)
     const getSuperadminNav = () => [
         { label: 'Dasbor Developer', href: '/dashboard', icon: Activity },
+        { header: 'MASTER AKADEMIK' },
         { label: 'Master Gedung & Ruang', href: '/admin/facilities', icon: Building2 },
+        { label: 'Tahun & Periode Semester', href: '/admin/academic-periods', icon: School },
+        { label: 'Plotting & Anti-Clash Jadwal', href: '/admin/schedules', icon: BookOpen },
         { header: 'PERBANKAN & BILLING BSI' },
         { label: 'BSI Smart Billing H2H', href: '/admin/bsi-gateway', icon: Landmark, highlight: true },
         { label: 'Keuangan & Setup Tarif VA', href: '/admin/finance', icon: CreditCard },
@@ -290,15 +293,15 @@ export default function AppLayout({ title, children }) {
         { label: 'Evaluasi Dosen (EDOM)', href: '/admin/edom', icon: Star },
         { label: 'Skrining Yudisium', href: '/admin/yudisium', icon: FileCheck },
         { label: 'Surat Keterangan Aktif', href: '/admin/letters', icon: FileText },
-        { header: 'MASTER AKADEMIK' },
-        { label: 'Plotting & Anti-Clash Jadwal', href: '/admin/schedules', icon: BookOpen },
-        { label: 'Tahun & Periode Semester', href: '/admin/academic-periods', icon: School },
     ];
 
     // MENU KHUSUS ADMIN (ADMIN BAAK / OPERASIONAL AKADEMIK)
     const getAdminNav = () => [
         { label: 'Dasbor Akademik', href: '/dashboard', icon: LayoutDashboard },
+        { header: 'MASTER AKADEMIK' },
         { label: 'Gedung & Ruang Kelas', href: '/admin/facilities', icon: Building2 },
+        { label: 'Tahun & Periode Semester', href: '/admin/academic-periods', icon: School },
+        { label: 'Plotting & Anti-Clash Jadwal', href: '/admin/schedules', icon: BookOpen },
         { header: 'DATA CIVITAS AKADEMIKA' },
         { label: 'Data Mahasiswa (Angkatan)', href: '/admin/students', icon: GraduationCap },
         { label: 'Data Dosen & Pengajar', href: '/admin/lecturers', icon: Users },
@@ -314,9 +317,6 @@ export default function AppLayout({ title, children }) {
         { label: 'Evaluasi Dosen (EDOM)', href: '/admin/edom', icon: Star },
         { label: 'Skrining Yudisium', href: '/admin/yudisium', icon: FileCheck },
         { label: 'Surat Keterangan Aktif', href: '/admin/letters', icon: FileText },
-        { header: 'MASTER AKADEMIK' },
-        { label: 'Tahun & Periode Semester', href: '/admin/academic-periods', icon: School },
-        { label: 'Plotting & Anti-Clash Jadwal', href: '/admin/schedules', icon: BookOpen },
         { header: 'LAYANAN & KEUANGAN' },
         { label: 'Keuangan & Setup Tarif VA', href: '/admin/finance', icon: CreditCard },
         { label: 'Penerimaan Mahasiswa (PMB)', href: '/admin/pmb', icon: UserCheck2 },
@@ -339,6 +339,7 @@ export default function AppLayout({ title, children }) {
         if (role === 'kaprodi') {
             return [
                 { label: 'Dasbor Kaprodi', href: '/dashboard', icon: LayoutDashboard },
+                { header: 'MASTER & FASILITAS' },
                 { label: 'Gedung & Ruang Kuliah', href: '/admin/facilities', icon: Building2 },
                 { header: 'STRUKTUR KURIKULUM' },
                 { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
