@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { Printer, ArrowLeft, Download, Building2, QrCode, CheckCircle2, DoorOpen } from 'lucide-react';
-import { ROOM_TYPES, getRoomTypeName } from './Index';
+import { Printer, ArrowLeft, Download, Building2, QrCode, CheckCircle2, DoorOpen, ChevronDown } from 'lucide-react';
+import { ROOM_TYPES, ROOM_TYPE_GROUPS, getRoomTypeName } from './Index';
 
 export default function FacilityPrint({ 
     rooms = [], 
@@ -113,16 +113,25 @@ export default function FacilityPrint({
                     {/* Tipe Ruang Filter */}
                     <div className="flex items-center space-x-2 shrink-0">
                         <span className="text-[11px] font-bold text-slate-400">Tipe Ruang:</span>
-                        <select
-                            value={filters.room_type || ''}
-                            onChange={(e) => handleFilterType(e.target.value)}
-                            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:bg-white"
-                        >
-                            <option value="">Semua Tipe Ruang ({ROOM_TYPES.length})</option>
-                            {ROOM_TYPES.map((t) => (
-                                <option key={t.value} value={t.value}>{t.label}</option>
-                            ))}
-                        </select>
+                        <div className="relative">
+                            <select
+                                value={filters.room_type || ''}
+                                onChange={(e) => handleFilterType(e.target.value)}
+                                className="bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-lg pl-2.5 pr-7 py-1 text-xs font-bold text-slate-800 focus:bg-white appearance-none cursor-pointer"
+                            >
+                                <option value="">Semua Tipe Ruang ({ROOM_TYPES.length})</option>
+                                {ROOM_TYPE_GROUPS.map((group) => (
+                                    <optgroup key={group.category} label={`── ${group.category} ──`} className="font-bold text-slate-900 bg-slate-100">
+                                        {group.types.map((t) => (
+                                            <option key={t.value} value={t.value} className="bg-white text-slate-800 font-medium">
+                                                {t.label}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                ))}
+                            </select>
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
                     </div>
                 </div>
             </div>

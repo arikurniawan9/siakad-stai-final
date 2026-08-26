@@ -6,8 +6,83 @@ import {
     Layers, Users, Tv, Check, Search, Filter, X, 
     Printer, FileSpreadsheet, Edit2, Trash2, MoreVertical,
     AlertCircle, RefreshCw, LayoutGrid, List, CheckSquare,
-    Eye, Power, Sparkles, MapPin, Armchair, GraduationCap
+    Eye, Power, Sparkles, MapPin, Armchair, GraduationCap,
+    ChevronDown
 } from 'lucide-react';
+
+export const ROOM_TYPE_GROUPS = [
+    {
+        category: 'Perkuliahan & Pembelajaran',
+        types: [
+            { value: '1', label: 'Kuliah' },
+            { value: '7', label: 'Seminar' },
+            { value: '38', label: 'Rapat' },
+            { value: '39', label: 'Ujian Skripsi/Tesis/Disertasi' },
+            { value: '40', label: 'Konseling' },
+            { value: '41', label: 'Micro Teaching' },
+        ],
+    },
+    {
+        category: 'Laboratorium & Praktikum',
+        types: [
+            { value: '2', label: 'Laboratorium' },
+            { value: '3', label: 'Studio' },
+            { value: '20', label: 'Komputer' },
+            { value: '24', label: 'Praktikum' },
+            { value: '14', label: 'Bengkel/Workshop/Reparasi' },
+        ],
+    },
+    {
+        category: 'Perpustakaan & Literatur',
+        types: [
+            { value: '4', label: 'Perpustakaan' },
+            { value: '25', label: 'Referensi/Buku/Literatur' },
+        ],
+    },
+    {
+        category: 'Pimpinan, Dosen & Kantor',
+        types: [
+            { value: '5', label: 'Dosen' },
+            { value: '6', label: 'Administrasi/Kantor' },
+            { value: '12', label: 'Senat' },
+            { value: '16', label: 'Pengelola/Resepsionis' },
+            { value: '23', label: 'Asisten' },
+            { value: '26', label: 'Ketua/Kepala' },
+            { value: '27', label: 'Wakil' },
+            { value: '28', label: 'Sekretaris' },
+            { value: '32', label: 'Ahli' },
+        ],
+    },
+    {
+        category: 'Kemahasiswaan & Fasilitas Umum',
+        types: [
+            { value: '9', label: 'Kantin' },
+            { value: '10', label: 'Ibadah' },
+            { value: '11', label: 'Parkir' },
+            { value: '13', label: 'Hall/Lobby' },
+            { value: '15', label: 'Dapur/Pantry' },
+            { value: '17', label: 'Koridor/Selasar/Teras' },
+            { value: '18', label: 'Tangga' },
+            { value: '19', label: 'Tamu' },
+            { value: '21', label: 'Panggung/Stage' },
+            { value: '22', label: 'Toilet/Lavatory' },
+            { value: '29', label: 'Security/Keamanan/Satpam/Penjaga' },
+            { value: '30', label: 'Garasi' },
+            { value: '31', label: 'Istirahat/Tidur/Ganti' },
+            { value: '33', label: 'Lift' },
+            { value: '34', label: 'Koperasi' },
+            { value: '35', label: 'Klinik/Kesehatan' },
+            { value: '37', label: 'Di Luar Ruang' },
+            { value: '42', label: 'Unit Kegiatan Mahasiswa' },
+        ],
+    },
+    {
+        category: 'Lainnya',
+        types: [
+            { value: '36', label: 'Ruang tak terdefinisi' },
+        ],
+    },
+];
 
 export const ROOM_TYPES = [
     { value: '1', label: 'Kuliah' },
@@ -514,75 +589,105 @@ export default function FacilitiesIndex({
                         <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 animate-fadeIn">
                             {/* Filter Gedung */}
                             <div>
-                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Gedung Kampus:</label>
-                                <select
-                                    value={buildingId}
-                                    onChange={(e) => {
-                                        setBuildingId(e.target.value);
-                                        handleFilterChange(e.target.value, roomType, floor, status);
-                                    }}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                                >
-                                    <option value="">Semua Gedung</option>
-                                    {buildings.map((b) => (
-                                        <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
-                                    ))}
-                                </select>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center space-x-1 mb-1">
+                                    <Building2 className="w-3 h-3 text-slate-400" />
+                                    <span>Gedung Kampus:</span>
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={buildingId}
+                                        onChange={(e) => {
+                                            setBuildingId(e.target.value);
+                                            handleFilterChange(e.target.value, roomType, floor, status);
+                                        }}
+                                        className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
+                                    >
+                                        <option value="">Semua Gedung ({buildings.length})</option>
+                                        {buildings.map((b) => (
+                                            <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
                             </div>
 
-                            {/* Filter Tipe Ruangan (42 Standar PDDIKTI) */}
+                            {/* Filter Tipe Ruangan (42 Standar PDDIKTI dengan Kategori Optgroup) */}
                             <div>
-                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Tipe Ruangan:</label>
-                                <select
-                                    value={roomType}
-                                    onChange={(e) => {
-                                        setRoomType(e.target.value);
-                                        handleFilterChange(buildingId, e.target.value, floor, status);
-                                    }}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                                >
-                                    <option value="">Semua Tipe Ruang ({ROOM_TYPES.length})</option>
-                                    {ROOM_TYPES.map((t) => (
-                                        <option key={t.value} value={t.value}>{t.label}</option>
-                                    ))}
-                                </select>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center space-x-1 mb-1">
+                                    <DoorOpen className="w-3 h-3 text-slate-400" />
+                                    <span>Tipe Ruangan:</span>
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={roomType}
+                                        onChange={(e) => {
+                                            setRoomType(e.target.value);
+                                            handleFilterChange(buildingId, e.target.value, floor, status);
+                                        }}
+                                        className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
+                                    >
+                                        <option value="">Semua Tipe Ruang ({ROOM_TYPES.length})</option>
+                                        {ROOM_TYPE_GROUPS.map((group) => (
+                                            <optgroup key={group.category} label={`── ${group.category} ──`} className="font-black text-slate-900 bg-slate-100">
+                                                {group.types.map((t) => (
+                                                    <option key={t.value} value={t.value} className="bg-white text-slate-800 font-medium py-1">
+                                                        {t.label}
+                                                    </option>
+                                                ))}
+                                            </optgroup>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
                             </div>
 
                             {/* Filter Lantai */}
                             <div>
-                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Nomor Lantai:</label>
-                                <select
-                                    value={floor}
-                                    onChange={(e) => {
-                                        setFloor(e.target.value);
-                                        handleFilterChange(buildingId, roomType, e.target.value, status);
-                                    }}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                                >
-                                    <option value="">Semua Lantai</option>
-                                    <option value="1">Lantai 1</option>
-                                    <option value="2">Lantai 2</option>
-                                    <option value="3">Lantai 3</option>
-                                    <option value="4">Lantai 4</option>
-                                    <option value="5">Lantai 5</option>
-                                </select>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center space-x-1 mb-1">
+                                    <Layers className="w-3 h-3 text-slate-400" />
+                                    <span>Nomor Lantai:</span>
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={floor}
+                                        onChange={(e) => {
+                                            setFloor(e.target.value);
+                                            handleFilterChange(buildingId, roomType, e.target.value, status);
+                                        }}
+                                        className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
+                                    >
+                                        <option value="">Semua Lantai</option>
+                                        <option value="1">Lantai 1</option>
+                                        <option value="2">Lantai 2</option>
+                                        <option value="3">Lantai 3</option>
+                                        <option value="4">Lantai 4</option>
+                                        <option value="5">Lantai 5</option>
+                                    </select>
+                                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
                             </div>
 
                             {/* Filter Status Operasional */}
                             <div>
-                                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Status Operasional:</label>
-                                <select
-                                    value={status}
-                                    onChange={(e) => {
-                                        setStatus(e.target.value);
-                                        handleFilterChange(buildingId, roomType, floor, e.target.value);
-                                    }}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                                >
-                                    <option value="">Semua Status</option>
-                                    <option value="active">● Siap Pakai (Aktif)</option>
-                                    <option value="inactive">○ Perawatan (Nonaktif)</option>
-                                </select>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center space-x-1 mb-1">
+                                    <ShieldCheck className="w-3 h-3 text-slate-400" />
+                                    <span>Status Operasional:</span>
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={status}
+                                        onChange={(e) => {
+                                            setStatus(e.target.value);
+                                            handleFilterChange(buildingId, roomType, floor, e.target.value);
+                                        }}
+                                        className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
+                                    >
+                                        <option value="">Semua Status</option>
+                                        <option value="active">● Siap Pakai (Aktif)</option>
+                                        <option value="inactive">○ Perawatan (Nonaktif)</option>
+                                    </select>
+                                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1100,16 +1205,19 @@ export default function FacilitiesIndex({
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block font-bold text-slate-700 mb-1">Pilih Gedung Kampus</label>
-                                        <select
-                                            value={roomForm.data.building_id}
-                                            onChange={(e) => roomForm.setData('building_id', e.target.value)}
-                                            className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 font-bold"
-                                            required
-                                        >
-                                            {buildings && buildings.map((b) => (
-                                                <option key={b.id} value={b.id}>{b.name}</option>
-                                            ))}
-                                        </select>
+                                        <div className="relative">
+                                            <select
+                                                value={roomForm.data.building_id}
+                                                onChange={(e) => roomForm.setData('building_id', e.target.value)}
+                                                className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-300 rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
+                                                required
+                                            >
+                                                {buildings && buildings.map((b) => (
+                                                    <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                                                ))}
+                                            </select>
+                                            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block font-bold text-slate-700 mb-1">Nomor Lantai</label>
@@ -1138,16 +1246,30 @@ export default function FacilitiesIndex({
                                         />
                                     </div>
                                     <div>
-                                        <label className="block font-bold text-slate-700 mb-1">Tipe Ruangan</label>
-                                        <select
-                                            value={roomForm.data.room_type}
-                                            onChange={(e) => roomForm.setData('room_type', e.target.value)}
-                                            className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 font-bold"
-                                        >
-                                            {ROOM_TYPES.map((t) => (
-                                                <option key={t.value} value={t.value}>{t.label}</option>
-                                            ))}
-                                        </select>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="block font-bold text-slate-700">Tipe Ruangan</label>
+                                            <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                                {getRoomTypeName(roomForm.data.room_type)}
+                                            </span>
+                                        </div>
+                                        <div className="relative">
+                                            <select
+                                                value={roomForm.data.room_type}
+                                                onChange={(e) => roomForm.setData('room_type', e.target.value)}
+                                                className="w-full bg-slate-50 hover:bg-slate-100/70 border border-slate-300 rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition shadow-2xs"
+                                            >
+                                                {ROOM_TYPE_GROUPS.map((group) => (
+                                                    <optgroup key={group.category} label={`── ${group.category} ──`} className="font-black text-slate-900 bg-slate-100 py-1">
+                                                        {group.types.map((t) => (
+                                                            <option key={t.value} value={t.value} className="bg-white text-slate-800 font-medium py-1">
+                                                                {t.label}
+                                                            </option>
+                                                        ))}
+                                                    </optgroup>
+                                                ))}
+                                            </select>
+                                            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
                                     </div>
                                 </div>
 
