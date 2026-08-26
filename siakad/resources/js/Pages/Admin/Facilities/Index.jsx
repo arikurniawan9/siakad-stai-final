@@ -223,6 +223,28 @@ export default function FacilitiesIndex({
         return () => clearTimeout(timer);
     }, [search]);
 
+    // Close active modal or FAB on ESC key press
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+                if (showRoomModal) {
+                    setShowRoomModal(false);
+                } else if (showBuildingModal) {
+                    setShowBuildingModal(false);
+                } else if (showDeleteRoomModal) {
+                    setShowDeleteRoomModal(false);
+                } else if (showDeleteBuildingModal) {
+                    setShowDeleteBuildingModal(false);
+                } else if (isMobileFabOpen) {
+                    setIsMobileFabOpen(false);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [showRoomModal, showBuildingModal, showDeleteRoomModal, showDeleteBuildingModal, isMobileFabOpen]);
+
     const handleFilterChange = (newBId, newType, newFloor, newStatus) => {
         router.get('/admin/facilities', {
             search,
@@ -1056,18 +1078,32 @@ export default function FacilitiesIndex({
 
                 {/* MODAL 1: TAMBAH / EDIT GEDUNG */}
                 {showBuildingModal && (
-                    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div 
+                        onClick={(e) => { if (e.target === e.currentTarget) setShowBuildingModal(false); }}
+                        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+                    >
                         <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-200">
-                            <div className="flex items-center space-x-3 text-slate-900">
-                                <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
-                                    <Building2 className="w-5 h-5" />
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3 text-slate-900">
+                                    <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
+                                        <Building2 className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-black text-slate-900">
+                                            {isEditingBuilding ? 'Edit Data Gedung Kampus' : 'Tambah Gedung Kampus Baru'}
+                                        </h3>
+                                        <p className="text-[11px] text-slate-500">Kelola master identitas gedung & denah lantai</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-base font-black text-slate-900">
-                                        {isEditingBuilding ? 'Edit Data Gedung Kampus' : 'Tambah Gedung Kampus Baru'}
-                                    </h3>
-                                    <p className="text-[11px] text-slate-500">Kelola master identitas gedung & denah lantai</p>
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBuildingModal(false)}
+                                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center space-x-1"
+                                    title="Tutup Modal (Tekan ESC)"
+                                >
+                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 border border-slate-200">ESC</span>
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
 
                             <form onSubmit={handleSubmitBuilding} className="space-y-3 text-xs">
@@ -1132,7 +1168,7 @@ export default function FacilitiesIndex({
                                         onClick={() => setShowBuildingModal(false)}
                                         className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 cursor-pointer"
                                     >
-                                        Batal
+                                        Batal (ESC)
                                     </button>
                                     <button
                                         type="submit"
@@ -1149,13 +1185,27 @@ export default function FacilitiesIndex({
 
                 {/* MODAL 2: KONFIRMASI HAPUS GEDUNG */}
                 {showDeleteBuildingModal && selectedBuilding && (
-                    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div 
+                        onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteBuildingModal(false); }}
+                        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+                    >
                         <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-200">
-                            <div className="flex items-center space-x-3 text-rose-600">
-                                <div className="p-2.5 bg-rose-100 rounded-xl">
-                                    <AlertCircle className="w-5 h-5" />
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3 text-rose-600">
+                                    <div className="p-2.5 bg-rose-100 rounded-xl">
+                                        <AlertCircle className="w-5 h-5" />
+                                    </div>
+                                    <h3 className="text-base font-black text-slate-900">Konfirmasi Hapus Gedung</h3>
                                 </div>
-                                <h3 className="text-base font-black text-slate-900">Konfirmasi Hapus Gedung</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeleteBuildingModal(false)}
+                                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center space-x-1"
+                                    title="Tutup Modal (Tekan ESC)"
+                                >
+                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 border border-slate-200">ESC</span>
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
                             <p className="text-xs text-slate-600 leading-relaxed">
                                 Apakah Anda yakin ingin menghapus gedung <strong>{selectedBuilding.name}</strong> ({selectedBuilding.code})?
@@ -1171,7 +1221,7 @@ export default function FacilitiesIndex({
                                     onClick={() => setShowDeleteBuildingModal(false)}
                                     className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 cursor-pointer"
                                 >
-                                    Batal
+                                    Batal (ESC)
                                 </button>
                                 <button
                                     type="button"
@@ -1187,18 +1237,32 @@ export default function FacilitiesIndex({
 
                 {/* MODAL 3: TAMBAH / EDIT RUANG KELAS */}
                 {showRoomModal && (
-                    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div 
+                        onClick={(e) => { if (e.target === e.currentTarget) setShowRoomModal(false); }}
+                        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+                    >
                         <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200">
-                            <div className="flex items-center space-x-3 text-slate-900">
-                                <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
-                                    <DoorOpen className="w-5 h-5" />
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3 text-slate-900">
+                                    <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
+                                        <DoorOpen className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-black text-slate-900">
+                                            {isEditingRoom ? 'Edit Ruang Kelas Perkuliahan' : 'Tambah Ruang Kelas Baru'}
+                                        </h3>
+                                        <p className="text-[11px] text-slate-500">Tentukan gedung, nomor lantai, kapasitas & fasilitas</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-base font-black text-slate-900">
-                                        {isEditingRoom ? 'Edit Ruang Kelas Perkuliahan' : 'Tambah Ruang Kelas Baru'}
-                                    </h3>
-                                    <p className="text-[11px] text-slate-500">Tentukan gedung, nomor lantai, kapasitas & fasilitas</p>
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowRoomModal(false)}
+                                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center space-x-1"
+                                    title="Tutup Modal (Tekan ESC)"
+                                >
+                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 border border-slate-200">ESC</span>
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
 
                             <form onSubmit={handleSubmitRoom} className="space-y-3 text-xs">
@@ -1342,7 +1406,7 @@ export default function FacilitiesIndex({
                                         onClick={() => setShowRoomModal(false)}
                                         className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 cursor-pointer"
                                     >
-                                        Batal
+                                        Batal (ESC)
                                     </button>
                                     <button
                                         type="submit"
@@ -1359,13 +1423,27 @@ export default function FacilitiesIndex({
 
                 {/* MODAL 4: KONFIRMASI HAPUS RUANG KELAS */}
                 {showDeleteRoomModal && selectedRoom && (
-                    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div 
+                        onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteRoomModal(false); }}
+                        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+                    >
                         <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-200">
-                            <div className="flex items-center space-x-3 text-rose-600">
-                                <div className="p-2.5 bg-rose-100 rounded-xl">
-                                    <AlertCircle className="w-5 h-5" />
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3 text-rose-600">
+                                    <div className="p-2.5 bg-rose-100 rounded-xl">
+                                        <AlertCircle className="w-5 h-5" />
+                                    </div>
+                                    <h3 className="text-base font-black text-slate-900">Konfirmasi Hapus Ruang Kelas</h3>
                                 </div>
-                                <h3 className="text-base font-black text-slate-900">Konfirmasi Hapus Ruang Kelas</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeleteRoomModal(false)}
+                                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center space-x-1"
+                                    title="Tutup Modal (Tekan ESC)"
+                                >
+                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 border border-slate-200">ESC</span>
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
                             <p className="text-xs text-slate-600 leading-relaxed">
                                 Apakah Anda yakin ingin menghapus ruang <strong>{selectedRoom.name}</strong> ({selectedRoom.code}) di <strong>{selectedRoom.building_name}</strong>?
@@ -1379,7 +1457,7 @@ export default function FacilitiesIndex({
                                     onClick={() => setShowDeleteRoomModal(false)}
                                     className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 cursor-pointer"
                                 >
-                                    Batal
+                                    Batal (ESC)
                                 </button>
                                 <button
                                     type="button"
