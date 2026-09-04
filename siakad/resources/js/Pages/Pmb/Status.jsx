@@ -81,7 +81,7 @@ export default function PmbStatus({ applicant, program, invoice, vaTransaction, 
 
     return (
         <div className="min-h-screen bg-slate-900 font-sans text-slate-800 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-            <Head title="Cek Status Pendaftaran PMB & Billing VA — STAI Al-Ittihad" />
+            <Head title="Status Pendaftaran PMB & VA" />
 
             {/* Background Blurs */}
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none"></div>

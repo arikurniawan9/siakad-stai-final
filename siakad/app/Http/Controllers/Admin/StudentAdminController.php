@@ -13,13 +13,15 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Illuminate\View\View;
 
 class StudentAdminController extends Controller
 {
     /**
      * Tampilan Data Mahasiswa berdasarkan Tahun Akademik / Angkatan
      */
-    public function index(Request $request): Response
+    public function index(Request $request): Response|JsonResponse
     {
         $search = $request->input('search');
         $yearFilter = $request->input('academic_year'); // e.g. 2026, 2025, 2024, 2023
@@ -27,591 +29,234 @@ class StudentAdminController extends Controller
         $statusFilter = $request->input('status'); // all, active, inactive
         $krsFilter = $request->input('krs_status'); // DISETUJUI, DIAJUKAN, BELUM_KRS
         $invoiceFilter = $request->input('invoice_status'); // LUNAS, BELUM_LUNAS
+        $perPage = (int) $request->input('per_page', 15);
 
         $academicYears = DB::table('academic_years')->orderBy('code', 'desc')->get();
-        $studyPrograms = DB::table('study_programs')->get();
+        $studyPrograms = DB::table('study_programs')
+            ->leftJoin('faculties', 'faculties.id', '=', 'study_programs.faculty_id')
+            ->select('study_programs.*', 'faculties.name as faculty_name')
+            ->orderBy('study_programs.id', 'asc')
+            ->get();
         $activePeriod = DB::table('academic_periods')->where('is_active', true)->first();
 
-        $studentsQuery = User::where('role', 'mahasiswa')
-            ->when($search, function ($q) use ($search) {
-                $q->where(function ($sq) use ($search) {
-                    $sq->where('name', 'ilike', "%{$search}%")
-                        ->orWhere('identity_number', 'ilike', "%{$search}%")
-                        ->orWhere('username', 'ilike', "%{$search}%")
-                        ->orWhere('email', 'ilike', "%{$search}%")
-                        ->orWhere('phone_number', 'ilike', "%{$search}%");
+        $batchYears = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
+
+        $curricula = DB::table('curricula')
+            ->leftJoin('study_programs', 'curricula.study_program_id', '=', 'study_programs.id')
+            ->select(
+                'curricula.id',
+                'curricula.code',
+                'curricula.name',
+                'curricula.start_year',
+                'curricula.total_credits_required',
+                'curricula.study_program_id',
+                'study_programs.name as study_program_name'
+            )
+            ->where('curricula.is_active', true)
+            ->orderByDesc('curricula.start_year')
+            ->get();
+
+        $lecturers = User::whereIn('role', ['dosen', 'dosen_pa', 'kaprodi'])
+            ->select('id', 'name', 'identity_number', 'email')
+            ->orderBy('name')
+            ->get();
+
+        // Selected Prodi Object
+        $selectedProdiObj = null;
+        if ($prodiFilter) {
+            $selectedProdiObj = $studyPrograms->first(function ($p) use ($prodiFilter) {
+                return (string)$p->id === (string)$prodiFilter || $p->code === $prodiFilter || $p->name === $prodiFilter;
+            });
+        }
+
+        $isSelectionComplete = !empty($selectedProdiObj) && !empty($yearFilter);
+
+        $students = null;
+        $stats = [
+            'total' => 0,
+            'active' => 0,
+            'inactive' => 0,
+            'krs_completed' => 0,
+            'paid_invoices' => 0,
+        ];
+
+        if ($isSelectionComplete) {
+            $studentsQuery = User::where('role', 'mahasiswa')
+                ->when($selectedProdiObj, function ($q) use ($selectedProdiObj) {
+                    $q->where(function ($sq) use ($selectedProdiObj) {
+                        $sq->where('study_program', $selectedProdiObj->name)
+                           ->orWhere('study_program', "{$selectedProdiObj->name} ({$selectedProdiObj->degree})")
+                           ->orWhere('study_program', 'ilike', "%{$selectedProdiObj->name}%")
+                           ->orWhere('study_program', 'ilike', "%{$selectedProdiObj->code}%");
+                    });
+                })
+                ->when($yearFilter, function ($q) use ($yearFilter) {
+                    $prefix2 = substr($yearFilter, -2);
+                    $prefix4 = substr($yearFilter, 0, 4);
+                    $q->where(function ($sq) use ($prefix2, $prefix4) {
+                        $sq->where('identity_number', 'like', "{$prefix2}%")
+                           ->orWhere('identity_number', 'like', "{$prefix4}%")
+                           ->orWhereYear('created_at', $prefix4);
+                    });
+                })
+                ->when($search, function ($q) use ($search) {
+                    $q->where(function ($sq) use ($search) {
+                        $sq->where('name', 'ilike', "%{$search}%")
+                            ->orWhere('identity_number', 'ilike', "%{$search}%")
+                            ->orWhere('nik', 'ilike', "%{$search}%")
+                            ->orWhere('username', 'ilike', "%{$search}%")
+                            ->orWhere('email', 'ilike', "%{$search}%")
+                            ->orWhere('phone_number', 'ilike', "%{$search}%");
+                    });
+                })
+                ->when($statusFilter, function ($q) use ($statusFilter) {
+                    if ($statusFilter === 'active') {
+                        $q->where('is_active', true);
+                    } elseif ($statusFilter === 'inactive') {
+                        $q->where('is_active', false);
+                    }
+                })
+                ->when($krsFilter, function ($q) use ($krsFilter, $activePeriod) {
+                    if ($krsFilter === 'BELUM_KRS') {
+                        $submittedIds = DB::table('krs_submissions')
+                            ->where('academic_period_id', $activePeriod?->id ?? 1)
+                            ->pluck('student_id');
+                        $q->whereNotIn('id', $submittedIds);
+                    } else {
+                        $targetIds = DB::table('krs_submissions')
+                            ->where('academic_period_id', $activePeriod?->id ?? 1)
+                            ->where('status', $krsFilter)
+                            ->pluck('student_id');
+                        $q->whereIn('id', $targetIds);
+                    }
+                })
+                ->when($invoiceFilter, function ($q) use ($invoiceFilter, $activePeriod) {
+                    if ($invoiceFilter === 'LUNAS') {
+                        $paidIds = DB::table('student_invoices')
+                            ->where('academic_period_id', $activePeriod?->id ?? 1)
+                            ->where('status', 'PAID')
+                            ->pluck('user_id');
+                        $q->whereIn('id', $paidIds);
+                    } elseif ($invoiceFilter === 'BELUM_LUNAS') {
+                        $paidIds = DB::table('student_invoices')
+                            ->where('academic_period_id', $activePeriod?->id ?? 1)
+                            ->where('status', 'PAID')
+                            ->pluck('user_id');
+                        $q->whereNotIn('id', $paidIds);
+                    }
                 });
-            })
-            ->when($prodiFilter, function ($q) use ($prodiFilter) {
-                $q->where('study_program', $prodiFilter);
-            })
-            ->when($yearFilter, function ($q) use ($yearFilter) {
-                $prefix = substr($yearFilter, -2);
-                $q->where(function ($sq) use ($prefix, $yearFilter) {
-                    $sq->where('identity_number', 'like', "{$prefix}%")
-                       ->orWhereYear('created_at', substr($yearFilter, 0, 4));
-                });
-            })
-            ->when($statusFilter, function ($q) use ($statusFilter) {
-                if ($statusFilter === 'active') {
-                    $q->where('is_active', true);
-                } elseif ($statusFilter === 'inactive') {
-                    $q->where('is_active', false);
-                }
-            })
-            ->when($krsFilter, function ($q) use ($krsFilter, $activePeriod) {
-                if ($krsFilter === 'BELUM_KRS') {
-                    $submittedIds = DB::table('krs_submissions')
-                        ->where('academic_period_id', $activePeriod?->id ?? 1)
-                        ->pluck('student_id');
-                    $q->whereNotIn('id', $submittedIds);
-                } else {
-                    $targetIds = DB::table('krs_submissions')
-                        ->where('academic_period_id', $activePeriod?->id ?? 1)
-                        ->where('status', $krsFilter)
-                        ->pluck('student_id');
-                    $q->whereIn('id', $targetIds);
-                }
-            })
-            ->when($invoiceFilter, function ($q) use ($invoiceFilter, $activePeriod) {
-                if ($invoiceFilter === 'LUNAS') {
-                    $paidIds = DB::table('student_invoices')
-                        ->where('academic_period_id', $activePeriod?->id ?? 1)
-                        ->where('status', 'PAID')
-                        ->pluck('user_id');
-                    $q->whereIn('id', $paidIds);
-                } elseif ($invoiceFilter === 'BELUM_LUNAS') {
-                    $paidIds = DB::table('student_invoices')
-                        ->where('academic_period_id', $activePeriod?->id ?? 1)
-                        ->where('status', 'PAID')
-                        ->pluck('user_id');
-                    $q->whereNotIn('id', $paidIds);
-                }
+
+            $students = $studentsQuery->orderBy('identity_number', 'asc')->paginate($perPage)->withQueryString();
+
+            // Status KRS, Tagihan, Kurikulum & Dosen Wali Maps
+            $studentIds = $students->pluck('id')->toArray();
+            $krsMap = DB::table('krs_submissions')
+                ->whereIn('student_id', $studentIds)
+                ->where('academic_period_id', $activePeriod?->id ?? 1)
+                ->pluck('status', 'student_id');
+
+            $invoiceMap = DB::table('student_invoices')
+                ->whereIn('user_id', $studentIds)
+                ->where('academic_period_id', $activePeriod?->id ?? 1)
+                ->pluck('status', 'user_id');
+
+            $curriculaMap = $curricula->keyBy('id');
+            $advisorMap = $lecturers->keyBy('id');
+
+            $students->getCollection()->transform(function ($stu) use ($krsMap, $invoiceMap, $curriculaMap, $advisorMap) {
+                $stu->krs_status = $krsMap[$stu->id] ?? 'BELUM_KRS';
+                $stu->invoice_status = $invoiceMap[$stu->id] ?? 'LUNAS';
+                $stu->curriculum = $stu->curriculum_id ? ($curriculaMap[$stu->curriculum_id] ?? null) : null;
+                $stu->advisor = $stu->academic_advisor_id ? ($advisorMap[$stu->academic_advisor_id] ?? null) : null;
+                $nimDigits = preg_replace('/[^0-9]/', '', $stu->identity_number ?? '21');
+                $nimPrefix = substr($nimDigits, 0, 2);
+                $stu->batch_year = strlen($nimPrefix) === 2 ? "20{$nimPrefix}" : '2021';
+                return $stu;
             });
 
-        $students = $studentsQuery->orderBy('identity_number', 'asc')->paginate(15)->withQueryString();
+            // Specific KPI for selection
+            $totalInBatch = (clone $studentsQuery)->count();
+            $activeInBatch = (clone $studentsQuery)->where('is_active', true)->count();
+            $inactiveInBatch = $totalInBatch - $activeInBatch;
 
-        // Status KRS & Tagihan
-        $studentIds = $students->pluck('id')->toArray();
-        $krsMap = DB::table('krs_submissions')
-            ->whereIn('student_id', $studentIds)
-            ->where('academic_period_id', $activePeriod?->id ?? 1)
-            ->pluck('status', 'student_id');
+            $stats = [
+                'total' => $totalInBatch,
+                'active' => $activeInBatch,
+                'inactive' => $inactiveInBatch,
+                'krs_completed' => DB::table('krs_submissions')
+                    ->whereIn('student_id', $studentIds)
+                    ->where('academic_period_id', $activePeriod?->id ?? 1)
+                    ->where('status', 'DISETUJUI')
+                    ->distinct('student_id')
+                    ->count('student_id'),
+                'paid_invoices' => DB::table('student_invoices')
+                    ->whereIn('user_id', $studentIds)
+                    ->where('academic_period_id', $activePeriod?->id ?? 1)
+                    ->where('status', 'PAID')
+                    ->distinct('user_id')
+                    ->count('user_id'),
+            ];
+        }
 
-        $invoiceMap = DB::table('student_invoices')
-            ->whereIn('user_id', $studentIds)
-            ->where('academic_period_id', $activePeriod?->id ?? 1)
-            ->pluck('status', 'user_id');
-
-        $students->getCollection()->transform(function ($stu) use ($krsMap, $invoiceMap) {
-            $stu->krs_status = $krsMap[$stu->id] ?? 'BELUM_KRS';
-            $stu->invoice_status = $invoiceMap[$stu->id] ?? 'LUNAS';
-            // Extract angkatan dari 2 digit awalan NIM
-            $nimPrefix = substr(preg_replace('/[^0-9]/', '', $stu->identity_number ?? '21'), 0, 2);
-            $stu->batch_year = strlen($nimPrefix) === 2 ? "20{$nimPrefix}" : '2021';
-            return $stu;
-        });
-
-        // KPI Ringkasan
-        $totalStudents = User::where('role', 'mahasiswa')->count();
-        $activeStudents = User::where('role', 'mahasiswa')->where('is_active', true)->count();
-        $inactiveStudents = $totalStudents - $activeStudents;
-        
-        $krsCompleted = 0;
-        $paidInvoices = 0;
-        try {
-            $krsCompleted = DB::table('krs_submissions')
-                ->where('academic_period_id', $activePeriod?->id ?? 1)
-                ->where('status', 'DISETUJUI')
-                ->distinct('student_id')
-                ->count('student_id');
-
-            $paidInvoices = DB::table('student_invoices')
-                ->where('academic_period_id', $activePeriod?->id ?? 1)
-                ->where('status', 'PAID')
-                ->distinct('user_id')
-                ->count('user_id');
-        } catch (\Throwable $e) {}
+        if ($request->input('format') === 'json' && !$request->header('X-Inertia')) {
+            return response()->json([
+                'success' => true,
+                'students' => $students,
+                'stats' => $stats,
+                'isSelectionComplete' => $isSelectionComplete,
+                'selectedProdiObj' => $selectedProdiObj,
+            ]);
+        }
 
         return Inertia::render('Admin/Students/Index', [
             'students' => $students,
             'academicYears' => $academicYears,
             'studyPrograms' => $studyPrograms,
+            'batchYears' => $batchYears,
             'activePeriod' => $activePeriod,
-            'stats' => [
-                'total' => $totalStudents,
-                'active' => $activeStudents,
-                'inactive' => $inactiveStudents,
-                'krs_completed' => $krsCompleted,
-                'paid_invoices' => $paidInvoices,
-            ],
+            'curricula' => $curricula,
+            'lecturers' => $lecturers,
+            'initialTab' => $request->input('tab', 'students'),
+            'isSelectionComplete' => $isSelectionComplete,
+            'selectedProdiObj' => $selectedProdiObj,
+            'stats' => $stats,
             'filters' => [
                 'search' => $search,
-                'academic_year' => $yearFilter,
-                'study_program' => $prodiFilter,
-                'status' => $statusFilter,
-                'krs_status' => $krsFilter,
-                'invoice_status' => $invoiceFilter,
+                'academic_year' => $yearFilter ?: '',
+                'study_program' => $prodiFilter ?: '',
+                'status' => $statusFilter ?: '',
+                'krs_status' => $krsFilter ?: '',
+                'invoice_status' => $invoiceFilter ?: '',
+                'per_page' => $perPage,
             ],
         ]);
     }
 
     /**
-     * Tampilan Cetak Dokumen PDF Resmi (Dapat Difilter per Angkatan & Prodi)
+     * Hapus Massal Data Mahasiswa (Bulk Delete)
      */
-    public function printPdf(Request $request): Response
+    public function bulkDestroy(Request $request): RedirectResponse
     {
-        $yearFilter = $request->input('academic_year'); // e.g. 2026, 2025, etc.
-        $prodiFilter = $request->input('study_program');
-        $statusFilter = $request->input('status');
-
-        $activePeriod = DB::table('academic_periods')->where('is_active', true)->first();
-        $studyPrograms = DB::table('study_programs')->get();
-
-        $studentsQuery = User::where('role', 'mahasiswa')
-            ->when($prodiFilter, fn($q) => $q->where('study_program', $prodiFilter))
-            ->when($yearFilter, function ($q) use ($yearFilter) {
-                $prefix = substr($yearFilter, -2);
-                $q->where(function ($sq) use ($prefix, $yearFilter) {
-                    $sq->where('identity_number', 'like', "{$prefix}%")
-                       ->orWhereYear('created_at', substr($yearFilter, 0, 4));
-                });
-            })
-            ->when($statusFilter, function ($q) use ($statusFilter) {
-                if ($statusFilter === 'active') $q->where('is_active', true);
-                elseif ($statusFilter === 'inactive') $q->where('is_active', false);
-            });
-
-        $students = $studentsQuery->orderBy('identity_number', 'asc')->get();
-
-        // Mapping Status KRS & Tagihan
-        $studentIds = $students->pluck('id')->toArray();
-        $krsMap = DB::table('krs_submissions')
-            ->whereIn('student_id', $studentIds)
-            ->where('academic_period_id', $activePeriod?->id ?? 1)
-            ->pluck('status', 'student_id');
-
-        $invoiceMap = DB::table('student_invoices')
-            ->whereIn('user_id', $studentIds)
-            ->where('academic_period_id', $activePeriod?->id ?? 1)
-            ->pluck('status', 'user_id');
-
-        $students->transform(function ($stu) use ($krsMap, $invoiceMap) {
-            $stu->krs_status = $krsMap[$stu->id] ?? 'BELUM_KRS';
-            $stu->invoice_status = $invoiceMap[$stu->id] ?? 'LUNAS';
-            $nimPrefix = substr(preg_replace('/[^0-9]/', '', $stu->identity_number ?? '21'), 0, 2);
-            $stu->batch_year = strlen($nimPrefix) === 2 ? "20{$nimPrefix}" : '2021';
-            return $stu;
-        });
-
-        return Inertia::render('Admin/Students/Print', [
-            'students' => $students,
-            'activePeriod' => $activePeriod,
-            'studyPrograms' => $studyPrograms,
-            'selectedYear' => $yearFilter ?: 'Semua Angkatan',
-            'selectedProdi' => $prodiFilter ?: 'Semua Program Studi',
-            'printedAt' => now()->translatedFormat('d F Y - H:i') . ' WIB',
-            'signer' => [
-                'name' => 'Dr. H. M. Ridwan, M.Ag',
-                'role' => 'Wakil Ketua I Bidang Akademik',
-                'nidn' => '2112087501',
-            ],
-        ]);
-    }
-
-    /**
-     * Ekspor Data Mahasiswa ke File Excel Mewah (.xls berformat HTML/XML Spreadsheet)
-     */
-    public function exportExcel(Request $request): StreamedResponse
-    {
-        $search = $request->input('search');
-        $yearFilter = $request->input('academic_year');
-        $prodiFilter = $request->input('study_program');
-        $statusFilter = $request->input('status');
-
-        $activePeriod = DB::table('academic_periods')->where('is_active', true)->first();
-
-        $studentsQuery = User::where('role', 'mahasiswa')
-            ->when($search, function ($q) use ($search) {
-                $q->where(function ($sq) use ($search) {
-                    $sq->where('name', 'ilike', "%{$search}%")
-                        ->orWhere('identity_number', 'ilike', "%{$search}%")
-                        ->orWhere('email', 'ilike', "%{$search}%");
-                });
-            })
-            ->when($prodiFilter, fn($q) => $q->where('study_program', $prodiFilter))
-            ->when($yearFilter, function ($q) use ($yearFilter) {
-                $prefix = substr($yearFilter, -2);
-                $q->where(function ($sq) use ($prefix, $yearFilter) {
-                    $sq->where('identity_number', 'like', "{$prefix}%")
-                       ->orWhereYear('created_at', substr($yearFilter, 0, 4));
-                });
-            })
-            ->when($statusFilter, function ($q) use ($statusFilter) {
-                if ($statusFilter === 'active') $q->where('is_active', true);
-                elseif ($statusFilter === 'inactive') $q->where('is_active', false);
-            });
-
-        $students = $studentsQuery->orderBy('identity_number', 'asc')->get();
-
-        $studentIds = $students->pluck('id')->toArray();
-        $krsMap = DB::table('krs_submissions')
-            ->whereIn('student_id', $studentIds)
-            ->where('academic_period_id', $activePeriod?->id ?? 1)
-            ->pluck('status', 'student_id');
-
-        $invoiceMap = DB::table('student_invoices')
-            ->whereIn('user_id', $studentIds)
-            ->where('academic_period_id', $activePeriod?->id ?? 1)
-            ->pluck('status', 'user_id');
-
-        $filename = 'Data_Mahasiswa_STAI_AlIttihad_' . ($yearFilter ? "Angkatan_{$yearFilter}_" : "") . date('Ymd_His') . '.xls';
-
-        return response()->streamDownload(function () use ($students, $yearFilter, $prodiFilter, $krsMap, $invoiceMap) {
-            echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
-            echo '<head>';
-            echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
-            echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Data Mahasiswa</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
-            echo '<style>';
-            echo 'body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11pt; }';
-            echo '.title { font-size: 16pt; font-weight: bold; color: #064e3b; text-align: center; }';
-            echo '.subtitle { font-size: 11pt; font-weight: bold; color: #334155; text-align: center; }';
-            echo '.meta { font-size: 9.5pt; color: #64748b; margin-bottom: 12px; }';
-            echo 'table { border-collapse: collapse; width: 100%; }';
-            echo 'th { background-color: #065f46; color: #ffffff; font-weight: bold; border: 1px solid #044e39; padding: 10px 8px; text-align: center; vertical-align: middle; }';
-            echo 'td { border: 1px solid #cbd5e1; padding: 7px 8px; vertical-align: middle; }';
-            echo '.nim { mso-number-format:"\@"; text-align: center; font-weight: bold; }';
-            echo '.center { text-align: center; }';
-            echo '.even { background-color: #f8fafc; }';
-            echo '.badge-lunas { color: #065f46; font-weight: bold; text-align: center; }';
-            echo '.badge-pending { color: #b91c1c; font-weight: bold; text-align: center; }';
-            echo '</style>';
-            echo '</head>';
-            echo '<body>';
-
-            echo '<table>';
-            echo '<tr><td colspan="10" class="title">SEKOLAH TINGGI AGAMA ISLAM (STAI) AL-ITTIHAD CIANJUR</td></tr>';
-            echo '<tr><td colspan="10" class="subtitle">DIREKTORI DATA INDUK MAHASISWA & STATUS AKADEMIK</td></tr>';
-            echo '<tr><td colspan="10" class="meta" style="text-align: center;">Angkatan: ' . ($yearFilter ?: 'Semua Angkatan') . ' | Program Studi: ' . ($prodiFilter ?: 'Semua Prodi') . ' | Tanggal Unduh: ' . date('d F Y H:i') . ' WIB</td></tr>';
-            echo '<tr><td colspan="10" style="height: 10px;"></td></tr>';
-
-            echo '<thead>';
-            echo '<tr>';
-            echo '<th style="width: 40px;">NO</th>';
-            echo '<th style="width: 120px;">NIM</th>';
-            echo '<th style="width: 240px;">NAMA LENGKAP MAHASISWA</th>';
-            echo '<th style="width: 60px;">L/P</th>';
-            echo '<th style="width: 220px;">PROGRAM STUDI</th>';
-            echo '<th style="width: 200px;">EMAIL MAHASISWA</th>';
-            echo '<th style="width: 130px;">NO. TELEPON / WA</th>';
-            echo '<th style="width: 110px;">STATUS KRS</th>';
-            echo '<th style="width: 110px;">TAGIHAN SPP</th>';
-            echo '<th style="width: 90px;">STATUS AKUN</th>';
-            echo '</tr>';
-            echo '</thead>';
-            echo '<tbody>';
-
-            $no = 1;
-            foreach ($students as $idx => $stu) {
-                $bgClass = ($idx % 2 === 1) ? 'class="even"' : '';
-                $krs = $krsMap[$stu->id] ?? 'BELUM_KRS';
-                $invoice = $invoiceMap[$stu->id] ?? 'LUNAS';
-
-                echo "<tr {$bgClass}>";
-                echo "<td class=\"center\">{$no}</td>";
-                echo "<td class=\"nim\">" . ($stu->identity_number ?: $stu->username) . "</td>";
-                echo "<td style=\"font-weight: bold;\">" . htmlspecialchars($stu->name) . "</td>";
-                echo "<td class=\"center\">" . ($stu->gender === 'P' ? 'P' : 'L') . "</td>";
-                echo "<td>" . htmlspecialchars($stu->study_program ?: 'Pendidikan Agama Islam (S1)') . "</td>";
-                echo "<td>" . htmlspecialchars($stu->email) . "</td>";
-                echo "<td class=\"center\">" . htmlspecialchars($stu->phone_number ?: '-') . "</td>";
-                echo "<td class=\"center\">{$krs}</td>";
-                echo "<td class=\"" . ($invoice === 'LUNAS' ? 'badge-lunas' : 'badge-pending') . "\">{$invoice}</td>";
-                echo "<td class=\"center\">" . ($stu->is_active ? 'AKTIF' : 'NONAKTIF') . "</td>";
-                echo "</tr>";
-                $no++;
-            }
-
-            echo '</tbody>';
-            echo '</table>';
-            echo '</body>';
-            echo '</html>';
-        }, $filename, [
-            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ]);
-    }
-
-    /**
-     * Unduh Template Excel Resmi untuk Impor Mahasiswa Baru (.xls)
-     */
-    public function templateExcel(): StreamedResponse
-    {
-        $filename = 'Template_Impor_Mahasiswa_STAI_AlIttihad.xls';
-
-        return response()->streamDownload(function () {
-            echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
-            echo '<head>';
-            echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
-            echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Template Mahasiswa</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
-            echo '<style>';
-            echo 'body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11pt; }';
-            echo '.header-table th { background-color: #065f46; color: #ffffff; font-weight: bold; border: 1px solid #044e39; padding: 10px; text-align: center; }';
-            echo 'td { border: 1px solid #cbd5e1; padding: 8px; }';
-            echo '.nim { mso-number-format:"\@"; text-align: center; }';
-            echo '.center { text-align: center; }';
-            echo '.instruction { background-color: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px; font-size: 10pt; color: #064e3b; margin-bottom: 10px; }';
-            echo '</style>';
-            echo '</head>';
-            echo '<body>';
-
-            echo '<table>';
-            echo '<tr><td colspan="6" style="font-size: 14pt; font-weight: bold; color: #064e3b;">TEMPLATE RESMI IMPOR DATA MAHASISWA — STAI AL-ITTIHAD CIANJUR</td></tr>';
-            echo '<tr><td colspan="6" style="color: #64748b; font-size: 9.5pt;">Petunjuk: Kolom bertanda (*) WAJIB diisi. Jenis Kelamin diisi L (Laki-laki) atau P (Perempuan). NIM harus berupa teks/angka unik.</td></tr>';
-            echo '<tr><td colspan="6" style="height: 10px;"></td></tr>';
-
-            echo '<thead>';
-            echo '<tr class="header-table">';
-            echo '<th style="width: 220px;">NAMA LENGKAP (*)</th>';
-            echo '<th style="width: 140px;">NIM (*)</th>';
-            echo '<th style="width: 220px;">PROGRAM STUDI (*)</th>';
-            echo '<th style="width: 80px;">L/P (*)</th>';
-            echo '<th style="width: 220px;">EMAIL (OPSIONAL)</th>';
-            echo '<th style="width: 140px;">NO. TELEPON / WA</th>';
-            echo '</tr>';
-            echo '</thead>';
-
-            echo '<tbody>';
-            echo '<tr>';
-            echo '<td style="font-weight: bold;">Muhammad Farhan Al-Ghifari</td>';
-            echo '<td class="nim">26010001</td>';
-            echo '<td>Pendidikan Agama Islam (S1)</td>';
-            echo '<td class="center">L</td>';
-            echo '<td>farhan.ghifari@staialittihad.ac.id</td>';
-            echo '<td class="center">081234567890</td>';
-            echo '</tr>';
-
-            echo '<tr>';
-            echo '<td style="font-weight: bold;">Nabila Nur Azizah</td>';
-            echo '<td class="nim">26010002</td>';
-            echo '<td>Pendidikan Agama Islam (S1)</td>';
-            echo '<td class="center">P</td>';
-            echo '<td>nabila.azizah@staialittihad.ac.id</td>';
-            echo '<td class="center">081234567891</td>';
-            echo '</tr>';
-
-            echo '<tr>';
-            echo '<td style="font-weight: bold;">Bilal Ahmad Zulfikar</td>';
-            echo '<td class="nim">26020001</td>';
-            echo '<td>Pendidikan Islam Anak Usia Dini (S1)</td>';
-            echo '<td class="center">L</td>';
-            echo '<td>bilal.zulfikar@staialittihad.ac.id</td>';
-            echo '<td class="center">081234567892</td>';
-            echo '</tr>';
-
-            echo '</tbody>';
-            echo '</table>';
-            echo '</body>';
-            echo '</html>';
-        }, $filename, [
-            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ]);
-    }
-
-    /**
-     * Cek Duplikasi Data Sebelum Impor (Validasi Batch)
-     */
-    public function checkImport(Request $request): JsonResponse
-    {
-        $records = $request->input('records', []);
-        if (empty($records)) {
-            return response()->json(['success' => false, 'message' => 'Tidak ada data baris yang diterima.'], 422);
+        $ids = $request->input('ids', []);
+        if (empty($ids) || !is_array($ids)) {
+            return back()->with('error', 'Tidak ada data mahasiswa yang dipilih.');
         }
 
-        $allNims = array_filter(array_map(fn($r) => trim((string)($r['identity_number'] ?? '')), $records));
-        $allEmails = array_filter(array_map(fn($r) => trim((string)($r['email'] ?? '')), $records));
-
-        // Query database mahasiswa yang sudah ada
-        $existingUsers = User::where(function ($q) use ($allNims, $allEmails) {
-            $q->whereIn('identity_number', $allNims)
-              ->orWhereIn('username', $allNims)
-              ->orWhereIn('email', $allEmails);
-        })->get();
-
-        $existingNimMap = [];
-        $existingEmailMap = [];
-        foreach ($existingUsers as $u) {
-            if ($u->identity_number) $existingNimMap[$u->identity_number] = $u;
-            if ($u->username) $existingNimMap[$u->username] = $u;
-            if ($u->email) $existingEmailMap[$u->email] = $u;
-        }
-
-        $analyzed = [];
-        $duplicateCount = 0;
-        $newCount = 0;
-
-        foreach ($records as $index => $r) {
-            $nim = trim((string)($r['identity_number'] ?? ''));
-            $name = trim((string)($r['name'] ?? ''));
-            $email = trim((string)($r['email'] ?? ''));
-            if (!$email && $nim) {
-                $email = "{$nim}@staialittihad.ac.id";
-            }
-            $prodi = trim((string)($r['study_program'] ?? 'Pendidikan Agama Islam (S1)'));
-            $gender = (!empty($r['gender']) && strtoupper($r['gender']) === 'P') ? 'P' : 'L';
-            $phone = trim((string)($r['phone_number'] ?? ''));
-
-            if (empty($nim) || empty($name)) continue;
-
-            $isDuplicate = false;
-            $duplicateReason = null;
-            $existingId = null;
-
-            if (isset($existingNimMap[$nim])) {
-                $isDuplicate = true;
-                $existing = $existingNimMap[$nim];
-                $duplicateReason = "NIM {$nim} sudah terdaftar di sistem atas nama '{$existing->name}'";
-                $existingId = $existing->id;
-            } elseif (isset($existingEmailMap[$email])) {
-                $isDuplicate = true;
-                $existing = $existingEmailMap[$email];
-                $duplicateReason = "Email {$email} sudah digunakan oleh mahasiswa '{$existing->name}'";
-                $existingId = $existing->id;
-            }
-
-            if ($isDuplicate) {
-                $duplicateCount++;
-            } else {
-                $newCount++;
-            }
-
-            $analyzed[] = [
-                'row_id' => $index + 1,
-                'identity_number' => $nim,
-                'name' => $name,
-                'study_program' => $prodi,
-                'gender' => $gender,
-                'email' => $email,
-                'phone_number' => $phone,
-                'status' => $isDuplicate ? 'DUPLICATE' : 'NEW',
-                'duplicate_reason' => $duplicateReason,
-                'existing_id' => $existingId,
-            ];
-        }
-
-        return response()->json([
-            'success' => true,
-            'analyzed' => $analyzed,
-            'summary' => [
-                'total' => count($analyzed),
-                'new_count' => $newCount,
-                'duplicate_count' => $duplicateCount,
-            ]
-        ]);
-    }
-
-    /**
-     * Eksekusi Impor Massal dengan Pilihan (Lewati vs Timpa/Perbarui)
-     */
-    public function processImport(Request $request): JsonResponse
-    {
-        $records = $request->input('records', []);
-        $conflictMode = $request->input('conflict_mode', 'skip'); // 'skip' atau 'overwrite'
-
-        if (empty($records)) {
-            return response()->json(['success' => false, 'message' => 'Tidak ada data untuk diimpor.'], 422);
-        }
-
-        $createdCount = 0;
-        $updatedCount = 0;
-        $skippedCount = 0;
-        $now = now();
-        $importedRows = [];
-
-        DB::transaction(function () use ($records, $conflictMode, &$createdCount, &$updatedCount, &$skippedCount, &$importedRows, $now) {
-            foreach ($records as $r) {
-                $nim = trim((string)($r['identity_number'] ?? ''));
-                $name = trim((string)($r['name'] ?? ''));
-                $email = trim((string)($r['email'] ?? ''));
-                if (!$email && $nim) {
-                    $email = "{$nim}@staialittihad.ac.id";
-                }
-                $prodi = $r['study_program'] ?? 'Pendidikan Agama Islam (S1)';
-                $gender = (!empty($r['gender']) && strtoupper($r['gender']) === 'P') ? 'P' : 'L';
-                $phone = $r['phone_number'] ?? null;
-
-                if (!$nim || !$name) {
-                    $skippedCount++;
-                    continue;
-                }
-
-                // Cek user eksisting
-                $existing = User::where('identity_number', $nim)->orWhere('username', $nim)->orWhere('email', $email)->first();
-
-                if ($existing) {
-                    if ($conflictMode === 'overwrite') {
-                        $existing->update([
-                            'name' => $name,
-                            'study_program' => $prodi,
-                            'gender' => $gender,
-                            'phone_number' => $phone ?: $existing->phone_number,
-                            'is_active' => true,
-                            'updated_at' => $now,
-                        ]);
-                        $updatedCount++;
-                        $importedRows[] = [
-                            'row_id' => $r['row_id'] ?? null,
-                            'nim' => $nim,
-                            'name' => $name,
-                            'action' => 'OVERWRITTEN',
-                        ];
-                    } else {
-                        $skippedCount++;
-                        $importedRows[] = [
-                            'row_id' => $r['row_id'] ?? null,
-                            'nim' => $nim,
-                            'name' => $name,
-                            'action' => 'SKIPPED',
-                        ];
-                    }
-                } else {
-                    User::create([
-                        'name' => $name,
-                        'username' => $nim,
-                        'identity_number' => $nim,
-                        'email' => $email,
-                        'role' => 'mahasiswa',
-                        'study_program' => $prodi,
-                        'gender' => $gender,
-                        'phone_number' => $phone,
-                        'password' => Hash::make('salam123'),
-                        'is_active' => true,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-                    $createdCount++;
-                    $importedRows[] = [
-                        'row_id' => $r['row_id'] ?? null,
-                        'nim' => $nim,
-                        'name' => $name,
-                        'action' => 'CREATED',
-                    ];
+        $count = 0;
+        foreach ($ids as $id) {
+            $student = User::where('role', 'mahasiswa')->find($id);
+            if ($student) {
+                try {
+                    $student->delete();
+                    $count++;
+                } catch (\Throwable $e) {
+                    $student->update(['is_active' => false]);
+                    $count++;
                 }
             }
-        });
+        }
 
-        return response()->json([
-            'success' => true,
-            'summary' => [
-                'total_processed' => count($records),
-                'created_count' => $createdCount,
-                'updated_count' => $updatedCount,
-                'skipped_count' => $skippedCount,
-            ],
-            'imported_rows' => $importedRows,
-            'message' => "Impor selesai: {$createdCount} mahasiswa baru ditambahkan, {$updatedCount} data diperbarui, {$skippedCount} dilewati."
-        ]);
+        return back()->with('success', "Berhasil menghapus {$count} data mahasiswa terpilih secara massal.");
     }
 
     /**
@@ -622,6 +267,7 @@ class StudentAdminController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'identity_number' => ['required', 'string', 'max:32', 'unique:users,identity_number'],
+            'nik' => ['nullable', 'string', 'max:20'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'study_program' => ['required', 'string', 'max:100'],
             'gender' => ['nullable', 'in:L,P'],
@@ -632,6 +278,7 @@ class StudentAdminController extends Controller
             'name' => $validated['name'],
             'username' => $validated['identity_number'],
             'identity_number' => $validated['identity_number'],
+            'nik' => $validated['nik'] ?: null,
             'email' => $validated['email'],
             'role' => 'mahasiswa',
             'study_program' => $validated['study_program'],
@@ -654,6 +301,7 @@ class StudentAdminController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'identity_number' => ['required', 'string', 'max:32', Rule::unique('users')->ignore($student->id)],
+            'nik' => ['nullable', 'string', 'max:20'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($student->id)],
             'study_program' => ['required', 'string', 'max:100'],
             'gender' => ['nullable', 'in:L,P'],
@@ -681,6 +329,358 @@ class StudentAdminController extends Controller
         } catch (\Throwable $e) {
             $student->update(['is_active' => false]);
             return back()->with('success', "Mahasiswa {$name} memiliki rekam akademik, status akun berhasil diubah menjadi NONAKTIF.");
+        }
+    }
+
+    /**
+     * Helper Query Filter Data Mahasiswa
+     */
+    private function buildStudentsQuery(Request $request)
+    {
+        $search = $request->input('search');
+        $prodiFilter = $request->input('study_program');
+        $yearFilter = $request->input('academic_year');
+        $statusFilter = $request->input('status');
+
+        return User::where('role', 'mahasiswa')
+            ->when($prodiFilter, function ($q) use ($prodiFilter) {
+                $q->where(function ($sq) use ($prodiFilter) {
+                    $sq->where('study_program', $prodiFilter)
+                       ->orWhere('study_program', 'ilike', "%{$prodiFilter}%");
+                });
+            })
+            ->when($yearFilter, function ($q) use ($yearFilter) {
+                $prefix2 = substr($yearFilter, -2);
+                $prefix4 = substr($yearFilter, 0, 4);
+                $q->where(function ($sq) use ($prefix2, $prefix4) {
+                    $sq->where('identity_number', 'like', "{$prefix2}%")
+                       ->orWhere('identity_number', 'like', "{$prefix4}%")
+                       ->orWhereYear('created_at', $prefix4);
+                });
+            })
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($sq) use ($search) {
+                    $sq->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('identity_number', 'ilike', "%{$search}%")
+                        ->orWhere('nik', 'ilike', "%{$search}%")
+                        ->orWhere('username', 'ilike', "%{$search}%")
+                        ->orWhere('email', 'ilike', "%{$search}%")
+                        ->orWhere('phone_number', 'ilike', "%{$search}%");
+                });
+            })
+            ->when($statusFilter, function ($q) use ($statusFilter) {
+                if ($statusFilter === 'active') {
+                    $q->where('is_active', true);
+                } elseif ($statusFilter === 'inactive') {
+                    $q->where('is_active', false);
+                }
+            });
+    }
+
+    /**
+     * Ekspor Data Mahasiswa ke Format Excel (.xls) dengan KOP Resmi STAI Al-Ittihad
+     */
+    public function exportExcel(Request $request): StreamedResponse
+    {
+        $students = $this->buildStudentsQuery($request)->orderBy('identity_number', 'asc')->get();
+        $prodi = $request->input('study_program');
+        $year = $request->input('academic_year');
+        $filename = 'data-mahasiswa-stai-al-ittihad-' . date('Ymd_His') . '.xls';
+
+        $response = new StreamedResponse(function () use ($students, $prodi, $year) {
+            $out = fopen('php://output', 'w');
+
+            echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+            echo '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">';
+            echo '<style>
+                body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11px; }
+                table { border-collapse: collapse; width: 100%; }
+                th { background-color: #065f46; color: #ffffff; font-weight: bold; border: 1px solid #047857; padding: 9px 8px; text-align: center; font-size: 11px; }
+                td { border: 1px solid #d1d5db; padding: 7px 8px; vertical-align: middle; }
+                .text-center { text-align: center; }
+                .text-right { text-align: right; }
+                .font-mono { font-family: "Consolas", monospace; mso-number-format:"\@"; }
+                .zebra { background-color: #f9fafb; }
+                .header-title { font-size: 15px; font-weight: 900; color: #065f46; }
+                .badge-active { background-color: #d1fae5; color: #065f46; font-weight: bold; }
+                .badge-inactive { background-color: #fee2e2; color: #991b1b; }
+            </style></head><body>';
+
+            echo '<table>';
+            echo '<tr><td colspan="9" class="header-title" style="border:none; text-align:center;">SEKOLAH TINGGI AGAMA ISLAM (STAI) AL-ITTIHAD CIANJUR</td></tr>';
+            echo '<tr><td colspan="9" style="border:none; text-align:center; font-weight:bold; font-size:12px;">DAFTAR RESMI BUKU INDUK & DATA MAHASISWA</td></tr>';
+            $metaText = ($prodi ? "Prodi: {$prodi}" : "Semua Prodi") . " • " . ($year ? "Angkatan: {$year}" : "Semua Angkatan") . " • Tanggal Ekspor: " . date('d F Y, H:i') . " WIB • Total: " . $students->count() . " Mahasiswa";
+            echo '<tr><td colspan="9" style="border:none; text-align:center; font-size:10px; color:#4b5563;">' . $metaText . '</td></tr>';
+            echo '<tr><td colspan="9" style="border:none; height:12px;"></td></tr>';
+
+            echo '<tr>';
+            echo '<th style="width:40px;">No</th>';
+            echo '<th style="width:130px;">NIM</th>';
+            echo '<th style="width:160px;">No. KTP / NIK</th>';
+            echo '<th style="width:240px;">Nama Lengkap Mahasiswa</th>';
+            echo '<th style="width:50px;">L/P</th>';
+            echo '<th style="width:200px;">Program Studi</th>';
+            echo '<th style="width:200px;">Email Mahasiswa</th>';
+            echo '<th style="width:130px;">No. HP / WA</th>';
+            echo '<th style="width:90px;">Status</th>';
+            echo '</tr>';
+
+            $no = 1;
+            foreach ($students as $stu) {
+                $isZebra = ($no % 2 === 0) ? 'class="zebra"' : '';
+                $statusText = $stu->is_active ? 'Aktif' : 'Nonaktif';
+                $statusClass = $stu->is_active ? 'badge-active' : 'badge-inactive';
+                $nim = $stu->identity_number ?: $stu->username;
+
+                echo "<tr {$isZebra}>";
+                echo "<td class='text-center'>{$no}</td>";
+                echo "<td class='font-mono text-center'><strong>{$nim}</strong></td>";
+                echo "<td class='font-mono text-center'>{$stu->nik}</td>";
+                echo "<td>{$stu->name}</td>";
+                echo "<td class='text-center'>{$stu->gender}</td>";
+                echo "<td>{$stu->study_program}</td>";
+                echo "<td>{$stu->email}</td>";
+                echo "<td class='font-mono text-center'>{$stu->phone_number}</td>";
+                echo "<td class='text-center {$statusClass}'>{$statusText}</td>";
+                echo '</tr>';
+                $no++;
+            }
+
+            echo '</table></body></html>';
+            fclose($out);
+        });
+
+        $response->headers->set('Content-Type', 'application/vnd.ms-excel; charset=UTF-8');
+        $response->headers->set('Content-Disposition', "attachment; filename=\"{$filename}\"");
+        $response->headers->set('Cache-Control', 'max-age=0');
+        $response->headers->set('Pragma', 'public');
+
+        return $response;
+    }
+
+    /**
+     * Cetak Pratinjau Dokumen PDF Resmi Rekap Data Mahasiswa Ber-KOP
+     */
+    public function printPdf(Request $request): View
+    {
+        $students = $this->buildStudentsQuery($request)->orderBy('identity_number', 'asc')->get();
+        $prodi = $request->input('study_program');
+        $year = $request->input('academic_year');
+        $activePeriod = DB::table('academic_periods')->where('is_active', true)->first();
+
+        return view('pdf.students', [
+            'students' => $students,
+            'studyProgram' => $prodi,
+            'academicYear' => $year,
+            'activePeriod' => $activePeriod,
+        ]);
+    }
+
+    /**
+     * Unduh Template Resmi Impor Excel Mahasiswa (.xlsx)
+     */
+    public function templateExcel(Request $request): BinaryFileResponse
+    {
+        $filePath = public_path('templates/template-impor-mahasiswa-stai.xlsx');
+        if (!file_exists($filePath)) {
+            abort(404, 'File template belum tersedia.');
+        }
+
+        return response()->download($filePath, 'template_impor_mahasiswa_stai_alittihad.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * Validasi Data Sebelum Impor Mahasiswa (Check & Analyze)
+     */
+    public function checkImport(Request $request): JsonResponse
+    {
+        $records = $request->input('records', []);
+        if (empty($records)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada data rekaman mahasiswa untuk dianalisis.'
+            ], 422);
+        }
+
+        $analyzed = [];
+        $readyCount = 0;
+        $conflictCount = 0;
+        $invalidCount = 0;
+
+        foreach ($records as $rec) {
+            $nim = trim($rec['identity_number'] ?? '');
+            $name = trim($rec['name'] ?? '');
+            $nik = trim($rec['nik'] ?? '');
+            $email = trim($rec['email'] ?? '');
+            $prodi = trim($rec['study_program'] ?? '');
+            $gender = strtoupper(trim($rec['gender'] ?? 'L')) === 'P' ? 'P' : 'L';
+            $phone = trim($rec['phone_number'] ?? '');
+
+            if (empty($nim) || empty($name)) {
+                $status = 'invalid';
+                $message = 'NIM dan Nama Lengkap wajib diisi.';
+                $invalidCount++;
+            } else {
+                $existing = User::where('role', 'mahasiswa')
+                    ->where(function ($q) use ($nim, $nik) {
+                        $q->where('identity_number', $nim)
+                          ->orWhere('username', $nim);
+                        if (!empty($nik)) {
+                            $q->orWhere('nik', $nik);
+                        }
+                    })->first();
+
+                if ($existing) {
+                    $status = 'conflict';
+                    $message = "Mahasiswa dengan NIM/NIK ini sudah ada di database ({$existing->name}).";
+                    $conflictCount++;
+                } else {
+                    $status = 'ready';
+                    $message = 'Data valid & siap diimpor.';
+                    $readyCount++;
+                }
+            }
+
+            $analyzed[] = [
+                'identity_number' => $nim,
+                'nik' => $nik,
+                'name' => $name,
+                'gender' => $gender,
+                'study_program' => $prodi,
+                'email' => $email ?: ($nim ? "{$nim}@staialittihad.ac.id" : ''),
+                'phone_number' => $phone,
+                'status' => $status,
+                'message' => $message,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'summary' => [
+                'total' => count($records),
+                'ready' => $readyCount,
+                'conflicts' => $conflictCount,
+                'invalid' => $invalidCount,
+                'new_count' => $readyCount,
+                'duplicate_count' => $conflictCount,
+            ],
+            'analyzed' => $analyzed,
+        ]);
+    }
+
+    /**
+     * Eksekusi Proses Impor Mahasiswa Massal
+     */
+    public function processImport(Request $request): JsonResponse
+    {
+        $records = $request->input('records', []);
+        $conflictMode = $request->input('conflict_mode', 'skip'); // 'skip' atau 'overwrite'
+
+        if (empty($records)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada rekaman untuk diproses.'
+            ], 422);
+        }
+
+        $inserted = 0;
+        $updated = 0;
+        $skipped = 0;
+
+        DB::beginTransaction();
+        try {
+            foreach ($records as $rec) {
+                $nim = trim($rec['identity_number'] ?? '');
+                $name = trim($rec['name'] ?? '');
+                $nik = trim($rec['nik'] ?? '');
+                $email = trim($rec['email'] ?? '');
+                $prodi = trim($rec['study_program'] ?? 'Pendidikan Agama Islam (S1)');
+                $gender = strtoupper(trim($rec['gender'] ?? 'L')) === 'P' ? 'P' : 'L';
+                $phone = trim($rec['phone_number'] ?? '');
+
+                if (empty($nim) || empty($name)) {
+                    $skipped++;
+                    continue;
+                }
+
+                $existing = User::where('role', 'mahasiswa')
+                    ->where(function ($q) use ($nim) {
+                        $q->where('identity_number', $nim)->orWhere('username', $nim);
+                    })->first();
+
+                if ($existing) {
+                    if ($conflictMode === 'overwrite') {
+                        $existing->update([
+                            'name' => $name,
+                            'nik' => $nik ?: $existing->nik,
+                            'gender' => $gender,
+                            'study_program' => $prodi,
+                            'phone_number' => $phone ?: $existing->phone_number,
+                            'email' => $email ?: $existing->email,
+                            'is_active' => true,
+                        ]);
+                        $updated++;
+                    } else {
+                        $skipped++;
+                    }
+                } else {
+                    $finalEmail = $email ?: "{$nim}@staialittihad.ac.id";
+                    if (User::where('email', $finalEmail)->exists()) {
+                        $finalEmail = "{$nim}." . time() . "@staialittihad.ac.id";
+                    }
+
+                    User::create([
+                        'name' => $name,
+                        'username' => $nim,
+                        'identity_number' => $nim,
+                        'nik' => $nik ?: null,
+                        'email' => $finalEmail,
+                        'password' => Hash::make('salam123'),
+                        'role' => 'mahasiswa',
+                        'gender' => $gender,
+                        'study_program' => $prodi,
+                        'phone_number' => $phone ?: null,
+                        'is_active' => true,
+                    ]);
+                    $inserted++;
+                }
+            }
+
+            DB::commit();
+
+            // Catat audit log
+            DB::table('audit_logs')->insert([
+                'user_id' => auth()->id(),
+                'action' => 'STUDENT_IMPORT_BATCH',
+                'target_entity' => 'User (Mahasiswa)',
+                'details' => json_encode([
+                    'total_records' => count($records),
+                    'inserted' => $inserted,
+                    'updated' => $updated,
+                    'skipped' => $skipped,
+                    'conflict_mode' => $conflictMode,
+                ]),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Proses impor selesai! {$inserted} mahasiswa baru ditambahkan, {$updated} diperbarui, {$skipped} dilewati.",
+                'inserted' => $inserted,
+                'updated' => $updated,
+                'skipped' => $skipped,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses impor: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

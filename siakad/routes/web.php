@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\AcademicPeriodController;
+use App\Http\Controllers\Admin\AcademicSettingController;
+use App\Http\Controllers\Admin\CampusOfficialController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\BsiGatewayController;
@@ -21,10 +23,19 @@ use App\Http\Controllers\Admin\PmbAdminController;
 use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\StudentAdminController;
+use App\Http\Controllers\Admin\StudentCurriculumController;
+use App\Http\Controllers\Admin\AcademicAdvisingController;
+use App\Http\Controllers\Admin\StudentPortalController;
+use App\Http\Controllers\Admin\KhsAdminController;
+use App\Http\Controllers\Admin\TranscriptAdminController;
+use App\Http\Controllers\Admin\GraduationAdminController;
+use App\Http\Controllers\Admin\StudentActivityController;
+use App\Http\Controllers\Admin\StudentStatusController;
 use App\Http\Controllers\Admin\StudyProgramController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\YudisiumController;
 use App\Http\Controllers\Api\BsiVirtualAccountController;
+use App\Http\Controllers\Api\OAuthController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CaptchaController;
 use App\Http\Controllers\DashboardController;
@@ -40,6 +51,9 @@ use Inertia\Inertia;
 // 1. PUBLIC ROUTES, PMB & DOCUMENT QR VERIFICATION
 // =========================================================================
 Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
     return redirect()->route('login');
 });
 
@@ -47,8 +61,10 @@ Route::get('/', function () {
 Route::get('/captcha/generate', [CaptchaController::class, 'generate'])->name('captcha.generate');
 
 // Authentication Routes
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+});
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Public Document QR Verification Portal
@@ -71,6 +87,17 @@ Route::prefix('api/v1/bsi/va')->group(function () {
 Route::post('/api/v1/lms/webhook', [LmsSyncController::class, 'receiveLmsWebhook']);
 
 // =========================================================================
+// SINGLE SIGN-ON (SSO) OAUTH2 / OIDC PROVIDER (SIAKAD ⇄ SALAM LMS)
+// =========================================================================
+Route::get('/oauth/authorize', [OAuthController::class, 'authorizeClient'])->name('oauth.authorize');
+Route::get('/sso/lms', [OAuthController::class, 'launchLms'])->name('sso.lms');
+
+Route::prefix('api/v1/oauth')->group(function () {
+    Route::post('/token', [OAuthController::class, 'issueToken'])->name('oauth.token');
+    Route::get('/userinfo', [OAuthController::class, 'userInfo'])->name('oauth.userinfo');
+});
+
+// =========================================================================
 // 2. AUTHENTICATED ROUTES
 // =========================================================================
 Route::middleware('auth')->group(function () {
@@ -87,6 +114,8 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         // Visual Audit Log Viewer & Activity Security Tracker
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit_logs.index');
+        Route::get('/audit-logs/export-csv', [AuditLogController::class, 'exportCsv'])->name('audit_logs.export_csv');
+        Route::post('/audit-logs/prune', [AuditLogController::class, 'pruneLogs'])->name('audit_logs.prune');
 
         // Pusat Siaran Pengumuman & Broadcast Civitas
         Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
@@ -99,7 +128,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/yudisium/periods', [YudisiumController::class, 'storePeriod'])->name('yudisium.periods.store');
         Route::put('/yudisium/applicants/{id}/status', [YudisiumController::class, 'updateStatus'])->name('yudisium.applicants.status.update');
 
-        // Data Mahasiswa (Berdasarkan Angkatan / Tahun Akademik)
+        // =====================================================================
+        // MODUL KEMAHASISWAAN (Sesuai Standar SIAKAD & Referensi)
+        // =====================================================================
+        // 1. Data Mahasiswa (Berdasarkan Angkatan / Tahun Akademik)
         Route::get('/students', [StudentAdminController::class, 'index'])->name('students.index');
         Route::get('/students/export-excel', [StudentAdminController::class, 'exportExcel'])->name('students.export_excel');
         Route::get('/students/template-excel', [StudentAdminController::class, 'templateExcel'])->name('students.template_excel');
@@ -108,12 +140,31 @@ Route::middleware('auth')->group(function () {
         Route::post('/students/process-import', [StudentAdminController::class, 'processImport'])->name('students.process_import');
         Route::post('/students', [StudentAdminController::class, 'store'])->name('students.store');
         Route::put('/students/{id}', [StudentAdminController::class, 'update'])->name('students.update');
+        Route::post('/students/bulk-delete', [StudentAdminController::class, 'bulkDestroy'])->name('students.bulk_delete');
         Route::delete('/students/{id}', [StudentAdminController::class, 'destroy'])->name('students.destroy');
+
+        // 2. Kurikulum Mahasiswa (Penetapan Kurikulum per Mahasiswa / Angkatan)
+        Route::get('/student-curricula', [StudentCurriculumController::class, 'index'])->name('student_curricula.index');
+        Route::post('/student-curricula/assign', [StudentCurriculumController::class, 'assignCurriculum'])->name('student_curricula.assign');
+
+        // 3. Bimbingan Akademik (Plotting Dosen PA & Catatan Sesi Bimbingan)
+        Route::get('/academic-advising', [AcademicAdvisingController::class, 'index'])->name('academic_advising.index');
+        Route::post('/academic-advising/assign', [AcademicAdvisingController::class, 'assignAdvisor'])->name('academic_advising.assign');
+        Route::post('/academic-advising/notes', [AcademicAdvisingController::class, 'storeNote'])->name('academic_advising.notes.store');
+
+        // 4. User Portal Mahasiswa (Manajemen Kredensial & Reset Password)
+        Route::get('/student-portal', [StudentPortalController::class, 'index'])->name('student_portal.index');
+        Route::post('/student-portal/reset-password', [StudentPortalController::class, 'resetPassword'])->name('student_portal.reset_password');
 
         // Data Dosen & Tenaga Pengajar
         Route::get('/lecturers', [LecturerAdminController::class, 'index'])->name('lecturers.index');
+        Route::get('/lecturers/export/excel', [LecturerAdminController::class, 'exportExcel'])->name('lecturers.export_excel');
+        Route::get('/lecturers/export/pdf', [LecturerAdminController::class, 'exportPdf'])->name('lecturers.export_pdf');
+        Route::get('/lecturers/template-xlsx', [LecturerAdminController::class, 'downloadTemplate'])->name('lecturers.template_xlsx');
+        Route::get('/lecturers/template-csv', [LecturerAdminController::class, 'downloadTemplate'])->name('lecturers.template_csv');
         Route::post('/lecturers', [LecturerAdminController::class, 'store'])->name('lecturers.store');
         Route::put('/lecturers/{id}', [LecturerAdminController::class, 'update'])->name('lecturers.update');
+        Route::delete('/lecturers/{id}', [LecturerAdminController::class, 'destroy'])->name('lecturers.destroy');
         Route::post('/lecturers/import-batch', [LecturerAdminController::class, 'importBatch'])->name('lecturers.import_batch');
 
         // Master Pengguna & Impersonation Portal (Superadmin Full Directory)
@@ -125,19 +176,48 @@ Route::middleware('auth')->group(function () {
         Route::post('/users/import-batch', [UserController::class, 'importBatch'])->name('users.import_batch');
         Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        // Monitoring & Approval KRS Mahasiswa (Bulk Approval)
+        // 1. Rencana Studi (KRS)
         Route::get('/krs-approval', [KrsApprovalController::class, 'index'])->name('krs_approval.index');
         Route::post('/krs-approval/{id}/approve', [KrsApprovalController::class, 'approve'])->name('krs_approval.approve');
         Route::post('/krs-approval/{id}/reject', [KrsApprovalController::class, 'reject'])->name('krs_approval.reject');
         Route::post('/krs-approval/bulk-approve', [KrsApprovalController::class, 'bulkApprove'])->name('krs_approval.bulk_approve');
+        Route::get('/krs-approval/{id}/print-pdf', [KrsApprovalController::class, 'printPdf'])->name('krs_approval.print_pdf');
+        Route::get('/krs-approval/{student_id}/courses', [KrsApprovalController::class, 'getStudentKrsDetails'])->name('krs_approval.courses');
+        Route::post('/krs-approval/{student_id}/add-course', [KrsApprovalController::class, 'addCourseToStudent'])->name('krs_approval.add_course');
+        Route::post('/krs-approval/{student_id}/batch-add-selected', [KrsApprovalController::class, 'batchAddSelected'])->name('krs_approval.batch_add_selected');
+        Route::post('/krs-approval/{student_id}/remove-course', [KrsApprovalController::class, 'removeCourseFromStudent'])->name('krs_approval.remove_course');
+        Route::post('/krs-approval/{student_id}/batch-add-package', [KrsApprovalController::class, 'batchAddPackage'])->name('krs_approval.batch_add_package');
+        Route::post('/krs-approval/{student_id}/update-status', [KrsApprovalController::class, 'updateKrsStatus'])->name('krs_approval.update_status');
 
-        // Gradebook, Grade Lock & Cetak Lembar Nilai DPNA
+        // 2. Penilaian Mahasiswa (Persentase, Per Kelas DPNA, Per Mahasiswa)
         Route::get('/grades', [GradeAdminController::class, 'index'])->name('grades.index');
         Route::get('/grades/{id}', [GradeAdminController::class, 'show'])->name('grades.show');
         Route::post('/grades/{id}/update', [GradeAdminController::class, 'updateGrades'])->name('grades.update');
         Route::post('/grades/{id}/toggle-lock', [GradeAdminController::class, 'toggleLock'])->name('grades.toggle_lock');
 
-        // Analitik Mutu Dosen & Evaluasi EDOM 4 Kompetensi
+        // 3. Hasil Studi (KHS)
+        Route::get('/khs', [KhsAdminController::class, 'index'])->name('khs.index');
+        Route::get('/khs/{studentId}/{periodId}/print-pdf', [KhsAdminController::class, 'printPdf'])->name('khs.print_pdf');
+
+        // 4. Transkrip Nilai Akademik Kumulatif
+        Route::get('/transcripts', [TranscriptAdminController::class, 'index'])->name('transcripts.index');
+        Route::get('/transcripts/{studentId}/print-pdf', [TranscriptAdminController::class, 'printPdf'])->name('transcripts.print_pdf');
+
+        // 5. Kelulusan (Tugas Akhir, Wisuda, Surat Keterangan Lulus)
+        Route::get('/graduations', [GraduationAdminController::class, 'index'])->name('graduations.index');
+        Route::post('/graduations/thesis', [GraduationAdminController::class, 'storeThesis'])->name('graduations.thesis.store');
+        Route::get('/graduations/skl/{id}/print-pdf', [GraduationAdminController::class, 'printSkl'])->name('graduations.skl.print_pdf');
+
+        // 6. Aktivitas Mahasiswa (MBKM, Prestasi, Organisasi)
+        Route::get('/activities', [StudentActivityController::class, 'index'])->name('activities.index');
+        Route::post('/activities', [StudentActivityController::class, 'store'])->name('activities.store');
+        Route::delete('/activities/{id}', [StudentActivityController::class, 'destroy'])->name('activities.destroy');
+
+        // 7. Status Kuliah Mahasiswa & Pengajuan Cuti
+        Route::get('/student-statuses', [StudentStatusController::class, 'index'])->name('student_statuses.index');
+        Route::post('/student-statuses/update', [StudentStatusController::class, 'updateStatus'])->name('student_statuses.update');
+
+        // 8. Analitik Mutu Dosen & Data Kuisioner (EDOM)
         Route::get('/edom', [EdomAdminController::class, 'index'])->name('edom.index');
         Route::get('/edom/{id}', [EdomAdminController::class, 'show'])->name('edom.show');
 
@@ -200,9 +280,19 @@ Route::middleware('auth')->group(function () {
         // Penjadwalan Kuliah Lanjutan & Anti-Clash Matrix
         Route::get('/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
         Route::post('/schedules', [ScheduleController::class, 'store'])->name('schedules.store');
+        Route::post('/schedules/quick', [ScheduleController::class, 'storeQuick'])->name('schedules.quick');
         Route::put('/schedules/{id}', [ScheduleController::class, 'update'])->name('schedules.update');
         Route::post('/schedules/check-conflict', [ScheduleController::class, 'checkConflict'])->name('schedules.check_conflict');
         Route::delete('/schedules/{id}', [ScheduleController::class, 'destroy'])->name('schedules.destroy');
+
+        // Jadwal Ujian (UTS / UAS)
+        Route::post('/schedules/exams', [ScheduleController::class, 'storeExam'])->name('schedules.exams.store');
+        Route::delete('/schedules/exams/{id}', [ScheduleController::class, 'destroyExam'])->name('schedules.exams.destroy');
+
+        // Presensi Kelas & Mahasiswa (Tab 3)
+        Route::get('/schedules/attendance/{classId}', [ScheduleController::class, 'getAttendanceData'])->name('schedules.attendance.get');
+        Route::post('/schedules/attendance', [ScheduleController::class, 'storeAttendance'])->name('schedules.attendance.store');
+        Route::post('/schedules/attendance/matrix', [ScheduleController::class, 'storeAttendanceMatrix'])->name('schedules.attendance.matrix');
 
         // Neo Feeder PDDIKTI Sync Connector
         Route::get('/pddikti', [PddiktiController::class, 'index'])->name('pddikti.index');
@@ -244,10 +334,63 @@ Route::middleware('auth')->group(function () {
         Route::post('/database/restore', [DatabaseController::class, 'restoreBackup'])->name('database.restore');
         Route::post('/database/seeder', [DatabaseController::class, 'runSeeder'])->name('database.seeder');
 
+        // 1. Kebijakan Akademik (Bobot Nilai, SKS Maksimum, Predikat Kelulusan, Gelar Kelulusan)
+        Route::get('/academic-settings', [AcademicSettingController::class, 'index'])->name('academic_settings.index');
+        Route::get('/setting/{section?}', function () {
+            return redirect()->route('academic_settings.index');
+        })->name('academic_settings.section');
+
+        Route::post('/academic-settings/grading', [AcademicSettingController::class, 'updateGrading'])->name('academic_settings.update_grading');
+        Route::post('/academic-settings/scales', [AcademicSettingController::class, 'storeScale'])->name('academic_settings.store_scale');
+        Route::post('/academic-settings/scales/{id}', [AcademicSettingController::class, 'updateScale'])->name('academic_settings.update_scale');
+        Route::delete('/academic-settings/scales/{id}', [AcademicSettingController::class, 'destroyScale'])->name('academic_settings.destroy_scale');
+        Route::post('/academic-settings/copy-standard-scales', [AcademicSettingController::class, 'copyStandardScales'])->name('academic_settings.copy_standard_scales');
+        Route::post('/academic-settings/sks-limits', [AcademicSettingController::class, 'updateSksLimits'])->name('academic_settings.update_sks_limits');
+        Route::post('/academic-settings/sks-limit', [AcademicSettingController::class, 'storeSksLimit'])->name('academic_settings.store_sks_limit');
+        Route::post('/academic-settings/sks-limit/{id}', [AcademicSettingController::class, 'updateSksLimit'])->name('academic_settings.update_sks_limit');
+        Route::delete('/academic-settings/sks-limit/{id}', [AcademicSettingController::class, 'destroySksLimit'])->name('academic_settings.destroy_sks_limit');
+        Route::post('/academic-settings/copy-standard-sks-limits', [AcademicSettingController::class, 'copyStandardSksLimits'])->name('academic_settings.copy_standard_sks_limits');
+        Route::post('/academic-settings/predicates', [AcademicSettingController::class, 'updatePredicates'])->name('academic_settings.update_predicates');
+        Route::post('/academic-settings/degrees', [AcademicSettingController::class, 'updateDegrees'])->name('academic_settings.update_degrees');
+
+        // Aliases for backwards compatibility
+        Route::post('/setting/grading', [AcademicSettingController::class, 'updateGrading']);
+        Route::post('/setting/scales', [AcademicSettingController::class, 'storeScale']);
+        Route::post('/setting/scales/{id}', [AcademicSettingController::class, 'updateScale']);
+        Route::delete('/setting/scales/{id}', [AcademicSettingController::class, 'destroyScale']);
+        Route::post('/setting/copy-standard-scales', [AcademicSettingController::class, 'copyStandardScales']);
+        Route::post('/setting/sks-limits', [AcademicSettingController::class, 'updateSksLimits']);
+        Route::post('/setting/sks-limit', [AcademicSettingController::class, 'storeSksLimit']);
+        Route::post('/setting/sks-limit/{id}', [AcademicSettingController::class, 'updateSksLimit']);
+        Route::delete('/setting/sks-limit/{id}', [AcademicSettingController::class, 'destroySksLimit']);
+        Route::post('/setting/copy-standard-sks-limits', [AcademicSettingController::class, 'copyStandardSksLimits']);
+        Route::post('/setting/predicates', [AcademicSettingController::class, 'updatePredicates']);
+        Route::post('/setting/degrees', [AcademicSettingController::class, 'updateDegrees']);
+
+        // 2. Data Pejabat Kampus & Penugasan Pengesah
+        Route::get('/officials', [CampusOfficialController::class, 'index'])->name('officials.index');
+        Route::post('/officials', [CampusOfficialController::class, 'storeOfficial'])->name('officials.store');
+        Route::post('/officials/{id}', [CampusOfficialController::class, 'updateOfficial'])->name('officials.update');
+        Route::delete('/officials/{id}', [CampusOfficialController::class, 'destroyOfficial'])->name('officials.destroy');
+        Route::post('/officials/signatories', [CampusOfficialController::class, 'storeSignatory'])->name('officials.signatories.store');
+        Route::post('/officials/signatories/{id}', [CampusOfficialController::class, 'updateSignatory'])->name('officials.signatories.update');
+        Route::delete('/officials/signatories/{id}', [CampusOfficialController::class, 'destroySignatory'])->name('officials.signatories.destroy');
+
+        // Aliases for pejabat routes
+        Route::post('/setting/officials', [CampusOfficialController::class, 'storeOfficial']);
+        Route::post('/setting/officials/{id}', [CampusOfficialController::class, 'updateOfficial']);
+        Route::delete('/setting/officials/{id}', [CampusOfficialController::class, 'destroyOfficial']);
+        Route::post('/setting/signatories/{id}', [CampusOfficialController::class, 'updateSignatory']);
+        Route::post('/setting/signatories', [CampusOfficialController::class, 'storeSignatory']);
+        Route::delete('/setting/signatories/{id}', [CampusOfficialController::class, 'destroySignatory']);
+
         // Pengaturan & Pemeliharaan
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
         Route::post('/settings/maintenance', [SettingController::class, 'toggleMaintenance'])->name('settings.maintenance');
+        Route::post('/settings/clear-cache', [SettingController::class, 'clearCache'])->name('settings.clear_cache');
+        Route::post('/settings/retry-jobs', [SettingController::class, 'retryJobs'])->name('settings.retry_jobs');
+        Route::post('/settings/flush-jobs', [SettingController::class, 'flushJobs'])->name('settings.flush_jobs');
     });
 
     // =====================================================================

@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # 1. DATABASE UTAMA: POSTGRESQL 16 PERSISTEN
+  salam-postgres:
+    container_name: salam-postgres-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-salam_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres2026!}
+    volumes:
+      - salam-pgdata:/var/lib/postgresql/data
+      - ./backend/src/db/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d salam_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - salam-network
+
+  # 2. OBJECT STORAGE: MINIO S3-COMPATIBLE
+  salam-minio:
+    container_name: salam-minio-storage
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin2026!}
+    volumes:
+      - salam-miniodata:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - salam-network
+
+  # 3. BACKEND REST API: NODE.JS 20 TYPESCRIPT
+  salam-backend:
+    container_name: salam-backend-api
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres2026!}@salam-postgres:5432/${POSTGRES_DB:-salam_db}
+      JWT_SECRET: ${JWT_SECRET:-salam_jwt_secret_key_stai_alittihad_production}
+      S3_ENDPOINT: http://salam-minio:9000
+      S3_BUCKET: salam-uploads
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin2026!}
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    depends_on:
+      salam-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - salam-network
+
+  # 4. FRONTEND SPA & REVERSE PROXY: NGINX
+  salam-frontend:
+    container_name: salam-frontend-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    ports:
+      - "${SALAM_PORT:-8080}:80"
+    depends_on:
+      - salam-backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - salam-network
+
+  # 5. NGROK SECURE PUBLIC TUNNEL
+  salam-ngrok:
+    container_name: salam-ngrok-tunnel
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command:
+      - "http"
+      - "salam-frontend:80"
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040" # Web inspection dashboard (http://localhost:4040)
+    depends_on:
+      - salam-frontend
+    networks:
+      - salam-network
+
+volumes:
+  salam-pgdata:
+    name: salam-postgres-data
+  salam-miniodata:
+    name: salam-minio-data
+
+networks:
+  salam-network:
+    name: salam-internal-network
+    driver: bridge

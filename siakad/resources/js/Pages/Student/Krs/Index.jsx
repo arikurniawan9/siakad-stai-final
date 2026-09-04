@@ -39,7 +39,7 @@ export default function KrsIndex({ activePeriod, isFinancialLocked, krsSubmissio
 
     return (
         <AppLayout title="Kartu Rencana Studi (KRS)">
-            <Head title="KRS Online — SIAKAD" />
+            <Head title="KRS Online" />
 
             <div className="space-y-6">
                 {/* Header */}

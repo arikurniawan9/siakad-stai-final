@@ -18,7 +18,7 @@ export default function EdomShow({ activePeriod, lecturer, feedbackList = [] }) 
 
     return (
         <AppLayout title={`Detail EDOM — ${lecturer.name}`}>
-            <Head title={`EDOM ${lecturer.name} — SIAKAD`} />
+            <Head title={`EDOM - ${lecturer.name}`} />
 
             <div className="space-y-4 max-w-4xl mx-auto">
                 {/* Header Back & Info */}

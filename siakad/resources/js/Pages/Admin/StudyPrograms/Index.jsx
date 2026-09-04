@@ -277,7 +277,7 @@ export default function StudyProgramsIndex({ studyPrograms = [], faculties = [],
 
     return (
         <AppLayout title="Master Program Studi & Fakultas">
-            <Head title="Program Studi & Fakultas — SIAKAD" />
+            <Head title="Program Studi & Fakultas" />
 
             <div className="space-y-3.5">
                 {/* 1. COMPACT HERO HEADER DENGAN INTEGRATED SUB-BAR PILIH FAKULTAS */}

@@ -9,13 +9,13 @@ import {
 export default function DocumentVerification({ document }) {
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-900 via-emerald-950 to-slate-900 py-10 px-4 sm:px-6 flex flex-col justify-between font-sans text-slate-800">
-            <Head title="Verifikasi Dokumen Resmi — STAI Al-Ittihad" />
+            <Head title="Verifikasi Dokumen Resmi" />
 
             <div className="max-w-2xl mx-auto w-full space-y-6">
                 {/* Header Logo */}
                 <div className="text-center space-y-2">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-800 text-white font-black text-3xl shadow-xl shadow-emerald-900/50 border border-emerald-400/30">
-                        S
+                    <div className="inline-flex items-center justify-center p-2 rounded-2xl bg-white/10 shadow-xl border border-white/20">
+                        <img src="/logostai.png" alt="Logo STAI Al-Ittihad" className="w-16 h-16 object-contain" />
                     </div>
                     <h1 className="text-lg sm:text-xl font-black text-white uppercase tracking-wider">
                         PORTAL VERIFIKASI DOKUMEN DIGITAL

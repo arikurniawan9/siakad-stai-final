@@ -114,7 +114,7 @@ export default function PmbRegister({ pmbPeriod, studyPrograms }) {
 
     return (
         <div className="min-h-screen bg-slate-950 font-sans text-slate-800 py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col justify-between">
-            <Head title="Penerimaan Mahasiswa Baru (PMB) Online — STAI Al-Ittihad" />
+            <Head title="Pendaftaran PMB Online" />
 
             {/* Background Glows */}
             <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>

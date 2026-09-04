@@ -78,7 +78,7 @@ export default function GradeShow({ courseClass, students = [], distribution = {
 
     return (
         <AppLayout title={`Lembar Nilai DPNA — ${courseClass.course_code}`}>
-            <Head title={`Nilai ${courseClass.course_code} — SIAKAD`} />
+            <Head title={`Lembar Nilai DPNA ${courseClass.course_code}`} />
 
             <div className="space-y-6 max-w-6xl mx-auto">
                 {/* Header Navbar (Hidden on Print) */}
@@ -154,9 +154,11 @@ export default function GradeShow({ courseClass, students = [], distribution = {
                     {/* Header Institusi */}
                     <div className="border-b-2 border-slate-900 pb-3 flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-emerald-700 rounded-xl flex items-center justify-center font-black text-white text-xl">
-                                S
-                            </div>
+                            <img 
+                                src="/logostai.png" 
+                                alt="Logo STAI Al-Ittihad" 
+                                className="w-12 h-12 object-contain shrink-0" 
+                            />
                             <div>
                                 <h1 className="text-sm sm:text-base font-black uppercase text-slate-900">
                                     SEKOLAH TINGGI AGAMA ISLAM (STAI) AL-ITTIHAD CIANJUR

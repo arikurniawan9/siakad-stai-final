@@ -13,7 +13,7 @@ export default function LetterShow({ letter }) {
 
     return (
         <AppLayout title="Cetak Surat Keterangan Aktif Kuliah">
-            <Head title={`Surat Keterangan ${letter.student_name} — SIAKAD`} />
+            <Head title={`Surat Keterangan - ${letter.student_name}`} />
 
             <div className="space-y-6 max-w-4xl mx-auto">
                 {/* Header Navbar (Hidden on Print) */}
@@ -43,9 +43,11 @@ export default function LetterShow({ letter }) {
                 <div className="bg-white rounded-2xl border border-slate-300 p-8 sm:p-12 shadow-md space-y-6 text-slate-900 text-xs sm:text-sm font-serif leading-relaxed">
                     {/* Institutional Letterhead (Kop Surat Resmi) */}
                     <div className="border-b-2 border-double border-slate-900 pb-4 flex items-center space-x-4">
-                        <div className="w-16 h-16 bg-emerald-800 rounded-2xl flex items-center justify-center font-black text-white text-3xl font-sans shrink-0 shadow">
-                            S
-                        </div>
+                        <img 
+                            src="/logostai.png" 
+                            alt="Logo STAI Al-Ittihad" 
+                            className="w-16 h-16 object-contain shrink-0" 
+                        />
                         <div className="text-center flex-1 space-y-0.5 font-sans">
                             <h2 className="text-xs font-black uppercase text-slate-700 tracking-wider">
                                 YAYASAN PENDIDIKAN ISLAM AL-ITTIHAD CIANJUR
@@ -57,9 +59,13 @@ export default function LetterShow({ letter }) {
                                 BIRO ADMINISTRASI AKADEMIK, KEMAHASISWAAN & KEUANGAN (BAAKK)
                             </p>
                             <p className="text-[10px] text-slate-500 font-sans">
-                                Jl. Bojong Herang No. 12 Cianjur • Telp: (0263) 228192 • Website: www.staialittihad.ac.id • Email: info@staialittihad.ac.id
+                                Kampus Terpadu: Jl. Raya Bandung Km. 03, Rawabango, Bojong, Karangtengah, Cianjur 43281 • Telp: (0263) 228192
+                            </p>
+                            <p className="text-[9.5px] text-slate-400 font-sans">
+                                Website: www.staialittihad.ac.id • Email: akademik@staialittihad.ac.id
                             </p>
                         </div>
+                        <div className="w-16 shrink-0 hidden sm:block"></div>
                     </div>
 
                     {/* Letter Title */}

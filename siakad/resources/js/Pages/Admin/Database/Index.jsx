@@ -114,7 +114,7 @@ export default function DatabaseIndex({ backups, tableStats, dbInfo }) {
 
     return (
         <AppLayout title="Manajemen Database, Backup & Seeder">
-            <Head title="Database Management & Backup — Superadmin" />
+            <Head title="Database & Backup" />
 
             <div className="space-y-6">
                 {/* Header Banner */}
@@ -173,6 +173,29 @@ export default function DatabaseIndex({ backups, tableStats, dbInfo }) {
                         <p className="text-[10px] font-bold text-slate-400 uppercase">Total Baris Record</p>
                         <p className="text-base font-black text-emerald-700 mt-0.5">{dbInfo.total_rows.toLocaleString('id-ID')} Baris</p>
                         <p className="text-[10px] text-slate-500 mt-1">{backups.length} File Backup Tersedia</p>
+                    </div>
+                </div>
+
+                {/* Auto Backup Scheduler Status Card */}
+                <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 p-4 rounded-2xl border border-emerald-800/40 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center space-x-3">
+                        <div className="p-2.5 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-500/30">
+                            <Clock className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div>
+                            <div className="flex items-center space-x-2">
+                                <h4 className="text-xs font-black text-white uppercase tracking-wider">Jadwal Pencadangan Otomatis (Auto Backup Scheduler)</h4>
+                                <span className="px-2 py-0.2 bg-emerald-500 text-slate-950 rounded font-black text-[9px]">AKTIF</span>
+                            </div>
+                            <p className="text-[11px] text-emerald-200 mt-0.5">
+                                Pencadangan snapshot JSON berjalan otomatis setiap hari pukul <strong>01:00 WIB</strong> via cron scheduler dengan kebijakan retensi <strong>14 arsip terbaru</strong>.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center space-x-2 shrink-0">
+                        <span className="px-3 py-1 bg-white/10 text-emerald-300 rounded-lg text-[10px] font-mono font-bold">
+                            Retensi: 14 Snapshot
+                        </span>
                     </div>
                 </div>
 

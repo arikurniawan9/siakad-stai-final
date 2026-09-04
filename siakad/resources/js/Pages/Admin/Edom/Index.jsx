@@ -17,7 +17,7 @@ export default function EdomIndex({ activePeriod, lecturers = [], stats = {} }) 
 
     return (
         <AppLayout title="Evaluasi Dosen oleh Mahasiswa (EDOM)">
-            <Head title="EDOM & Mutu Dosen — SIAKAD" />
+            <Head title="Evaluasi Dosen (EDOM)" />
 
             <div className="space-y-6">
                 {/* Header */}

@@ -72,6 +72,15 @@ class LetterController extends Controller
      */
     public function show(int $id): Response
     {
+        $signatory = DB::table('institutional_signatories')
+            ->where('document_type', 'SURAT_KETERANGAN')
+            ->where('is_active', true)
+            ->first();
+
+        $signatoryName = $signatory ? $signatory->signatory_name : 'Dr. H. M. Ridwan, M.Ag';
+        $signatoryRole = $signatory ? $signatory->position_title : 'Wakil Ketua I Bidang Akademik';
+        $signatoryNidn = $signatory ? $signatory->signatory_nip_nidn : '2112087501';
+
         $letter = [
             'id' => $id,
             'letter_number' => '421.4/STAI-ITTH/SK/VIII/2026/042',
@@ -84,9 +93,9 @@ class LetterController extends Controller
             'academic_year' => '2026/2027 (Ganjil)',
             'purpose' => 'Persyaratan Pengajuan Beasiswa Prestasi Mahasiswa Kemenag RI',
             'issue_date' => '24 Agustus 2026',
-            'signatory_name' => 'Dr. H. M. Ridwan, M.Ag',
-            'signatory_role' => 'Wakil Ketua I Bidang Akademik',
-            'signatory_nidn' => '2112087501',
+            'signatory_name' => $signatoryName,
+            'signatory_role' => $signatoryRole,
+            'signatory_nidn' => $signatoryNidn,
             'qr_hash' => 'SK-AKTIF-STAI-2026-21010042-VERIFIED',
         ];
 

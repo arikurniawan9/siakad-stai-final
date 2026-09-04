@@ -71,11 +71,17 @@ class KhsController extends Controller
         }
         $ips = $totalSks > 0 ? round($totalQuality / $totalSks, 2) : 0.00;
 
+        $signatory = DB::table('institutional_signatories')
+            ->where('document_type', 'KHS')
+            ->where('is_active', true)
+            ->first();
+
         return Inertia::render('Student/Khs/Index', [
             'academicPeriods' => $academicPeriods,
             'selectedPeriodId' => (int) $selectedPeriodId,
             'selectedPeriod' => $selectedPeriod,
             'grades' => $grades,
+            'signatory' => $signatory,
             'summary' => [
                 'semester_credits' => $totalSks,
                 'semester_gpa' => $ips,

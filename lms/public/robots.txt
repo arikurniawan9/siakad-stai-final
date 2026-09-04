@@ -1,0 +1,16 @@
+# =========================================================================
+# SALAM LMS (STAI AL-ITTIHAD) - ROBOTS.TXT
+# Melindungi privasi data akademik dan nilai dari pengindeksan mesin pencari
+# =========================================================================
+
+User-agent: *
+Disallow: /api/
+Disallow: /kelas/
+Disallow: /tugas/
+Disallow: /kuis/
+Disallow: /progres/
+Disallow: /forum/
+Disallow: /laporan/
+Disallow: /admin/
+Allow: /login
+Allow: /

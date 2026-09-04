@@ -136,7 +136,7 @@ export default function FinanceIndex({
 
     return (
         <AppLayout title="Sistem Manajemen Keuangan & Setup Tarif">
-            <Head title="Manajemen Keuangan & Tarif — SIAKAD" />
+            <Head title="Manajemen Keuangan & Tarif" />
 
             <div className="space-y-6">
                 {/* Header */}

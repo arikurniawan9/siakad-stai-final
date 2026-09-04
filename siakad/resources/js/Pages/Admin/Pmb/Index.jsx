@@ -91,7 +91,7 @@ export default function PmbIndex({
 
     return (
         <AppLayout title="Portal Penerimaan Mahasiswa Baru (PMB)">
-            <Head title="Admin PMB — SIAKAD" />
+            <Head title="Penerimaan Mahasiswa Baru (PMB)" />
 
             <div className="space-y-6">
                 {/* Header */}

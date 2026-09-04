@@ -9,15 +9,24 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('pmb_applicants', function (Blueprint $table) {
-            $table->string('mother_name', 150)->nullable()->after('full_name');
-            $table->string('nisn', 20)->nullable()->after('previous_school');
+            if (!Schema::hasColumn('pmb_applicants', 'mother_name')) {
+                $table->string('mother_name', 150)->nullable()->after('full_name');
+            }
+            if (!Schema::hasColumn('pmb_applicants', 'nisn')) {
+                $table->string('nisn', 20)->nullable()->after('previous_school');
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('pmb_applicants', function (Blueprint $table) {
-            $table->dropColumn(['mother_name', 'nisn']);
+            $cols = [];
+            if (Schema::hasColumn('pmb_applicants', 'mother_name')) $cols[] = 'mother_name';
+            if (Schema::hasColumn('pmb_applicants', 'nisn')) $cols[] = 'nisn';
+            if (!empty($cols)) {
+                $table->dropColumn($cols);
+            }
         });
     }
 };

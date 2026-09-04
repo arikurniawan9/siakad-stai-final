@@ -65,7 +65,7 @@ export default function LmsSyncIndex({ syncLogs = [], stats = {}, activePeriod =
 
     return (
         <AppLayout title="Gateway Sinkronisasi SALAM LMS">
-            <Head title="Integrasi SALAM LMS — SIAKAD" />
+            <Head title="Integrasi SALAM LMS" />
 
             <div className="space-y-6">
                 {/* Header */}

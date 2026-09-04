@@ -63,11 +63,11 @@ class DatabaseSeeder extends Seeder
                 'username' => '2118097201',
                 'name' => "Dr. Ahmad Syafi'i, M.Ag",
                 'identity_number' => '2118097201',
-                'email' => 'kaprodi.pai@staialittihad.ac.id',
+                'email' => 'kaprodi.piaud@staialittihad.ac.id',
                 'password' => $passwordHash,
                 'role' => 'kaprodi',
                 'phone_number' => '081234567893',
-                'study_program' => 'Program Studi S1 PAI',
+                'study_program' => 'Pendidikan Islam Anak Usia Dini (S1)',
                 'is_active' => true,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -81,7 +81,7 @@ class DatabaseSeeder extends Seeder
                 'password' => $passwordHash,
                 'role' => 'dosen_pa',
                 'phone_number' => '081234567894',
-                'study_program' => 'Fakultas Tarbiyah (Dosen Wali PA)',
+                'study_program' => 'Fakultas Tarbiyah dan Keguruan (Dosen Wali PA)',
                 'is_active' => true,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -95,7 +95,7 @@ class DatabaseSeeder extends Seeder
                 'password' => $passwordHash,
                 'role' => 'dosen',
                 'phone_number' => '081234567895',
-                'study_program' => 'Fakultas Tarbiyah / PAI',
+                'study_program' => 'Fakultas Tarbiyah dan Keguruan / PIAUD',
                 'is_active' => true,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -109,7 +109,7 @@ class DatabaseSeeder extends Seeder
                 'password' => $passwordHash,
                 'role' => 'mahasiswa',
                 'phone_number' => '081234567896',
-                'study_program' => 'Pendidikan Agama Islam (S1)',
+                'study_program' => 'Pendidikan Islam Anak Usia Dini (S1)',
                 'is_active' => true,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -239,11 +239,11 @@ class DatabaseSeeder extends Seeder
             ]
         ]);
 
-        // 4. SEED FAKULTAS & 5 PRODI
+        // 4. SEED FAKULTAS (3 FAKULTAS RESMI)
         DB::table('faculties')->insertOrIgnore([
             [
                 'id' => 1,
-                'code' => 'TARBIYAH',
+                'code' => 'FTK',
                 'name' => 'Fakultas Tarbiyah dan Keguruan',
                 'dean_name' => "Prof. Dr. KH. Abdul Halim, M.A.",
                 'is_active' => true,
@@ -252,24 +252,35 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'id' => 2,
-                'code' => 'SYARIAH',
-                'name' => 'Fakultas Syariah dan Ekonomi Islam',
+                'code' => 'FEB',
+                'name' => 'Fakultas Ekonomi dan Bisnis',
                 'dean_name' => "Dr. H. M. Ridwan, M.Ag",
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'id' => 3,
+                'code' => 'FDK',
+                'name' => 'Fakultas Dakwah dan Komunikasi',
+                'dean_name' => "Drs. H. Ahmad Fauzi, M.Si",
                 'is_active' => true,
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
         ]);
 
+        // SEED PROGRAM STUDI (4 PRODI RESMI)
         DB::table('study_programs')->insertOrIgnore([
             [
                 'id' => 1,
                 'faculty_id' => 1,
-                'code' => 'PAI',
-                'name' => 'Pendidikan Agama Islam (S1)',
+                'code' => 'PIAUD',
+                'national_code' => '86236',
+                'name' => 'Pendidikan Islam Anak Usia Dini',
                 'degree' => 'S1',
-                'accreditation' => 'Unggul',
-                'sk_number' => 'SK-BAN-PT-PAI-2024',
+                'accreditation' => 'Baik Sekali',
+                'sk_number' => 'SK-BAN-PT-PIAUD-2024',
                 'head_of_program_id' => 4, // Dr. Ahmad Syafi'i
                 'is_active' => true,
                 'created_at' => $now,
@@ -279,7 +290,8 @@ class DatabaseSeeder extends Seeder
                 'id' => 2,
                 'faculty_id' => 1,
                 'code' => 'MPI',
-                'name' => 'Manajemen Pendidikan Islam (S1)',
+                'national_code' => '86201',
+                'name' => 'Manajemen Pendidikan Islam',
                 'degree' => 'S1',
                 'accreditation' => 'Baik Sekali',
                 'sk_number' => 'SK-BAN-PT-MPI-2024',
@@ -291,11 +303,12 @@ class DatabaseSeeder extends Seeder
             [
                 'id' => 3,
                 'faculty_id' => 2,
-                'code' => 'HES',
-                'name' => 'Hukum Ekonomi Syariah (S1)',
+                'code' => 'ES',
+                'national_code' => '60202',
+                'name' => 'Ekonomi Syariah',
                 'degree' => 'S1',
                 'accreditation' => 'Baik Sekali',
-                'sk_number' => 'SK-BAN-PT-HES-2024',
+                'sk_number' => 'SK-BAN-PT-ES-2024',
                 'head_of_program_id' => null,
                 'is_active' => true,
                 'created_at' => $now,
@@ -303,25 +316,13 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'id' => 4,
-                'faculty_id' => 1,
-                'code' => 'PGMI',
-                'name' => 'Pendidikan Guru Madrasah Ibtidaiyah (S1)',
+                'faculty_id' => 3,
+                'code' => 'BKI',
+                'national_code' => '70201',
+                'name' => 'Bimbingan Konseling Islam',
                 'degree' => 'S1',
-                'accreditation' => 'B',
-                'sk_number' => 'SK-BAN-PT-PGMI-2024',
-                'head_of_program_id' => null,
-                'is_active' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'id' => 5,
-                'faculty_id' => 2,
-                'code' => 'ESY',
-                'name' => 'Ekonomi Syariah (S1)',
-                'degree' => 'S1',
-                'accreditation' => 'B',
-                'sk_number' => 'SK-BAN-PT-ESY-2024',
+                'accreditation' => 'Baik',
+                'sk_number' => 'SK-BAN-PT-BKI-2024',
                 'head_of_program_id' => null,
                 'is_active' => true,
                 'created_at' => $now,
@@ -334,8 +335,8 @@ class DatabaseSeeder extends Seeder
             [
                 'id' => 1,
                 'study_program_id' => 1,
-                'code' => 'KUR-PAI-2024',
-                'name' => 'Kurikulum Merdeka OBE PAI 2024',
+                'code' => 'KUR-PIAUD-2024',
+                'name' => 'Kurikulum Merdeka OBE PIAUD 2024',
                 'start_year' => 2024,
                 'total_credits_required' => 144,
                 'is_active' => true,
@@ -547,10 +548,69 @@ class DatabaseSeeder extends Seeder
                 'address' => 'Kp. Cijedil RT 02/04 Cugenang Cianjur',
                 'previous_school' => 'SMA Negeri 2 Cianjur',
                 'nisn' => '0045566778',
-                'first_choice_program_id' => 3, // HES
-                'second_choice_program_id' => 5, // ESY
+                'first_choice_program_id' => 3, // ES
+                'second_choice_program_id' => 4, // BKI
                 'pathway' => 'REGULER',
                 'status' => 'MENUNGGU_PEMBAYARAN',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        ]);
+
+        // SEED FEE TYPES
+        DB::table('fee_types')->insertOrIgnore([
+            [
+                'id' => 1,
+                'code' => 'PMB',
+                'name' => 'Biaya Pendaftaran PMB Online',
+                'va_bill_code' => '01',
+                'default_amount' => 250000,
+                'is_periodic' => false,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'id' => 2,
+                'code' => 'SPP_UKT',
+                'name' => 'UKT / SPP Perkuliahan Semester',
+                'va_bill_code' => '02',
+                'default_amount' => 2000000,
+                'is_periodic' => true,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'id' => 3,
+                'code' => 'PRAKTIKUM',
+                'name' => 'Biaya Praktikum & Laboratorium',
+                'va_bill_code' => '03',
+                'default_amount' => 350000,
+                'is_periodic' => true,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'id' => 4,
+                'code' => 'SKRIPSI',
+                'name' => 'Biaya Bimbingan & Sidang Munaqasyah',
+                'va_bill_code' => '04',
+                'default_amount' => 1500000,
+                'is_periodic' => false,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'id' => 5,
+                'code' => 'WISUDA',
+                'name' => 'Biaya Wisuda & Ijazah Digital',
+                'va_bill_code' => '05',
+                'default_amount' => 2500000,
+                'is_periodic' => false,
+                'is_active' => true,
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
@@ -903,11 +963,10 @@ class DatabaseSeeder extends Seeder
         // 12. SEED SETUP TARIF BIAYA PER TAHUN AKADEMIK & PRODI
         DB::table('fee_tariffs')->insertOrIgnore([
             // TA 2026/2027 (Tahun Akademik Id: 1)
-            ['academic_year_id' => 1, 'study_program_id' => 1, 'fee_type_id' => 2, 'amount' => 2500000, 'description' => 'SPP/UKT Semesteran PAI (TA 2026/2027)', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['academic_year_id' => 1, 'study_program_id' => 1, 'fee_type_id' => 2, 'amount' => 2500000, 'description' => 'SPP/UKT Semesteran PIAUD (TA 2026/2027)', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
             ['academic_year_id' => 1, 'study_program_id' => 2, 'fee_type_id' => 2, 'amount' => 2400000, 'description' => 'SPP/UKT Semesteran MPI (TA 2026/2027)', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['academic_year_id' => 1, 'study_program_id' => 3, 'fee_type_id' => 2, 'amount' => 2450000, 'description' => 'SPP/UKT Semesteran HES (TA 2026/2027)', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['academic_year_id' => 1, 'study_program_id' => 4, 'fee_type_id' => 2, 'amount' => 2350000, 'description' => 'SPP/UKT Semesteran PGMI (TA 2026/2027)', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['academic_year_id' => 1, 'study_program_id' => 5, 'fee_type_id' => 2, 'amount' => 2400000, 'description' => 'SPP/UKT Semesteran ESY (TA 2026/2027)', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['academic_year_id' => 1, 'study_program_id' => 3, 'fee_type_id' => 2, 'amount' => 2450000, 'description' => 'SPP/UKT Semesteran ES (TA 2026/2027)', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['academic_year_id' => 1, 'study_program_id' => 4, 'fee_type_id' => 2, 'amount' => 2350000, 'description' => 'SPP/UKT Semesteran BKI (TA 2026/2027)', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
             ['academic_year_id' => 1, 'study_program_id' => null, 'fee_type_id' => 1, 'amount' => 300000, 'description' => 'Biaya Registrasi PMB Mahasiswa Baru', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
             ['academic_year_id' => 1, 'study_program_id' => null, 'fee_type_id' => 3, 'amount' => 450000, 'description' => 'Biaya Praktikum Laboratorium & Microteaching', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
             ['academic_year_id' => 1, 'study_program_id' => null, 'fee_type_id' => 4, 'amount' => 1250000, 'description' => 'Biaya Ujian Munaqasyah & Sidang Skripsi', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
@@ -1058,5 +1117,39 @@ class DatabaseSeeder extends Seeder
                 'updated_at' => $now,
             ]
         ]);
+
+        // 16. SEED PENGATURAN AKADEMIK & KURIKULUM LENGKAP
+        $this->call([
+            AcademicSettingsSeeder::class,
+            CurriculumEnhancementSeeder::class,
+        ]);
+
+        // 17. SINKRONISASI SEQUENCE POSTGRESQL AGAR TIDAK TERJADI DUPLICATE KEY PADA AUTO-INCREMENT
+        $this->resetPostgresSequences();
+    }
+
+    private function resetPostgresSequences(): void
+    {
+        if (DB::getDriverName() === 'pgsql') {
+            $tables = [
+                'users', 'buildings', 'rooms', 'academic_years', 'academic_periods',
+                'faculties', 'study_programs', 'curricula', 'courses', 'course_prerequisites',
+                'structural_positions', 'pmb_periods', 'pmb_applicants', 'fee_types',
+                'student_invoices', 'va_bsi_transactions', 'course_classes', 'class_schedules',
+                'class_lecturers', 'class_enrollments', 'transfer_grade_conversions',
+                'system_settings', 'fee_tariffs', 'audit_logs', 'announcements',
+                'yudisium_periods', 'yudisium_applicants', 'grading_scales', 'grade_weights',
+                'sks_limits', 'graduation_predicates', 'study_program_degrees',
+                'institutional_signatories', 'lecturer_positions'
+            ];
+
+            foreach ($tables as $table) {
+                try {
+                    $max = DB::table($table)->max('id') ?? 0;
+                    $next = $max + 1;
+                    DB::statement("SELECT setval(pg_get_serial_sequence('{$table}', 'id'), {$next}, false)");
+                } catch (\Exception $e) {}
+            }
+        }
     }
 }

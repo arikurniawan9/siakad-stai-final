@@ -1,0 +1,11 @@
+version: "2"
+authtoken: ${NGROK_AUTHTOKEN}
+web_addr: 0.0.0.0:4040
+log: stdout
+
+tunnels:
+  salam-app:
+    proto: http
+    addr: salam-frontend:80
+    inspect: true
+    bind_tls: true

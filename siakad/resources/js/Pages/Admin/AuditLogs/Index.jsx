@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '../../../Layouts/AppLayout';
+import DeleteConfirmationModal from '@/Components/DeleteConfirmationModal';
 import { 
     ShieldAlert, ShieldCheck, Search, Filter, Calendar, 
     Clock, Activity, User, Eye, ArrowRight, RefreshCw, 
-    AlertTriangle, CheckCircle2, Lock, Terminal, KeyRound
+    AlertTriangle, CheckCircle2, Lock, Terminal, KeyRound,
+    Download, Trash2
 } from 'lucide-react';
 
 export default function AuditLogsIndex({ logs, stats = {}, filters = {} }) {
@@ -12,11 +14,27 @@ export default function AuditLogsIndex({ logs, stats = {}, filters = {} }) {
     const [actionFilter, setActionFilter] = useState(filters.action || '');
     const [dateFilter, setDateFilter] = useState(filters.date || '');
     const [selectedLog, setSelectedLog] = useState(null);
+    const [isPruneModalOpen, setIsPruneModalOpen] = useState(false);
+    const [pruneDays, setPruneDays] = useState(90);
+    const [isPruning, setIsPruning] = useState(false);
 
     const handleSearch = (e) => {
         e.preventDefault();
         router.get('/admin/audit-logs', { search, action: actionFilter, date: dateFilter }, { preserveState: true });
     };
+
+    const handleConfirmPrune = () => {
+        setIsPruning(true);
+        router.post('/admin/audit-logs/prune', { days: pruneDays }, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsPruning(false);
+                setIsPruneModalOpen(false);
+            }
+        });
+    };
+
+    const exportUrl = `/admin/audit-logs/export-csv?search=${encodeURIComponent(search)}&action=${encodeURIComponent(actionFilter)}&date=${encodeURIComponent(dateFilter)}`;
 
     const getActionBadge = (action) => {
         if (action.includes('IMPERSONATE')) {
@@ -39,7 +57,7 @@ export default function AuditLogsIndex({ logs, stats = {}, filters = {} }) {
 
     return (
         <AppLayout title="Visual Audit Log & Security Activity Tracker">
-            <Head title="Audit Log — SIAKAD" />
+            <Head title="Audit Log Aktivitas" />
 
             <div className="space-y-6">
                 {/* Header */}
@@ -49,6 +67,25 @@ export default function AuditLogsIndex({ logs, stats = {}, filters = {} }) {
                         <p className="text-xs text-slate-500">
                             Pencatatan real-time seluruh aktivitas otentikasi, impersonasi, approval KRS, perubahan nilai, dan transaksi perbankan.
                         </p>
+                    </div>
+
+                    <div className="flex items-center space-x-2 shrink-0">
+                        <a
+                            href={exportUrl}
+                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow flex items-center space-x-1.5 cursor-pointer"
+                        >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Ekspor CSV</span>
+                        </a>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsPruneModalOpen(true)}
+                            className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition shadow-2xs flex items-center space-x-1.5 cursor-pointer"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Bersihkan Log Lawas</span>
+                        </button>
                     </div>
                 </div>
 
@@ -255,6 +292,64 @@ export default function AuditLogsIndex({ logs, stats = {}, filters = {} }) {
                             </div>
                             <div className="flex justify-end pt-3 border-t border-slate-100">
                                 <button onClick={() => setSelectedLog(null)} className="px-4 py-2 bg-slate-800 text-white rounded-lg font-bold">Tutup</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* MODAL BERSIHKAN LOG LAWAS */}
+                {isPruneModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                        <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+                            <div className="flex items-center space-x-3 text-rose-600">
+                                <div className="p-3 bg-rose-100 rounded-xl">
+                                    <Trash2 className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black text-slate-900">Pembersihan Audit Log Lawas</h3>
+                                    <p className="text-xs text-slate-500">Hapus rekaman aktivitas lama untuk efisiensi basis data.</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 text-xs">
+                                <div>
+                                    <label className="block font-bold text-slate-700 mb-1.5">
+                                        Pilih Batas Usia Log yang Dihapus:
+                                    </label>
+                                    <select
+                                        value={pruneDays}
+                                        onChange={(e) => setPruneDays(Number(e.target.value))}
+                                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800"
+                                    >
+                                        <option value={30}>Lebih lama dari 30 Hari (1 Bulan)</option>
+                                        <option value={60}>Lebih lama dari 60 Hari (2 Bulan)</option>
+                                        <option value={90}>Lebih lama dari 90 Hari (3 Bulan) - Rekomendasi</option>
+                                        <option value={180}>Lebih lama dari 180 Hari (6 Bulan)</option>
+                                        <option value={365}>Lebih lama dari 1 Tahun (365 Hari)</option>
+                                    </select>
+                                </div>
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-[11px] leading-relaxed">
+                                    ⚠️ <strong>Perhatian:</strong> Rekaman log yang melampaui batas waktu yang dipilih akan dihapus secara permanen dari PostgreSQL. Aksi pembersihan ini sendiri akan dicatat sebagai log audit.
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPruneModalOpen(false)}
+                                    disabled={isPruning}
+                                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmPrune}
+                                    disabled={isPruning}
+                                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow cursor-pointer disabled:opacity-50"
+                                >
+                                    {isPruning ? 'Membersihkan...' : 'Ya, Hapus Log Lawas'}
+                                </button>
                             </div>
                         </div>
                     </div>

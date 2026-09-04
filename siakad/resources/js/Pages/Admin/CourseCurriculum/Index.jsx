@@ -214,7 +214,7 @@ export default function CourseCurriculumIndex({
 
     return (
         <AppLayout title="Matakuliah - Kurikulum">
-            <Head title="Matakuliah - Kurikulum — SIAKAD" />
+            <Head title="Matakuliah - Kurikulum" />
 
             <div className="space-y-3.5">
                 {/* 1. COMPACT HERO HEADER DENGAN INTEGRATED DUAL-PICKER (PRODI & KURIKULUM) */}

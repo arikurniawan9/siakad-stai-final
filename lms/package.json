@@ -1,0 +1,34 @@
+{
+  "name": "salam-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "tunnel:url": "node scripts/get-ngrok-url.js",
+    "tunnel:start": "powershell -ExecutionPolicy Bypass -File ./tunnel.ps1"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "papaparse": "^5.6.0",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.3",
+    "xlsx": "^0.18.5"
+  }
+}

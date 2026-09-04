@@ -54,7 +54,7 @@ export default function Login() {
 
     return (
         <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
-            <Head title="Masuk — SIAKAD STAI Al-Ittihad" />
+            <Head title="Masuk" />
 
             {/* Background Decorative Islamic Geometry Elements */}
             <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-emerald-600/10 blur-3xl pointer-events-none"></div>
@@ -63,8 +63,8 @@ export default function Login() {
             <div className="sm:mx-auto sm:w-full sm:max-w-md z-10">
                 {/* Brand Header */}
                 <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-600 shadow-xl shadow-emerald-600/30 text-white font-black text-3xl mb-4 border border-emerald-400/40">
-                        S
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white shadow-xl shadow-emerald-950/40 p-2 mb-3 border border-slate-200">
+                        <img src="/logostai.png" alt="Logo STAI Al-Ittihad" className="w-full h-full object-contain" />
                     </div>
                     <h2 className="text-2xl font-black text-white tracking-tight">SIAKAD TERPADU</h2>
                     <p className="text-sm font-semibold text-emerald-400 tracking-wider uppercase mt-0.5">STAI Al-Ittihad Cianjur</p>

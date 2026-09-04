@@ -7,7 +7,8 @@ import {
     X, Bell, ExternalLink, RefreshCw, UserCheck2, Landmark,
     Activity, Database, Terminal, ShieldCheck, AlertOctagon, Server,
     Users, ChevronLeft, ChevronRight, HardDrive, Cpu, Radio, Award,
-    Megaphone, FileCheck, Sparkles, BookMarked, ArrowRightLeft, Layers
+    Megaphone, FileCheck, Sparkles, BookMarked, ArrowRightLeft, Layers, Sliders,
+    KeyRound, Trophy
 } from 'lucide-react';
 
 export default function AppLayout({ title, children }) {
@@ -21,7 +22,41 @@ export default function AppLayout({ title, children }) {
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
     const [userDropdownOpen, setUserDropdownOpen] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
+    const isAcademicSettingsActive = pageUrl.includes('/admin/setting') || pageUrl.includes('/admin/academic-settings');
+    const isPejabatActive = pageUrl.includes('/admin/setting/data-pejabat') || pageUrl.includes('/admin/setting/pejabat-pengesah') || pageUrl.includes('tab=data-pejabat') || pageUrl.includes('tab=pejabat-pengesah');
+
+    const [openMenus, setOpenMenus] = useState({
+        'setting': isAcademicSettingsActive,
+        'pejabat': isPejabatActive
+    });
     const userDropdownRef = useRef(null);
+
+    // Sync menu collapse when navigating: auto-expand when entering academic settings, collapse when leaving
+    useEffect(() => {
+        const isAcademicActive = pageUrl.includes('/admin/setting') || pageUrl.includes('/admin/academic-settings');
+        const isPejActive = pageUrl.includes('/admin/setting/data-pejabat') || pageUrl.includes('/admin/setting/pejabat-pengesah') || pageUrl.includes('tab=data-pejabat') || pageUrl.includes('tab=pejabat-pengesah');
+
+        if (isAcademicActive) {
+            setOpenMenus(prev => ({
+                ...prev,
+                'setting': true,
+                'pejabat': isPejActive ? true : (prev['pejabat'] ?? false)
+            }));
+        } else {
+            setOpenMenus(prev => ({
+                ...prev,
+                'setting': false,
+                'pejabat': false
+            }));
+        }
+    }, [pageUrl]);
+
+    const toggleMenu = (key) => {
+        setOpenMenus(prev => ({
+            ...prev,
+            [key]: !prev[key]
+        }));
+    };
 
     // Auto-close user dropdown on outside click and ESC key press
     useEffect(() => {
@@ -123,6 +158,30 @@ export default function AppLayout({ title, children }) {
             };
         }
         if (href.includes('/study-programs')) {
+            return {
+                boxBg: isActive 
+                    ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' 
+                    : 'bg-indigo-500/15 text-indigo-400 ring-1 ring-indigo-500/30 group-hover:bg-indigo-500 group-hover:text-white',
+                activeItemBg: 'bg-indigo-950/40 text-indigo-200 border-l-2 border-indigo-400'
+            };
+        }
+        if (href.includes('/student-curricula')) {
+            return {
+                boxBg: isActive 
+                    ? 'bg-purple-500 text-white shadow-md shadow-purple-500/30' 
+                    : 'bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/30 group-hover:bg-purple-500 group-hover:text-white',
+                activeItemBg: 'bg-purple-950/40 text-purple-200 border-l-2 border-purple-400'
+            };
+        }
+        if (href.includes('/academic-advising')) {
+            return {
+                boxBg: isActive 
+                    ? 'bg-teal-500 text-white shadow-md shadow-teal-500/30' 
+                    : 'bg-teal-500/15 text-teal-400 ring-1 ring-teal-500/30 group-hover:bg-teal-500 group-hover:text-white',
+                activeItemBg: 'bg-teal-950/40 text-teal-200 border-l-2 border-teal-400'
+            };
+        }
+        if (href.includes('/student-portal')) {
             return {
                 boxBg: isActive 
                     ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' 
@@ -302,6 +361,10 @@ export default function AppLayout({ title, children }) {
         { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
         { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
         { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
+        { header: 'SETTING & KEBIJAKAN' },
+        { label: 'Pengaturan Sistem & Maintenance', href: '/admin/settings', icon: Settings },
+        { label: 'Kebijakan Akademik', href: '/admin/academic-settings', icon: Sliders },
+        { label: 'Pejabat & Penugasan', href: '/admin/officials', icon: ShieldCheck },
         { header: 'PERBANKAN & BILLING BSI' },
         { label: 'BSI Smart Billing H2H', href: '/admin/bsi-gateway', icon: Landmark, highlight: true },
         { label: 'Keuangan & Setup Tarif VA', href: '/admin/finance', icon: CreditCard },
@@ -312,16 +375,22 @@ export default function AppLayout({ title, children }) {
         { header: 'INTEGRASI SERVER & LMS' },
         { label: 'Sinkronisasi SALAM LMS', href: '/admin/lms-sync', icon: RefreshCw },
         { label: 'Neo Feeder PDDIKTI', href: '/admin/pddikti', icon: Server },
-        { header: 'DATA CIVITAS & PENGGUNA' },
-        { label: 'Semua Akun (Portal Menyamar)', href: '/admin/users', icon: ShieldCheck, highlight: true },
+        { header: 'KEMAHASISWAAN' },
         { label: 'Data Mahasiswa', href: '/admin/students', icon: GraduationCap },
+        { header: 'DATA DOSEN & AKUN' },
         { label: 'Data Dosen & Pengajar', href: '/admin/lecturers', icon: Users },
-        { header: 'OPERASIONAL AKADEMIK' },
+        { label: 'Manajemen Akun & Pengguna', href: '/admin/users', icon: KeyRound },
+        { header: 'AKADEMIK' },
+        { label: 'Rencana Studi', href: '/admin/krs-approval', icon: BookOpen },
+        { label: 'Penilaian', href: '/admin/grades', icon: Award },
+        { label: 'Hasil Studi', href: '/admin/khs', icon: FileText },
+        { label: 'Transkrip', href: '/admin/transcripts', icon: GraduationCap },
+        { label: 'Kelulusan & Tugas Akhir', href: '/admin/graduations', icon: FileCheck },
+        { label: 'Skrining Yudisium', href: '/admin/yudisium', icon: Award },
+        { label: 'Aktivitas Mahasiswa', href: '/admin/activities', icon: Trophy },
+        { label: 'Status Kuliah Mahasiswa', href: '/admin/student-statuses', icon: Users },
+        { label: 'Data Kuisioner', href: '/admin/edom', icon: Star },
         { label: 'Pusat Pengumuman', href: '/admin/announcements', icon: Megaphone },
-        { label: 'Approval KRS Mahasiswa', href: '/admin/krs-approval', icon: UserCheck },
-        { label: 'Gradebook & DPNA Nilai', href: '/admin/grades', icon: Award },
-        { label: 'Evaluasi Dosen (EDOM)', href: '/admin/edom', icon: Star },
-        { label: 'Skrining Yudisium', href: '/admin/yudisium', icon: FileCheck },
         { label: 'Surat Keterangan Aktif', href: '/admin/letters', icon: FileText },
     ];
 
@@ -337,15 +406,26 @@ export default function AppLayout({ title, children }) {
         { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
         { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
         { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
-        { header: 'DATA CIVITAS AKADEMIKA' },
-        { label: 'Data Mahasiswa (Angkatan)', href: '/admin/students', icon: GraduationCap },
+        { header: 'SETTING & KEBIJAKAN' },
+        { label: 'Pengaturan Sistem', href: '/admin/settings', icon: Settings },
+        { label: 'Kebijakan Akademik', href: '/admin/academic-settings', icon: Sliders },
+        { label: 'Pejabat & Penugasan', href: '/admin/officials', icon: ShieldCheck },
+        { header: 'KEMAHASISWAAN' },
+        { label: 'Data Mahasiswa', href: '/admin/students', icon: GraduationCap },
+        { header: 'DATA DOSEN & PENGELOLA' },
         { label: 'Data Dosen & Pengajar', href: '/admin/lecturers', icon: Users },
-        { header: 'OPERASIONAL STUDI' },
+        { label: 'Manajemen Akun & Pengguna', href: '/admin/users', icon: KeyRound },
+        { header: 'AKADEMIK' },
+        { label: 'Rencana Studi', href: '/admin/krs-approval', icon: BookOpen },
+        { label: 'Penilaian', href: '/admin/grades', icon: Award },
+        { label: 'Hasil Studi', href: '/admin/khs', icon: FileText },
+        { label: 'Transkrip', href: '/admin/transcripts', icon: GraduationCap },
+        { label: 'Kelulusan & Tugas Akhir', href: '/admin/graduations', icon: FileCheck },
+        { label: 'Skrining Yudisium', href: '/admin/yudisium', icon: Award },
+        { label: 'Aktivitas Mahasiswa', href: '/admin/activities', icon: Trophy },
+        { label: 'Status Kuliah Mahasiswa', href: '/admin/student-statuses', icon: Users },
+        { label: 'Data Kuisioner', href: '/admin/edom', icon: Star },
         { label: 'Pusat Pengumuman', href: '/admin/announcements', icon: Megaphone },
-        { label: 'Approval KRS Mahasiswa', href: '/admin/krs-approval', icon: UserCheck },
-        { label: 'Gradebook & DPNA Nilai', href: '/admin/grades', icon: Award },
-        { label: 'Evaluasi Dosen (EDOM)', href: '/admin/edom', icon: Star },
-        { label: 'Skrining Yudisium', href: '/admin/yudisium', icon: FileCheck },
         { label: 'Surat Keterangan Aktif', href: '/admin/letters', icon: FileText },
         { header: 'LAYANAN & KEUANGAN' },
         { label: 'Keuangan & Setup Tarif VA', href: '/admin/finance', icon: CreditCard },
@@ -375,10 +455,17 @@ export default function AppLayout({ title, children }) {
                 { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
                 { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
                 { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
-                { header: 'PROGRAM STUDI' },
-                { label: 'Approval KRS Mahasiswa', href: '/admin/krs-approval', icon: UserCheck },
-                { label: 'Gradebook & Nilai DPNA', href: '/admin/grades', icon: Award },
-                { label: 'Evaluasi Mutu EDOM', href: '/admin/edom', icon: Star },
+                { header: 'KEMAHASISWAAN & PRODI' },
+                { label: 'Data Mahasiswa', href: '/admin/students', icon: GraduationCap },
+                { header: 'AKADEMIK' },
+                { label: 'Rencana Studi', href: '/admin/krs-approval', icon: BookOpen },
+                { label: 'Penilaian', href: '/admin/grades', icon: Award },
+                { label: 'Hasil Studi', href: '/admin/khs', icon: FileText },
+                { label: 'Transkrip', href: '/admin/transcripts', icon: GraduationCap },
+                { label: 'Kelulusan', href: '/admin/graduations', icon: FileCheck },
+                { label: 'Aktivitas Mahasiswa', href: '/admin/activities', icon: Trophy },
+                { label: 'Status Kuliah Mahasiswa', href: '/admin/student-statuses', icon: Users },
+                { label: 'Data Kuisioner', href: '/admin/edom', icon: Star },
             ];
         }
         if (role === 'dosen_pa' || role === 'dosen') {
@@ -389,8 +476,9 @@ export default function AppLayout({ title, children }) {
                 { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
                 { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
                 { header: 'AKADEMIK & BIMBINGAN' },
-                { label: 'Approval KRS Mahasiswa', href: '/admin/krs-approval', icon: UserCheck },
-                { label: 'Gradebook & Nilai DPNA', href: '/admin/grades', icon: Award },
+                { label: 'Bimbingan Akademik (Wali)', href: '/admin/academic-advising', icon: UserCheck },
+                { label: 'Rencana Studi (KRS)', href: '/admin/krs-approval', icon: BookOpen },
+                { label: 'Penilaian (DPNA)', href: '/admin/grades', icon: Award },
                 { label: 'Hasil Evaluasi EDOM', href: '/admin/edom', icon: Star },
             ];
         }
@@ -438,13 +526,15 @@ export default function AppLayout({ title, children }) {
                     {/* Brand Header (Compact h-14 Glassmorphic) */}
                     <div className="h-14 flex items-center justify-between px-3.5 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 relative">
                         <div className="flex items-center space-x-2.5 overflow-hidden">
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-white text-base shadow-lg shrink-0 ring-2 ${
-                                role === 'superadmin' 
-                                    ? 'bg-gradient-to-tr from-purple-700 via-indigo-600 to-purple-500 ring-purple-500/30' 
-                                    : 'bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-400 ring-emerald-500/30'
-                            }`}>
-                                {role === 'superadmin' ? '⚡' : 'S'}
-                            </div>
+                            {role === 'superadmin' ? (
+                                <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-white text-base shadow-lg shrink-0 ring-2 bg-gradient-to-tr from-purple-700 via-indigo-600 to-purple-500 ring-purple-500/30">
+                                    ⚡
+                                </div>
+                            ) : (
+                                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-white p-0.5 shadow-lg shrink-0 ring-2 ring-emerald-500/30 overflow-hidden">
+                                    <img src="/logostai.png" alt="Logo STAI" className="w-full h-full object-contain" />
+                                </div>
+                            )}
                             {!sidebarCollapsed && (
                                 <div className="truncate">
                                     <h1 className="text-xs font-black text-white tracking-wide leading-tight flex items-center space-x-1.5">
@@ -493,7 +583,118 @@ export default function AppLayout({ title, children }) {
                                     </div>
                                 );
                             }
+
                             const Icon = item.icon;
+
+                            // Render Collapsible Group Menu (e.g. Setting)
+                            if (item.isGroup) {
+                                const isGroupOpen = openMenus[item.key] ?? true;
+                                const isGroupActive = pageUrl.includes('/admin/academic-settings');
+
+                                return (
+                                    <div key={idx} className="space-y-0.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleMenu(item.key)}
+                                            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-200 cursor-pointer group ${
+                                                isGroupActive
+                                                    ? 'bg-slate-900 text-white font-black'
+                                                    : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-center space-x-2.5 truncate">
+                                                <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 ring-1 ring-emerald-500/30">
+                                                    <Icon className="w-3.5 h-3.5" />
+                                                </div>
+                                                {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+                                            </div>
+
+                                            {!sidebarCollapsed && (
+                                                <div className="flex items-center space-x-1.5 shrink-0">
+                                                    {item.badge && (
+                                                        <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-black shadow-xs">
+                                                            {item.badge}
+                                                        </span>
+                                                    )}
+                                                    <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isGroupOpen ? 'rotate-0 text-emerald-400' : '-rotate-90'}`} />
+                                                </div>
+                                            )}
+                                        </button>
+
+                                        {/* Child Items */}
+                                        {!sidebarCollapsed && isGroupOpen && (
+                                            <div className="pl-6 pr-1 space-y-0.5 pt-0.5 border-l border-slate-800 ml-5">
+                                                {item.children?.map((child, cIdx) => {
+                                                    // Sub-Group (e.g. Pejabat)
+                                                    if (child.isSubGroup) {
+                                                        const isSubOpen = openMenus[child.key] ?? true;
+                                                        const isSubActive = pageUrl.includes('/admin/setting/data-pejabat') || pageUrl.includes('/admin/setting/pejabat-pengesah') || pageUrl.includes('tab=data-pejabat') || pageUrl.includes('tab=pejabat-pengesah');
+
+                                                        return (
+                                                            <div key={cIdx} className="space-y-0.5 pt-0.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toggleMenu(child.key)}
+                                                                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                                                                        isSubActive ? 'text-white font-black' : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex items-center space-x-1.5">
+                                                                        <ChevronDown className={`w-3 h-3 transition-transform ${isSubOpen ? 'rotate-0 text-emerald-400' : '-rotate-90'}`} />
+                                                                        <span>{child.label}</span>
+                                                                    </div>
+                                                                    {child.badge && (
+                                                                        <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[8px] font-black">
+                                                                            {child.badge}
+                                                                        </span>
+                                                                    )}
+                                                                </button>
+
+                                                                {isSubOpen && (
+                                                                    <div className="pl-4 space-y-0.5 border-l border-slate-800 ml-2">
+                                                                        {child.children?.map((subChild, scIdx) => {
+                                                                            const subActive = isItemActive(subChild.href);
+                                                                            return (
+                                                                                <Link
+                                                                                    key={scIdx}
+                                                                                    href={subChild.href}
+                                                                                    className={`block px-2 py-1.5 rounded-lg text-[11px] transition ${
+                                                                                        subActive
+                                                                                            ? 'bg-slate-900 text-emerald-300 font-black border-l-2 border-emerald-400 pl-2'
+                                                                                            : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+                                                                                    }`}
+                                                                                >
+                                                                                    {subChild.label}
+                                                                                </Link>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    const childActive = isItemActive(child.href);
+                                                    return (
+                                                        <Link
+                                                            key={cIdx}
+                                                            href={child.href}
+                                                            className={`block px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition ${
+                                                                childActive
+                                                                    ? 'bg-slate-900 text-emerald-300 font-black border-l-2 border-emerald-400 pl-2'
+                                                                    : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+                                                            }`}
+                                                        >
+                                                            {child.label}
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            }
+
                             const active = isItemActive(item.href);
                             const iconStyle = getMenuIconStyle(item.href, item.highlight, active);
 
@@ -521,17 +722,17 @@ export default function AppLayout({ title, children }) {
                     {/* Bottom Quick LMS Link & User Pill */}
                     <div className="p-2.5 bg-slate-900/95 border-t border-slate-800/80 space-y-2">
                         <a
-                            href="http://localhost:3000"
+                            href="/sso/lms"
                             target="_blank"
                             rel="noreferrer"
-                            title={sidebarCollapsed ? "Buka SALAM LMS" : undefined}
+                            title={sidebarCollapsed ? "Buka SALAM LMS (SSO)" : undefined}
                             className="flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-emerald-950/60 to-teal-950/40 hover:from-emerald-900/70 hover:to-teal-900/60 text-emerald-300 border border-emerald-700/40 rounded-xl text-[11px] font-bold transition shadow-xs group"
                         >
                             <span className="flex items-center space-x-2">
                                 <div className="w-5 h-5 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center ring-1 ring-emerald-500/30">
-                                    <RefreshCw className="w-3 h-3 group-hover:rotate-180 transition-transform duration-500" />
+                                    <Sparkles className="w-3 h-3 text-emerald-400" />
                                 </div>
-                                {!sidebarCollapsed && <span>Buka SALAM LMS</span>}
+                                {!sidebarCollapsed && <span>Buka SALAM LMS (SSO)</span>}
                             </span>
                             {!sidebarCollapsed && <ExternalLink className="w-3 h-3 text-emerald-400" />}
                         </a>
@@ -573,7 +774,20 @@ export default function AppLayout({ title, children }) {
                         </div>
 
                         {/* Right Navigation Controls */}
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2.5">
+                            {/* SALAM LMS SSO 1-Click Launch Button */}
+                            <a
+                                href="/sso/lms"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Buka SALAM Learning Management System via Single Sign-On"
+                                className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-sm shadow-emerald-700/30 hover:from-emerald-700 hover:to-teal-800 transition transform hover:-translate-y-0.5 cursor-pointer ring-1 ring-emerald-400/40"
+                            >
+                                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                                <span>SALAM LMS</span>
+                                <ExternalLink className="w-3 h-3 opacity-80" />
+                            </a>
+
                             <div ref={userDropdownRef} className="relative z-50">
                                 <button
                                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}

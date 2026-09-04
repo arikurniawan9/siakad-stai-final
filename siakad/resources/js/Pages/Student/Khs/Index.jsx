@@ -14,7 +14,7 @@ export default function KhsIndex({ academicPeriods, selectedPeriodId, selectedPe
 
     return (
         <AppLayout title="Kartu Hasil Studi (KHS)">
-            <Head title="Kartu Hasil Studi — SIAKAD" />
+            <Head title="Kartu Hasil Studi" />
 
             <div className="space-y-6 max-w-5xl mx-auto">
                 {/* Header */}
@@ -48,15 +48,17 @@ export default function KhsIndex({ academicPeriods, selectedPeriodId, selectedPe
                     {/* Document Official Header */}
                     <div className="border-b-2 border-slate-900 pb-4 flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                            <div className="w-14 h-14 bg-emerald-700 rounded-xl flex items-center justify-center font-black text-white text-2xl shadow">
-                                S
-                            </div>
+                            <img 
+                                src="/logostai.png" 
+                                alt="Logo STAI Al-Ittihad" 
+                                className="w-14 h-14 object-contain shrink-0" 
+                            />
                             <div>
                                 <h1 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-wide">
                                     SEKOLAH TINGGI AGAMA ISLAM (STAI) AL-ITTIHAD CIANJUR
                                 </h1>
                                 <p className="text-xs font-bold text-emerald-800">BIRO ADMINISTRASI AKADEMIK & KEMAHASISWAAN (BAAK)</p>
-                                <p className="text-[11px] text-slate-500">Jl. Bojong Herang No. 12, Cianjur, Jawa Barat • Website: www.staialittihad.ac.id</p>
+                                <p className="text-[11px] text-slate-500">Kampus Terpadu: Jl. Raya Bandung Km. 03 Bojong, Karangtengah, Cianjur • Website: www.staialittihad.ac.id</p>
                             </div>
                         </div>
                     </div>

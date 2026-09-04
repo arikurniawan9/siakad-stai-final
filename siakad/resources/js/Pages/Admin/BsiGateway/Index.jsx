@@ -178,7 +178,7 @@ export default function BsiGatewayIndex({
 
     return (
         <AppLayout>
-            <Head title="Pusat Kontrol BSI Smart Billing H2H Direct" />
+            <Head title="BSI Smart Billing H2H" />
 
             <div className="space-y-4">
                 {/* 1. HEADER BANNER UTAMA BSI SMART BILLING */}

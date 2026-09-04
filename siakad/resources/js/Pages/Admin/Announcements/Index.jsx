@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../../Layouts/AppLayout';
+import DeleteConfirmationModal from '@/Components/DeleteConfirmationModal';
 import { 
     Megaphone, Pin, Plus, Trash2, Calendar, 
     Users, AlertCircle, Info, AlertTriangle, Sparkles, 
@@ -9,6 +10,12 @@ import {
 
 export default function AnnouncementsIndex({ announcements, studyPrograms = [] }) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        id: null,
+        title: '',
+        isLoading: false
+    });
 
     const form = useForm({
         title: '',
@@ -36,10 +43,27 @@ export default function AnnouncementsIndex({ announcements, studyPrograms = [] }
         router.post(`/admin/announcements/${id}/toggle-pin`);
     };
 
-    const handleDelete = (id) => {
-        if (confirm('Hapus pengumuman ini?')) {
-            router.delete(`/admin/announcements/${id}`);
-        }
+    const handleDelete = (id, title) => {
+        setDeleteModal({
+            isOpen: true,
+            id,
+            title,
+            isLoading: false
+        });
+    };
+
+    const handleConfirmDelete = () => {
+        if (!deleteModal.id) return;
+        setDeleteModal(prev => ({ ...prev, isLoading: true }));
+        router.delete(`/admin/announcements/${deleteModal.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setDeleteModal({ isOpen: false, id: null, title: '', isLoading: false });
+            },
+            onError: () => {
+                setDeleteModal(prev => ({ ...prev, isLoading: false }));
+            }
+        });
     };
 
     const getTypeBadge = (type) => {
@@ -57,7 +81,7 @@ export default function AnnouncementsIndex({ announcements, studyPrograms = [] }
 
     return (
         <AppLayout title="Pusat Siaran Pengumuman & Broadcast Civitas">
-            <Head title="Pengumuman — SIAKAD" />
+            <Head title="Pusat Pengumuman" />
 
             <div className="space-y-6">
                 {/* Header */}
@@ -110,8 +134,8 @@ export default function AnnouncementsIndex({ announcements, studyPrograms = [] }
                                                 <Pin className="w-3.5 h-3.5" />
                                             </button>
                                             <button
-                                                onClick={() => handleDelete(ann.id)}
-                                                className="p-1 rounded text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                                onClick={() => handleDelete(ann.id, ann.title)}
+                                                className="p-1 rounded text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                                                 title="Hapus Pengumuman"
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -168,22 +192,36 @@ export default function AnnouncementsIndex({ announcements, studyPrograms = [] }
                                             <option value="INFO">Informasi Umum (Hijau)</option>
                                             <option value="WARNING">Penting / Batas Waktu (Kuning)</option>
                                             <option value="URGENT">Mendesak / Urgent (Merah)</option>
-                                            <option value="EVENT">Agenda / Kegiatan (Ungu)</option>
+                                            <option value="EVENT">Kegiatan / Event (Ungu)</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="font-bold text-slate-700 block mb-1">Target Audiens:</label>
+                                        <label className="font-bold text-slate-700 block mb-1">Target Civitas:</label>
                                         <select
                                             value={form.data.target_role}
                                             onChange={(e) => form.setData('target_role', e.target.value)}
                                             className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-bold"
                                         >
                                             <option value="ALL">Semua Pengguna (Civitas)</option>
-                                            <option value="MAHASISWA">Khusus Mahasiswa</option>
-                                            <option value="DOSEN">Khusus Tenaga Dosen</option>
-                                            <option value="ADMIN">Khusus Staf Administrasi</option>
+                                            <option value="STUDENT">Khusus Mahasiswa</option>
+                                            <option value="LECTURER">Khusus Dosen</option>
+                                            <option value="ADMIN">Khusus Staf & Admin</option>
                                         </select>
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="font-bold text-slate-700 block mb-1">Filter Program Studi (Opsional):</label>
+                                    <select
+                                        value={form.data.target_study_program_id}
+                                        onChange={(e) => form.setData('target_study_program_id', e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-bold"
+                                    >
+                                        <option value="">Semua Program Studi (Umum)</option>
+                                        {studyPrograms.map((p) => (
+                                            <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <div>
@@ -220,6 +258,21 @@ export default function AnnouncementsIndex({ announcements, studyPrograms = [] }
                     </div>
                 )}
             </div>
+
+            {/* MODAL KONFIRMASI HAPUS PENGUMUMAN */}
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, id: null, title: '', isLoading: false })}
+                onConfirm={handleConfirmDelete}
+                title="Hapus Siaran Pengumuman"
+                message="Apakah Anda yakin ingin menghapus pengumuman ini? Pengumuman tidak akan lagi ditampilkan pada dashboard civitas."
+                itemName={deleteModal.title}
+                itemType="Siaran Pengumuman"
+                confirmText="Ya, Hapus Pengumuman"
+                cancelText="Batal"
+                variant="danger"
+                isLoading={deleteModal.isLoading}
+            />
         </AppLayout>
     );
 }

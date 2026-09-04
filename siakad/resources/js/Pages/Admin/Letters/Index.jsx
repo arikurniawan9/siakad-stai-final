@@ -33,7 +33,7 @@ export default function LettersIndex({ activePeriod, letters = [], students = []
 
     return (
         <AppLayout title="Surat Keterangan Aktif Kuliah">
-            <Head title="Surat Keterangan — SIAKAD" />
+            <Head title="Surat Keterangan" />
 
             <div className="space-y-6">
                 {/* Header */}

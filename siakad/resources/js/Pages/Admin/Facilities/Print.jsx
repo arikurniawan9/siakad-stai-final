@@ -36,7 +36,7 @@ export default function FacilityPrint({
 
     return (
         <div className="min-h-screen bg-slate-100 print:bg-white text-slate-900 font-sans p-4 sm:p-8 print:p-0">
-            <Head title="Cetak Inventaris Gedung & Ruang Kelas — SIAKAD STAI Al-Ittihad" />
+            <Head title="Cetak Inventaris Gedung & Ruang Kelas" />
 
             {/* TOP ACTION & CONTROLS NAVBAR (Hidden on print) */}
             <div className="max-w-5xl mx-auto mb-6 bg-white rounded-2xl p-4 shadow-xs border border-slate-200 print:hidden space-y-3">
@@ -141,9 +141,11 @@ export default function FacilityPrint({
                 
                 {/* 1. KOP SURAT RESMI INSTITUSI */}
                 <div className="border-b-2 border-double border-slate-900 pb-4 flex items-center space-x-4">
-                    <div className="w-16 h-16 bg-emerald-800 rounded-2xl flex items-center justify-center font-black text-white text-3xl font-serif shrink-0 shadow-xs">
-                        S
-                    </div>
+                    <img 
+                        src="/logostai.png" 
+                        alt="Logo STAI Al-Ittihad" 
+                        className="w-16 h-16 object-contain shrink-0" 
+                    />
                     <div className="text-center flex-1 space-y-0.5">
                         <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
                             YAYASAN PENDIDIKAN ISLAM AL-ITTIHAD CIANJUR
@@ -161,6 +163,7 @@ export default function FacilityPrint({
                             Telp: (0263) 228192 • Website: www.staialittihad.ac.id • Email: sarpras@staialittihad.ac.id
                         </p>
                     </div>
+                    <div className="w-16 shrink-0 hidden sm:block"></div>
                 </div>
 
                 {/* 2. JUDUL DOKUMEN */}

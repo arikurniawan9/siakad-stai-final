@@ -53,6 +53,18 @@ class DashboardController extends Controller
                     // fallback default
                 }
 
+                // Status Antrean & Worker
+                $pendingJobs = 0;
+                $failedJobs = 0;
+                try {
+                    if (DB::getSchemaBuilder()->hasTable('jobs')) {
+                        $pendingJobs = DB::table('jobs')->count();
+                    }
+                    if (DB::getSchemaBuilder()->hasTable('failed_jobs')) {
+                        $failedJobs = DB::table('failed_jobs')->count();
+                    }
+                } catch (\Throwable $e) {}
+
                 // Metrik & Status Telemetri Server
                 $systemMetrics = [
                     'php_version' => PHP_VERSION,
@@ -63,6 +75,12 @@ class DashboardController extends Controller
                     'bsi_status' => 'ONLINE (BI-SNAP H2H)',
                     'bsi_biller_code' => '8891 - BI-SNAP-DEV',
                     'lms_bridge_status' => 'ACTIVE (Bridge Port 5000)',
+                    'is_maintenance' => app()->isDownForMaintenance(),
+                    'queue_driver' => config('queue.default', 'database'),
+                    'pending_jobs' => $pendingJobs,
+                    'failed_jobs' => $failedJobs,
+                    'cache_driver' => config('cache.default', 'file'),
+                    'wa_status' => 'ACTIVE (WABlas Bridge)',
                 ];
 
                 // Audit Feed Terkini

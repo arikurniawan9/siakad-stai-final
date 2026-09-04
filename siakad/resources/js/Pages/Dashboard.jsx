@@ -10,7 +10,7 @@ import {
     HardDrive, Cpu, Radio, ShieldCheck, Database,
     Server, Terminal, AlertOctagon, Check, Play,
     Megaphone, TrendingUp, Award, FileCheck, Sliders, Send, Key, Landmark,
-    UserCheck2, ShieldAlert
+    UserCheck2, ShieldAlert, Settings
 } from 'lucide-react';
 
 export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = [], recentBsiTransactions = [] }) {
@@ -19,6 +19,35 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
     const role = user.role || 'mahasiswa';
     const [simulatingBsi, setSimulatingBsi] = useState(false);
     const [testingBsi, setTestingBsi] = useState(false);
+    const [clearingCache, setClearingCache] = useState(false);
+    const [retryingJobs, setRetryingJobs] = useState(false);
+    const [flushingJobs, setFlushingJobs] = useState(false);
+
+    const handleQuickClearCache = () => {
+        setClearingCache(true);
+        router.post('/admin/settings/clear-cache', {}, {
+            preserveScroll: true,
+            onFinish: () => setClearingCache(false)
+        });
+    };
+
+    const handleRetryJobs = () => {
+        setRetryingJobs(true);
+        router.post('/admin/settings/retry-jobs', {}, {
+            preserveScroll: true,
+            onFinish: () => setRetryingJobs(false)
+        });
+    };
+
+    const handleFlushJobs = () => {
+        if (confirm('Bersihkan seluruh daftar background jobs yang gagal?')) {
+            setFlushingJobs(true);
+            router.post('/admin/settings/flush-jobs', {}, {
+                preserveScroll: true,
+                onFinish: () => setFlushingJobs(false)
+            });
+        }
+    };
 
     // Format currency IDR
     const formatRp = (val) => {
@@ -111,7 +140,7 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
 
     return (
         <AppLayout title={role === 'superadmin' ? 'Dasbor Developer & Sistem' : 'Dasbor Akademik'}>
-            <Head title={role === 'superadmin' ? 'Developer Health & System Dashboard' : 'Dasbor — SIAKAD STAI Al-Ittihad'} />
+            <Head title={role === 'superadmin' ? 'Dasbor Sistem' : 'Dasbor Akademik'} />
 
             {/* Premium Impersonation Modal */}
             <ImpersonationModal
@@ -190,6 +219,23 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                         <span>Audit Log</span>
                                     </Link>
                                     <Link
+                                        href="/admin/settings"
+                                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1 border border-slate-700"
+                                    >
+                                        <Settings className="w-3 h-3 text-slate-300" />
+                                        <span>⚙️ Pengaturan</span>
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        onClick={handleQuickClearCache}
+                                        disabled={clearingCache}
+                                        className="px-3 py-1.5 bg-purple-700/80 hover:bg-purple-600 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1.5 border border-purple-500/40 cursor-pointer disabled:opacity-50"
+                                        title="Bersihkan cache framework, views, rute, dan konfigurasi"
+                                    >
+                                        <RefreshCw className={`w-3 h-3 ${clearingCache ? 'animate-spin' : ''}`} />
+                                        <span>{clearingCache ? 'Membersihkan...' : 'Clear Cache'}</span>
+                                    </button>
+                                    <Link
                                         href="/admin/users"
                                         className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg text-[11px] font-black transition shadow flex items-center space-x-1"
                                     >
@@ -257,7 +303,7 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                         </div>
 
                         {/* 3. Telemetry Health Grid (Compact) */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                             {/* DB Health */}
                             <Link 
                                 href="/admin/database"
@@ -315,6 +361,30 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                 <p className="text-sm font-black text-slate-900 mt-1">Laravel 13 • PHP {systemMetrics.php_version || '8.4'}</p>
                                 <p className="text-[10px] font-semibold text-slate-500 mt-0.5">Memori: {systemMetrics.server_memory || '24.5 MB'}</p>
                             </div>
+
+                            {/* Mode Pemeliharaan & Status Sistem */}
+                            <Link
+                                href="/admin/settings"
+                                className={`p-3.5 rounded-2xl border shadow-2xs transition group block ${
+                                    systemMetrics.is_maintenance 
+                                        ? 'bg-rose-50/60 border-rose-300 hover:bg-rose-100/50' 
+                                        : 'bg-white border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-slate-900">Mode Sistem</span>
+                                    <span className={`p-1 rounded-md ${systemMetrics.is_maintenance ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                        <ShieldAlert className="w-3.5 h-3.5" />
+                                    </span>
+                                </div>
+                                <p className={`text-sm font-black mt-1 ${systemMetrics.is_maintenance ? 'text-rose-700' : 'text-slate-900'}`}>
+                                    {systemMetrics.is_maintenance ? 'Maintenance' : 'Online Normal'}
+                                </p>
+                                <p className={`text-[10px] font-semibold flex items-center space-x-1 mt-0.5 ${systemMetrics.is_maintenance ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${systemMetrics.is_maintenance ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
+                                    <span>{systemMetrics.is_maintenance ? 'Akses Terkunci' : 'Civitas Aktif'} ⚙️</span>
+                                </p>
+                            </Link>
                         </div>
 
                         {/* 4. BSI SMART BILLING & BI-SNAP H2H GATEWAY CONTROL CARD */}
@@ -379,6 +449,92 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                             </div>
                         </div>
 
+                        {/* 4b. LIVE QUEUE & BACKGROUND WORKER MONITOR */}
+                        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 sm:p-5 rounded-2xl border border-indigo-800/40 shadow-sm text-white space-y-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-900/60 pb-2.5">
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-2 bg-indigo-500/20 text-indigo-300 rounded-xl border border-indigo-500/30">
+                                        <Cpu className="w-4 h-4 text-indigo-400" />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center space-x-2">
+                                            <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                                                Telemetri Antrean Background Worker & Layanan Notifikasi
+                                            </h3>
+                                            <span className="px-2 py-0.2 bg-indigo-500 text-white rounded text-[9px] font-black font-mono">
+                                                Driver: {systemMetrics.queue_driver || 'database'}
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] text-indigo-200 mt-0.5">
+                                            Pemantauan status antrean sinkronisasi LMS, pengiriman webhook perbankan, notifikasi WhatsApp civitas, dan proses asinkron SIAKAD.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2 shrink-0">
+                                    {Number(systemMetrics.failed_jobs) > 0 && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={handleRetryJobs}
+                                                disabled={retryingJobs}
+                                                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer disabled:opacity-50"
+                                            >
+                                                <RefreshCw className={`w-3 h-3 ${retryingJobs ? 'animate-spin' : ''}`} />
+                                                <span>{retryingJobs ? 'Memproses...' : 'Ulangi Jobs Gagal'}</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleFlushJobs}
+                                                disabled={flushingJobs}
+                                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer disabled:opacity-50"
+                                            >
+                                                <span>Bersihkan Gagal</span>
+                                            </button>
+                                        </>
+                                    )}
+                                    <Link
+                                        href="/admin/settings"
+                                        className="px-3.5 py-1.5 bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer"
+                                    >
+                                        <Settings className="w-3 h-3" />
+                                        <span>Konfigurasi Worker →</span>
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+                                    <span className="text-slate-400">Antrean Pending:</span>
+                                    <p className="font-mono font-bold text-white mt-0.5 flex items-center space-x-1.5">
+                                        <span className={`w-2 h-2 rounded-full ${Number(systemMetrics.pending_jobs) > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`}></span>
+                                        <span>{systemMetrics.pending_jobs || 0} Tugas Menunggu</span>
+                                    </p>
+                                </div>
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+                                    <span className="text-slate-400">Status Kegagalan:</span>
+                                    <p className="font-mono font-bold mt-0.5 flex items-center space-x-1.5">
+                                        <span className={`w-2 h-2 rounded-full ${Number(systemMetrics.failed_jobs) > 0 ? 'bg-rose-500 animate-ping' : 'bg-emerald-400'}`}></span>
+                                        <span className={Number(systemMetrics.failed_jobs) > 0 ? 'text-rose-400' : 'text-emerald-400'}>
+                                            {systemMetrics.failed_jobs || 0} Jobs Gagal
+                                        </span>
+                                    </p>
+                                </div>
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+                                    <span className="text-slate-400">WhatsApp Gateway:</span>
+                                    <p className="font-bold text-emerald-400 mt-0.5 truncate">
+                                        🟢 {systemMetrics.wa_status || 'ACTIVE'}
+                                    </p>
+                                </div>
+                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
+                                    <span className="text-slate-400">Cache Engine:</span>
+                                    <p className="font-mono font-bold text-indigo-300 mt-0.5 truncate">
+                                        Driver: {systemMetrics.cache_driver || 'file'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* 5. DUA KOLOM UTAMA SUPERADMIN: NAVIGASI MODUL & AUDIT TRAIL */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                             {/* KOLOM KIRI (LEBAR 8): MODUL AKSES CEPAT & TRANSAKSI VA TERKINI */}
@@ -393,7 +549,7 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                         <span className="text-[10px] text-slate-400 font-semibold">Tersusun Berdasarkan Kategori</span>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {/* Kategori 1: Perbankan & Kas */}
                                         <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200/80 space-y-2">
                                             <div className="flex items-center justify-between">
@@ -418,27 +574,31 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                             </div>
                                         </div>
 
-                                        {/* Kategori 2: Kesehatan & Database */}
+                                        {/* Kategori 2: Kesehatan, Pemeliharaan & Database */}
                                         <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200/80 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-indigo-950 flex items-center space-x-1.5">
                                                     <Database className="w-3.5 h-3.5 text-indigo-600" />
-                                                    <span>Kesehatan & Keamanan Sistem</span>
+                                                    <span>Pemeliharaan & Keamanan</span>
                                                 </span>
                                             </div>
                                             <div className="space-y-1 text-xs">
+                                                <Link href="/admin/settings" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
+                                                    <span>⚙️ Pengaturan & Maintenance</span>
+                                                    <ChevronRight className="w-3 h-3 text-indigo-600" />
+                                                </Link>
                                                 <Link href="/admin/database" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
-                                                    <span>💾 Backup, Restore & Seeder DB</span>
+                                                    <span>💾 Backup, Restore & Seeder</span>
                                                     <ChevronRight className="w-3 h-3 text-indigo-600" />
                                                 </Link>
                                                 <Link href="/admin/audit-logs" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
-                                                    <span>🛡️ Visual Audit Log & Security</span>
+                                                    <span>🛡️ Visual Audit Log Tracker</span>
                                                     <ChevronRight className="w-3 h-3 text-indigo-600" />
                                                 </Link>
                                             </div>
                                         </div>
 
-                                        {/* Kategori 3: Integrasi Eksternal */}
+                                        {/* Kategori 3: Integrasi Eksternal & Feeder */}
                                         <div className="p-3.5 rounded-xl bg-purple-50/60 border border-purple-200/80 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-purple-950 flex items-center space-x-1.5">
@@ -448,13 +608,17 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                             </div>
                                             <div className="space-y-1 text-xs">
                                                 <Link href="/admin/lms-sync" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-purple-100/70 text-purple-900 font-medium transition">
-                                                    <span>💻 Bridge Sinkronisasi SALAM LMS</span>
+                                                    <span>💻 Bridge Sinkronisasi LMS</span>
                                                     <ChevronRight className="w-3 h-3 text-purple-600" />
                                                 </Link>
                                                 <Link href="/admin/pddikti" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-purple-100/70 text-purple-900 font-medium transition">
                                                     <span>🏛️ Integrasi Neo Feeder PDDIKTI</span>
                                                     <ChevronRight className="w-3 h-3 text-purple-600" />
                                                 </Link>
+                                                <a href="/sso/lms" target="_blank" rel="noreferrer" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-purple-100/70 text-purple-900 font-medium transition">
+                                                    <span>🔑 Launch SSO Portal LMS</span>
+                                                    <ChevronRight className="w-3 h-3 text-purple-600" />
+                                                </a>
                                             </div>
                                         </div>
 
@@ -472,12 +636,60 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                                     <ChevronRight className="w-3 h-3 text-teal-600" />
                                                 </Link>
                                                 <Link href="/admin/curricula" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-teal-100/70 text-teal-900 font-medium transition">
-                                                    <span>📚 Master Kurikulum & Matakuliah</span>
+                                                    <span>📚 Master Kurikulum & Mata Kuliah</span>
                                                     <ChevronRight className="w-3 h-3 text-teal-600" />
                                                 </Link>
                                                 <Link href="/admin/schedules" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-teal-100/70 text-teal-900 font-medium transition">
-                                                    <span>📅 Plotting Jadwal Anti-Bentrok</span>
+                                                    <span>📅 Plotting Jadwal Perkuliahan</span>
                                                     <ChevronRight className="w-3 h-3 text-teal-600" />
+                                                </Link>
+                                            </div>
+                                        </div>
+
+                                        {/* Kategori 5: Kebijakan Akademik & Pejabat */}
+                                        <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/80 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-amber-950 flex items-center space-x-1.5">
+                                                    <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                                                    <span>Kebijakan & Legalitas Kampus</span>
+                                                </span>
+                                            </div>
+                                            <div className="space-y-1 text-xs">
+                                                <Link href="/admin/academic-settings" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-amber-100/70 text-amber-900 font-medium transition">
+                                                    <span>⚖️ Kebijakan Bobot & Batas SKS</span>
+                                                    <ChevronRight className="w-3 h-3 text-amber-600" />
+                                                </Link>
+                                                <Link href="/admin/officials" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-amber-100/70 text-amber-900 font-medium transition">
+                                                    <span>🏛️ Pejabat Kampus & Tanda Tangan</span>
+                                                    <ChevronRight className="w-3 h-3 text-amber-600" />
+                                                </Link>
+                                                <Link href="/admin/yudisium" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-amber-100/70 text-amber-900 font-medium transition">
+                                                    <span>🎓 Skrining Yudisium & Wisuda</span>
+                                                    <ChevronRight className="w-3 h-3 text-amber-600" />
+                                                </Link>
+                                            </div>
+                                        </div>
+
+                                        {/* Kategori 6: Operasional Akademik & Nilai */}
+                                        <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200/80 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-blue-950 flex items-center space-x-1.5">
+                                                    <FileCheck className="w-3.5 h-3.5 text-blue-600" />
+                                                    <span>Operasional Nilai & KHS</span>
+                                                </span>
+                                            </div>
+                                            <div className="space-y-1 text-xs">
+                                                <Link href="/admin/grades" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-blue-100/70 text-blue-900 font-medium transition">
+                                                    <span>📝 Penilaian DPNA & Kunci Nilai</span>
+                                                    <ChevronRight className="w-3 h-3 text-blue-600" />
+                                                </Link>
+                                                <Link href="/admin/khs" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-blue-100/70 text-blue-900 font-medium transition">
+                                                    <span>📜 Hasil Studi & Cetak KHS</span>
+                                                    <ChevronRight className="w-3 h-3 text-blue-600" />
+                                                </Link>
+                                                <Link href="/admin/transcripts" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-blue-100/70 text-blue-900 font-medium transition">
+                                                    <span>🎓 Transkrip Akademik Lengkap</span>
+                                                    <ChevronRight className="w-3 h-3 text-blue-600" />
                                                 </Link>
                                             </div>
                                         </div>

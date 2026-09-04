@@ -115,7 +115,7 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
 
     return (
         <AppLayout title="Master Tahun & Periode Akademik">
-            <Head title="Tahun & Periode Akademik — SIAKAD" />
+            <Head title="Tahun & Periode Akademik" />
 
             <div className="space-y-3.5">
                 {/* 1. COMPACT HERO HEADER */}

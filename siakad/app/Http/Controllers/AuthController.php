@@ -16,8 +16,12 @@ class AuthController extends Controller
     /**
      * Tampilan Form Login
      */
-    public function showLogin(): Response
+    public function showLogin(): Response|RedirectResponse
     {
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
+
         return Inertia::render('Auth/Login');
     }
 

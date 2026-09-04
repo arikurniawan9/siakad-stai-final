@@ -23,12 +23,16 @@ class UserController extends Controller
         $roleFilter = $request->input('role');
         $prodiFilter = $request->input('study_program');
 
+        $perPage = (int) $request->input('per_page', 15);
+        if ($perPage <= 0 || $perPage > 100) $perPage = 15;
+
         $users = User::query()
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sq) use ($search) {
                     $sq->where('name', 'ilike', "%{$search}%")
                         ->orWhere('username', 'ilike', "%{$search}%")
                         ->orWhere('identity_number', 'ilike', "%{$search}%")
+                        ->orWhere('nik', 'ilike', "%{$search}%")
                         ->orWhere('email', 'ilike', "%{$search}%");
                 });
             })
@@ -39,18 +43,31 @@ class UserController extends Controller
                 $q->where('study_program', $prodiFilter);
             })
             ->orderBy('id', 'asc')
-            ->paginate(15)
+            ->paginate($perPage)
             ->withQueryString();
 
         $studyPrograms = DB::table('study_programs')->get();
+        $totalUsers = User::count();
+        $activeUsers = User::where('is_active', true)->count();
+        $mhsCount = User::where('role', 'mahasiswa')->count();
+        $dosenCount = User::whereIn('role', ['dosen', 'dosen_pa', 'kaprodi'])->count();
+        $staffCount = User::whereIn('role', ['superadmin', 'admin_akademik', 'keuangan'])->count();
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
             'studyPrograms' => $studyPrograms,
+            'stats' => [
+                'total' => $totalUsers,
+                'active' => $activeUsers,
+                'students' => $mhsCount,
+                'lecturers' => $dosenCount,
+                'staff' => $staffCount,
+            ],
             'filters' => [
                 'search' => $search,
                 'role' => $roleFilter,
                 'study_program' => $prodiFilter,
+                'per_page' => $perPage,
             ],
         ]);
     }
@@ -64,6 +81,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:64', 'unique:users,username'],
             'identity_number' => ['nullable', 'string', 'max:32', 'unique:users,identity_number'],
+            'nik' => ['nullable', 'string', 'max:20'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'role' => ['required', 'string', 'in:superadmin,admin_akademik,keuangan,kaprodi,dosen_pa,dosen,mahasiswa'],
             'study_program' => ['nullable', 'string', 'max:100'],
@@ -76,6 +94,7 @@ class UserController extends Controller
             'name' => $validated['name'],
             'username' => $validated['username'],
             'identity_number' => $validated['identity_number'] ?: null,
+            'nik' => $validated['nik'] ?: null,
             'email' => $validated['email'],
             'role' => $validated['role'],
             'study_program' => $validated['study_program'] ?: 'Pendidikan Agama Islam (S1)',
@@ -99,6 +118,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:64', Rule::unique('users')->ignore($user->id)],
             'identity_number' => ['nullable', 'string', 'max:32', Rule::unique('users')->ignore($user->id)],
+            'nik' => ['nullable', 'string', 'max:20'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'role' => ['required', 'string', 'in:superadmin,admin_akademik,keuangan,kaprodi,dosen_pa,dosen,mahasiswa'],
             'study_program' => ['nullable', 'string', 'max:100'],

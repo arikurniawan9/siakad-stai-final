@@ -194,7 +194,7 @@ export default function CoursesIndex({ studyPrograms = [], selectedProgramId = n
 
     return (
         <AppLayout title="Data Matakuliah — Program Studi">
-            <Head title="Data Matakuliah — SIAKAD" />
+            <Head title="Data Mata Kuliah" />
 
             <div className="space-y-3.5">
                 {/* 1. COMPACT HERO HEADER DENGAN INTEGRATED SUB-BAR PILIH PROGRAM STUDI */}

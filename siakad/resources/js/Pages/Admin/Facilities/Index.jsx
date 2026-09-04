@@ -394,7 +394,7 @@ export default function FacilitiesIndex({
 
     return (
         <AppLayout title="Infrastruktur: Gedung & Ruang Kelas">
-            <Head title="Gedung & Ruang Kelas — SIAKAD STAI Al-Ittihad" />
+            <Head title="Gedung & Ruang Kelas" />
 
             <div className="space-y-4">
                 {/* 1. COMPACT HERO HEADER (Standard Dashboard & Master Akademik Style) */}

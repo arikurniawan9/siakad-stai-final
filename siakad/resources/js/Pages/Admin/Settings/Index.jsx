@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '../../../Layouts/AppLayout';
-import { Settings, ShieldAlert, Database, Server, Save, CheckCircle2, RefreshCw, CreditCard, Sliders, Landmark } from 'lucide-react';
+import DeleteConfirmationModal from '@/Components/DeleteConfirmationModal';
+import { Settings, ShieldAlert, Database, Server, Save, CheckCircle2, RefreshCw, CreditCard, Sliders, Landmark, Cpu } from 'lucide-react';
 
-export default function SettingsIndex({ settings, isMaintenance }) {
+export default function SettingsIndex({ settings, isMaintenance, systemInfo = {} }) {
     const { auth } = usePage().props;
     const isSuperadmin = auth?.user?.role === 'superadmin';
+
+    const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
+    const [isTogglingMaintenance, setIsTogglingMaintenance] = useState(false);
+    const [isClearingCache, setIsClearingCache] = useState(false);
 
     const { data, setData, post, processing } = useForm({
         institution_name: settings?.institution_name?.value || 'Sekolah Tinggi Agama Islam (STAI) Al-Ittihad Cianjur',
@@ -20,15 +25,28 @@ export default function SettingsIndex({ settings, isMaintenance }) {
         post('/admin/settings');
     };
 
-    const handleToggleMaintenance = () => {
-        if (confirm(`Apakah Anda yakin ingin ${isMaintenance ? 'MENONAKTIFKAN' : 'MENGAKTIFKAN'} Mode Pemeliharaan (Maintenance Mode)?`)) {
-            router.post('/admin/settings/maintenance');
-        }
+    const handleConfirmToggleMaintenance = () => {
+        setIsTogglingMaintenance(true);
+        router.post('/admin/settings/maintenance', {}, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsTogglingMaintenance(false);
+                setIsMaintenanceModalOpen(false);
+            }
+        });
+    };
+
+    const handleClearCache = () => {
+        setIsClearingCache(true);
+        router.post('/admin/settings/clear-cache', {}, {
+            preserveScroll: true,
+            onFinish: () => setIsClearingCache(false)
+        });
     };
 
     return (
         <AppLayout title="Pengaturan & Pemeliharaan">
-            <Head title="Pengaturan Sistem — SIAKAD" />
+            <Head title="Pengaturan Sistem" />
 
             <div className="space-y-6 max-w-4xl">
                 {/* Header */}
@@ -58,8 +76,8 @@ export default function SettingsIndex({ settings, isMaintenance }) {
                     </div>
                     <button
                         type="button"
-                        onClick={handleToggleMaintenance}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-black transition shadow ${
+                        onClick={() => setIsMaintenanceModalOpen(true)}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-black transition shadow cursor-pointer ${
                             isMaintenance
                                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                                 : 'bg-rose-600 hover:bg-rose-700 text-white'
@@ -69,98 +87,122 @@ export default function SettingsIndex({ settings, isMaintenance }) {
                     </button>
                 </div>
 
+                {/* 2. SYSTEM CACHE & OPTIMIZATION CARD (Khusus Superadmin) */}
+                {isSuperadmin && (
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-start space-x-3">
+                            <div className="p-3 rounded-xl bg-indigo-100 text-indigo-700">
+                                <Cpu className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-black text-slate-900">Optimasi Cache & Diagnostik Server</h3>
+                                <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-slate-600 font-mono">
+                                    <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">PHP {systemInfo.php_version || '8.3'}</span>
+                                    <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">Laravel {systemInfo.laravel_version || '13'}</span>
+                                    <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">DB: {systemInfo.db_driver || 'pgsql'}</span>
+                                    <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">Env: {systemInfo.environment || 'local'}</span>
+                                </div>
+                                <p className="text-[11px] text-slate-400 mt-1">
+                                    Bersihkan cache framework, view, route, dan konfigurasi jika terjadi ketidaksesuaian data.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleClearCache}
+                            disabled={isClearingCache}
+                            className="px-4 py-2.5 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white transition shadow cursor-pointer flex items-center space-x-1.5 shrink-0 disabled:opacity-50"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isClearingCache ? 'animate-spin' : ''}`} />
+                            <span>{isClearingCache ? 'Membersihkan...' : 'Bersihkan Cache Sistem'}</span>
+                        </button>
+                    </div>
+                )}
+
                 {/* 2. GENERAL SETTINGS FORM */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 sm:p-8 space-y-6">
                     <form onSubmit={handleSubmit} className="space-y-5 text-xs">
                         <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2">
                             1. Identitas Institusi Perguruan Tinggi
                         </h3>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block font-bold text-slate-700 mb-1">Nama Perguruan Tinggi</label>
+                                <label className="block text-slate-700 font-bold mb-1">Nama Perguruan Tinggi / Kampus:</label>
                                 <input
                                     type="text"
                                     value={data.institution_name}
                                     onChange={(e) => setData('institution_name', e.target.value)}
-                                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold"
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-semibold"
                                     required
                                 />
                             </div>
                             <div>
-                                <label className="block font-bold text-slate-700 mb-1">Kode PT (PDDIKTI / Kemenag)</label>
+                                <label className="block text-slate-700 font-bold mb-1">Kode Perguruan Tinggi (PDDIKTI):</label>
                                 <input
                                     type="text"
                                     value={data.institution_code}
                                     onChange={(e) => setData('institution_code', e.target.value)}
-                                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold"
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-mono font-bold"
                                     required
                                 />
                             </div>
                         </div>
 
-                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2 pt-2">
-                            2. Konfigurasi Bank Syariah Indonesia (BSI) VA Open API
-                        </h3>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">Prefix Institusi VA BSI (4 Digit)</label>
-                                <input
-                                    type="text"
-                                    maxLength={4}
-                                    value={data.bsi_prefix}
-                                    onChange={(e) => setData('bsi_prefix', e.target.value)}
-                                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono font-black text-emerald-800"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">BSI Client / Merchant ID</label>
-                                <input
-                                    type="text"
-                                    value={data.bsi_merchant_id}
-                                    onChange={(e) => setData('bsi_merchant_id', e.target.value)}
-                                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono font-medium"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2 pt-2">
-                            3. Endpoint SALAM LMS Gateway
-                        </h3>
-
-                        <div>
-                            <label className="block font-bold text-slate-700 mb-1">URL API Gateway SALAM LMS</label>
-                            <input
-                                type="url"
-                                value={data.lms_gateway_url}
-                                onChange={(e) => setData('lms_gateway_url', e.target.value)}
-                                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono"
-                                required
-                            />
-                        </div>
-
-                        {/* 4. BSI SMART BILLING & VIRTUAL ACCOUNT H2H (KHUSUS SUPERADMIN) */}
                         {isSuperadmin && (
                             <>
-                                <h3 className="text-xs font-black text-emerald-800 uppercase tracking-wider border-b border-emerald-100 pb-2 pt-2 flex items-center justify-between">
-                                    <span className="flex items-center space-x-1.5">
-                                        <Landmark className="w-3.5 h-3.5 text-emerald-600" />
-                                        <span>4. Integrasi BSI Smart Billing H2H Direct (BI-SNAP)</span>
-                                    </span>
-                                    <span className="px-2 py-0.2 bg-amber-400 text-slate-950 rounded font-black text-[9px]">
-                                        SUPERADMIN ONLY
-                                    </span>
+                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2 pt-4">
+                                    2. Gateway Pembayaran & Integrasi Eksternal
                                 </h3>
 
-                                <div className="p-4 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white rounded-2xl border border-emerald-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <h4 className="font-black text-white text-xs">Pusat Kontrol BSI Smart Billing, SNAP Inquiry & Push Webhook</h4>
-                                        <p className="text-[11px] text-emerald-200 mt-0.5 max-w-xl">
-                                            Konfigurasi kode institusi biller (8891/9928), token otentikasi HTTP & H2H Service Code 73, URL inquiry & payment callback, simulator sandbox, serta saldo rekening giro penampung BSI.
-                                        </p>
+                                        <label className="block text-slate-700 font-bold mb-1">Prefix BSI Virtual Account (VA):</label>
+                                        <input
+                                            type="text"
+                                            value={data.bsi_prefix}
+                                            onChange={(e) => setData('bsi_prefix', e.target.value)}
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-mono"
+                                            placeholder="Contoh: 9928"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-slate-700 font-bold mb-1">Merchant ID BSI H2H:</label>
+                                        <input
+                                            type="text"
+                                            value={data.bsi_merchant_id}
+                                            onChange={(e) => setData('bsi_merchant_id', e.target.value)}
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-slate-700 font-bold mb-1">URL Gateway Integrasi SALAM LMS:</label>
+                                    <input
+                                        type="url"
+                                        value={data.lms_gateway_url}
+                                        onChange={(e) => setData('lms_gateway_url', e.target.value)}
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-mono"
+                                        placeholder="https://lms.stai-alittihad.ac.id/api"
+                                    />
+                                    <p className="text-[11px] text-slate-400 mt-1">
+                                        Digunakan untuk sinkronisasi otomatis data kelas dan nilai tugas/CBT secara real-time.
+                                    </p>
+                                </div>
+
+                                {/* Link Banner ke Modul BSI Gateway Dedicated */}
+                                <div className="p-4 bg-gradient-to-r from-emerald-900 to-teal-900 text-white rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="p-2.5 bg-white/10 rounded-xl">
+                                            <Landmark className="w-5 h-5 text-emerald-300" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-white text-xs">Pusat Kontrol BSI Smart Billing, SNAP Inquiry & Push Webhook</h4>
+                                            <p className="text-[11px] text-emerald-200 mt-0.5 max-w-xl">
+                                                Konfigurasi kode institusi biller (8891/9928), token otentikasi HTTP & H2H Service Code 73, URL inquiry & payment callback, simulator sandbox, serta saldo rekening giro penampung BSI.
+                                            </p>
+                                        </div>
                                     </div>
                                     <Link
                                         href="/admin/bsi-gateway"
@@ -177,7 +219,7 @@ export default function SettingsIndex({ settings, isMaintenance }) {
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center space-x-1.5 shadow"
+                                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center space-x-1.5 shadow cursor-pointer"
                             >
                                 <Save className="w-4 h-4" />
                                 <span>Simpan Perubahan Pengaturan</span>
@@ -186,6 +228,25 @@ export default function SettingsIndex({ settings, isMaintenance }) {
                     </form>
                 </div>
             </div>
+
+            {/* MODAL KONFIRMASI MODE PEMELIHARAAN */}
+            <DeleteConfirmationModal
+                isOpen={isMaintenanceModalOpen}
+                onClose={() => setIsMaintenanceModalOpen(false)}
+                onConfirm={handleConfirmToggleMaintenance}
+                title={isMaintenance ? 'Kembalikan Sistem ke Online?' : 'Aktifkan Mode Pemeliharaan?'}
+                message={
+                    isMaintenance
+                        ? 'Sistem akan dibuka kembali untuk seluruh mahasiswa, dosen, dan staf kampus untuk mengakses perkuliahan.'
+                        : 'Sistem akan dikunci ke Mode Pemeliharaan (Maintenance Mode). Hanya Superadmin yang dapat login dan mengakses SIAKAD.'
+                }
+                itemName="Maintenance Mode"
+                itemType="Keamanan & Pemeliharaan Sistem"
+                confirmText={isMaintenance ? 'Ya, Buka Sistem Online' : 'Ya, Aktifkan Maintenance'}
+                cancelText="Batal"
+                variant={isMaintenance ? 'info' : 'warning'}
+                isLoading={isTogglingMaintenance}
+            />
         </AppLayout>
     );
 }

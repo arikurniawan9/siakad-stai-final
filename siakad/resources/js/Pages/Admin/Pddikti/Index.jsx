@@ -50,7 +50,7 @@ export default function PddiktiIndex({ activePeriod, stats = {}, config = {}, sy
 
     return (
         <AppLayout title="PDDIKTI Neo Feeder Sync Connector">
-            <Head title="PDDIKTI Neo Feeder — SIAKAD" />
+            <Head title="PDDIKTI Neo Feeder" />
 
             <div className="space-y-6">
                 {/* Header */}

@@ -14,11 +14,56 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class SettingController extends Controller
 {
     /**
-     * Tampilan Halaman Pengaturan Sistem (Dialihkan ke Pusat BSI Gateway)
+     * Tampilan Halaman Pengaturan Sistem & Pemeliharaan
      */
-    public function index(): RedirectResponse
+    public function index(): Response
     {
-        return redirect()->route('admin.bsi_gateway.index');
+        $settingsRaw = DB::table('system_settings')->get();
+        $settings = [];
+        foreach ($settingsRaw as $row) {
+            $settings[$row->key] = $row;
+        }
+
+        $isMaintenance = app()->isDownForMaintenance();
+
+        return Inertia::render('Admin/Settings/Index', [
+            'settings' => $settings,
+            'isMaintenance' => $isMaintenance,
+            'systemInfo' => [
+                'php_version' => PHP_VERSION,
+                'laravel_version' => app()->version(),
+                'environment' => app()->environment(),
+                'db_driver' => DB::connection()->getDriverName(),
+                'cache_driver' => config('cache.default'),
+            ]
+        ]);
+    }
+
+    /**
+     * Bersihkan Cache Aplikasi & Optimasi Sistem (php artisan optimize:clear)
+     */
+    public function clearCache(): RedirectResponse
+    {
+        Artisan::call('optimize:clear');
+        return back()->with('success', 'Cache aplikasi, konfigurasi, rute, dan blade views berhasil dibersihkan.');
+    }
+
+    /**
+     * Ulangi (retry) seluruh background jobs yang gagal
+     */
+    public function retryJobs(): RedirectResponse
+    {
+        Artisan::call('queue:retry', ['id' => ['all']]);
+        return back()->with('success', 'Seluruh antrean background jobs yang gagal telah dijadwalkan ulang untuk diproses.');
+    }
+
+    /**
+     * Hapus (flush) seluruh background jobs yang gagal
+     */
+    public function flushJobs(): RedirectResponse
+    {
+        Artisan::call('queue:flush');
+        return back()->with('success', 'Seluruh antrean jobs yang gagal berhasil dibersihkan dari database.');
     }
 
     /**

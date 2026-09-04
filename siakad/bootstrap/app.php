@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'api/*',
         ]);
+        $middleware->redirectTo(
+            guests: '/login',
+            users: '/dashboard',
+        );
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);

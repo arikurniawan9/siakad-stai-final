@@ -19,80 +19,55 @@ class CurriculumEnhancementSeeder extends Seeder
             DB::statement("SELECT setval(pg_get_serial_sequence('courses', 'id'), coalesce(max(id),0) + 1, false) FROM courses");
         } catch (\Exception $e) {}
 
-        // 1. Pastikan Prodi memiliki national_code
-        DB::table('study_programs')->where('code', 'PAI')->update(['national_code' => '86208', 'name' => 'Pendidikan Agama Islam']);
-        DB::table('study_programs')->where('code', 'MPI')->update(['national_code' => '86201', 'name' => 'Manajemen Pendidikan Islam']);
-        DB::table('study_programs')->where('code', 'HES')->update(['national_code' => '74201', 'name' => 'Hukum Ekonomi Syariah']);
-        DB::table('study_programs')->where('code', 'PGMI')->update(['national_code' => '86205', 'name' => 'Pendidikan Guru Madrasah Ibtidaiyah']);
-        DB::table('study_programs')->where('code', 'ESY')->update(['national_code' => '60202', 'name' => 'Ekonomi Syariah']);
-
-        // Tambahkan PIAUD jika belum ada
         $piaud = DB::table('study_programs')->where('code', 'PIAUD')->first();
-        if (!$piaud) {
-            $piaudId = DB::table('study_programs')->insertGetId([
-                'faculty_id' => 1,
-                'code' => 'PIAUD',
-                'national_code' => '86236',
-                'name' => 'Pendidikan Islam Anak Usia Dini',
-                'degree' => 'S1',
-                'accreditation' => 'Baik Sekali',
-                'sk_number' => 'SK-BAN-PT-PIAUD-2024',
-                'head_of_program_id' => null,
-                'is_active' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-        } else {
-            $piaudId = $piaud->id;
-            DB::table('study_programs')->where('id', $piaudId)->update(['national_code' => '86236', 'name' => 'Pendidikan Islam Anak Usia Dini']);
+        $mpi = DB::table('study_programs')->where('code', 'MPI')->first();
+        $es = DB::table('study_programs')->where('code', 'ES')->orWhere('code', 'ESY')->first();
+        $bki = DB::table('study_programs')->where('code', 'BKI')->first();
+
+        // 1. KURIKULUM & MATAKULIAH PIAUD
+        if ($piaud) {
+            $kurPiaud2019 = DB::table('curricula')->where('study_program_id', $piaud->id)->where('code', 'KUR-PIAUD-2019')->first();
+            if (!$kurPiaud2019) {
+                DB::table('curricula')->insert([
+                    'study_program_id' => $piaud->id,
+                    'code' => 'KUR-PIAUD-2019',
+                    'name' => 'Kurikulum 2019 PIAUD STAI Al-Ittihad',
+                    'start_year' => 2019,
+                    'total_credits_required' => 154,
+                    'ideal_semesters' => 8,
+                    'mandatory_credits' => 146,
+                    'elective_credits' => 8,
+                    'is_active' => false,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+
+            $kurPiaud2023 = DB::table('curricula')->where('study_program_id', $piaud->id)->where('code', 'KUR-PIAUD-2023')->first();
+            if (!$kurPiaud2023) {
+                DB::table('curricula')->insert([
+                    'study_program_id' => $piaud->id,
+                    'code' => 'KUR-PIAUD-2023',
+                    'name' => 'KURIKULUM PIAUD 2023 STAI AL ITTIHAD CIANJUR',
+                    'start_year' => 2023,
+                    'total_credits_required' => 144,
+                    'ideal_semesters' => 8,
+                    'mandatory_credits' => 88,
+                    'elective_credits' => 50,
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
         }
 
-        $esyProdi = DB::table('study_programs')->where('code', 'ESY')->first();
-        $paiProdi = DB::table('study_programs')->where('code', 'PAI')->first();
-
-        // 2. SEED KURIKULUM LENGKAP
-        // PIAUD
-        $kurPiaud2019 = DB::table('curricula')->where('code', 'KUR-PIAUD-2019')->first();
-        if (!$kurPiaud2019) {
-            DB::table('curricula')->insert([
-                'study_program_id' => $piaudId,
-                'code' => 'KUR-PIAUD-2019',
-                'name' => 'Kurikulum 2019 PIAUD STAI Al-Ittihad',
-                'start_year' => 2019,
-                'total_credits_required' => 154,
-                'ideal_semesters' => 8,
-                'mandatory_credits' => 146,
-                'elective_credits' => 8,
-                'is_active' => false,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-        }
-
-        $kurPiaud2023 = DB::table('curricula')->where('code', 'KUR-PIAUD-2023')->first();
-        if (!$kurPiaud2023) {
-            DB::table('curricula')->insert([
-                'study_program_id' => $piaudId,
-                'code' => 'KUR-PIAUD-2023',
-                'name' => 'KURIKULUM PIAUD 2023 STAI AL ITTIHAD CIANJUR',
-                'start_year' => 2023,
-                'total_credits_required' => 144,
-                'ideal_semesters' => 8,
-                'mandatory_credits' => 88,
-                'elective_credits' => 50,
-                'is_active' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-        }
-
-        // Ekonomi Syariah
-        if ($esyProdi) {
-            $kurEsy2019 = DB::table('curricula')->where('code', 'KUR-ESY-2019')->first();
-            if (!$kurEsy2019) {
-                $kurEsy2019Id = DB::table('curricula')->insertGetId([
-                    'study_program_id' => $esyProdi->id,
-                    'code' => 'KUR-ESY-2019',
+        // 2. KURIKULUM & MATAKULIAH EKONOMI SYARIAH
+        if ($es) {
+            $kurEs2019 = DB::table('curricula')->where('study_program_id', $es->id)->where('code', 'KUR-ES-2019')->first();
+            if (!$kurEs2019) {
+                $kurEs2019Id = DB::table('curricula')->insertGetId([
+                    'study_program_id' => $es->id,
+                    'code' => 'KUR-ES-2019',
                     'name' => 'Kurikulum 2019 ES STAI Al-Ittihad',
                     'start_year' => 2019,
                     'total_credits_required' => 148,
@@ -104,14 +79,14 @@ class CurriculumEnhancementSeeder extends Seeder
                     'updated_at' => $now,
                 ]);
             } else {
-                $kurEsy2019Id = $kurEsy2019->id;
+                $kurEs2019Id = $kurEs2019->id;
             }
 
-            $kurEsy2023 = DB::table('curricula')->where('code', 'KUR-ESY-2023')->first();
-            if (!$kurEsy2023) {
-                $kurEsy2023Id = DB::table('curricula')->insertGetId([
-                    'study_program_id' => $esyProdi->id,
-                    'code' => 'KUR-ESY-2023',
+            $kurEs2023 = DB::table('curricula')->where('study_program_id', $es->id)->where('code', 'KUR-ES-2023')->first();
+            if (!$kurEs2023) {
+                $kurEs2023Id = DB::table('curricula')->insertGetId([
+                    'study_program_id' => $es->id,
+                    'code' => 'KUR-ES-2023',
                     'name' => 'Kurikulum 2023 ES STAI Al-Ittihad',
                     'start_year' => 2023,
                     'total_credits_required' => 144,
@@ -123,11 +98,11 @@ class CurriculumEnhancementSeeder extends Seeder
                     'updated_at' => $now,
                 ]);
             } else {
-                $kurEsy2023Id = $kurEsy2023->id;
+                $kurEs2023Id = $kurEs2023->id;
             }
 
-            // 3. SEED MATA KULIAH EKONOMI SYARIAH (PERSIS SEPERTI GAMBAR matakuliah.png)
-            $esyCourses = [
+            // SEED MATA KULIAH EKONOMI SYARIAH
+            $esCourses = [
                 ['code' => 'STAIES111', 'name' => 'Ahlussunnah Wal Jamaah', 'credits' => 2, 'theory' => 2, 'practice' => 0, 'field' => 0, 'smt' => 1, 'type' => 'Wajib', 'group' => 'MKU/MKDU (mata kuliah umum/mata kuliah dasar umum)'],
                 ['code' => 'STAIES105', 'name' => 'Akhlaq Tashawuf', 'credits' => 2, 'theory' => 2, 'practice' => 0, 'field' => 0, 'smt' => 1, 'type' => 'Wajib', 'group' => 'MKU/MKDU (mata kuliah umum/mata kuliah dasar umum)'],
                 ['code' => 'STAIES765', 'name' => 'Akuntansi Keuangan Syariah', 'credits' => 2, 'theory' => 2, 'practice' => 0, 'field' => 0, 'smt' => 3, 'type' => 'Wajib', 'group' => 'MKU/MKDU (mata kuliah umum/mata kuliah dasar umum)'],
@@ -143,11 +118,11 @@ class CurriculumEnhancementSeeder extends Seeder
                 ['code' => 'STAIES501', 'name' => 'Pasar Modal Syariah', 'credits' => 2, 'theory' => 2, 'practice' => 0, 'field' => 0, 'smt' => 5, 'type' => 'Pilihan', 'group' => 'MKB (Mata Kuliah Keahlian Berkarya)'],
             ];
 
-            foreach ($esyCourses as $c) {
-                $exists2019 = DB::table('courses')->where('curriculum_id', $kurEsy2019Id)->where('code', $c['code'])->first();
+            foreach ($esCourses as $c) {
+                $exists2019 = DB::table('courses')->where('curriculum_id', $kurEs2019Id)->where('code', $c['code'])->first();
                 if ($exists2019) {
                     DB::table('courses')->where('id', $exists2019->id)->update([
-                        'study_program_id' => $esyProdi->id,
+                        'study_program_id' => $es->id,
                         'name' => $c['name'],
                         'credits' => $c['credits'],
                         'theory_credits' => $c['theory'],
@@ -161,8 +136,8 @@ class CurriculumEnhancementSeeder extends Seeder
                     ]);
                 } else {
                     DB::table('courses')->insert([
-                        'curriculum_id' => $kurEsy2019Id,
-                        'study_program_id' => $esyProdi->id,
+                        'curriculum_id' => $kurEs2019Id,
+                        'study_program_id' => $es->id,
                         'code' => $c['code'],
                         'name' => $c['name'],
                         'credits' => $c['credits'],
@@ -178,10 +153,10 @@ class CurriculumEnhancementSeeder extends Seeder
                     ]);
                 }
 
-                $exists2023 = DB::table('courses')->where('curriculum_id', $kurEsy2023Id)->where('code', $c['code'])->first();
+                $exists2023 = DB::table('courses')->where('curriculum_id', $kurEs2023Id)->where('code', $c['code'])->first();
                 if ($exists2023) {
                     DB::table('courses')->where('id', $exists2023->id)->update([
-                        'study_program_id' => $esyProdi->id,
+                        'study_program_id' => $es->id,
                         'name' => $c['name'],
                         'credits' => $c['credits'],
                         'theory_credits' => $c['theory'],
@@ -195,8 +170,8 @@ class CurriculumEnhancementSeeder extends Seeder
                     ]);
                 } else {
                     DB::table('courses')->insert([
-                        'curriculum_id' => $kurEsy2023Id,
-                        'study_program_id' => $esyProdi->id,
+                        'curriculum_id' => $kurEs2023Id,
+                        'study_program_id' => $es->id,
                         'code' => $c['code'],
                         'name' => $c['name'],
                         'credits' => $c['credits'],
@@ -211,6 +186,46 @@ class CurriculumEnhancementSeeder extends Seeder
                         'updated_at' => $now,
                     ]);
                 }
+            }
+        }
+
+        // 3. KURIKULUM & MATAKULIAH MPI
+        if ($mpi) {
+            $kurMpi2024 = DB::table('curricula')->where('study_program_id', $mpi->id)->where('code', 'KUR-MPI-2024')->first();
+            if (!$kurMpi2024) {
+                DB::table('curricula')->insert([
+                    'study_program_id' => $mpi->id,
+                    'code' => 'KUR-MPI-2024',
+                    'name' => 'Kurikulum Merdeka OBE MPI 2024',
+                    'start_year' => 2024,
+                    'total_credits_required' => 144,
+                    'ideal_semesters' => 8,
+                    'mandatory_credits' => 130,
+                    'elective_credits' => 14,
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+        }
+
+        // 4. KURIKULUM & MATAKULIAH BKI
+        if ($bki) {
+            $kurBki2024 = DB::table('curricula')->where('study_program_id', $bki->id)->where('code', 'KUR-BKI-2024')->first();
+            if (!$kurBki2024) {
+                DB::table('curricula')->insert([
+                    'study_program_id' => $bki->id,
+                    'code' => 'KUR-BKI-2024',
+                    'name' => 'Kurikulum Merdeka OBE BKI 2024',
+                    'start_year' => 2024,
+                    'total_credits_required' => 144,
+                    'ideal_semesters' => 8,
+                    'mandatory_credits' => 130,
+                    'elective_credits' => 14,
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
             }
         }
     }

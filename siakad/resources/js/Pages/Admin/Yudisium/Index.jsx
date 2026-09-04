@@ -38,7 +38,7 @@ export default function YudisiumIndex({ applicants, periods = [], academicYears 
 
     return (
         <AppLayout title="Skrining Kelulusan, Yudisium & SK Sarjana">
-            <Head title="Yudisium & Kelulusan — SIAKAD" />
+            <Head title="Yudisium & Kelulusan" />
 
             <div className="space-y-6">
                 {/* Header */}

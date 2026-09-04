@@ -202,7 +202,7 @@ export default function CurriculaIndex({ studyPrograms = [], selectedProgramId =
 
     return (
         <AppLayout title="Data Kurikulum — Program Studi">
-            <Head title="Data Kurikulum — SIAKAD" />
+            <Head title="Data Kurikulum" />
 
             <div className="space-y-3.5">
                 {/* 1. COMPACT HERO HEADER DENGAN INTEGRATED SUB-BAR PILIH PROGRAM STUDI (THEMA PURPLE) */}
