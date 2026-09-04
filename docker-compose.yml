@@ -1,0 +1,199 @@
+version: '3.8'
+
+# =========================================================================
+# DOCKER COMPOSE PRODUKSI (COOLIFY / VPS) — SIAKAD & SALAM LMS
+# SEKOLAH TINGGI AGAMA ISLAM (STAI) AL-ITTIHAD CIANJUR
+# =========================================================================
+
+services:
+  # -----------------------------------------------------------------------
+  # 1. DATABASE UTAMA: POSTGRESQL 16 ENTERPRISE
+  # -----------------------------------------------------------------------
+  siakad-postgres:
+    container_name: siakad-postgres-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-siakad_stai_db}
+      POSTGRES_USER: ${POSTGRES_USER:-siakad_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SuperSecretPassword2026!}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-siakad_user} -d ${POSTGRES_DB:-siakad_stai_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # -----------------------------------------------------------------------
+  # 2. IN-MEMORY CACHE & QUEUE: REDIS 7
+  # -----------------------------------------------------------------------
+  siakad-redis:
+    container_name: siakad-redis-cache
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-RedisSecret2026!}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-RedisSecret2026!}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app-network
+
+  # -----------------------------------------------------------------------
+  # 3. OBJECT STORAGE S3-COMPATIBLE: MINIO
+  # -----------------------------------------------------------------------
+  salam-minio:
+    container_name: salam-minio-storage
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-MinioAdminSecret2026!}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app-network
+
+  # -----------------------------------------------------------------------
+  # 4. APLIKASI UTAMA: SIAKAD (LARAVEL 13 + INERTIA REACT)
+  # -----------------------------------------------------------------------
+  siakad-app:
+    container_name: siakad-core-app
+    build:
+      context: ./siakad
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    environment:
+      APP_NAME: "SIAKAD STAI AL-ITTIHAD"
+      APP_ENV: production
+      APP_KEY: ${SIAKAD_APP_KEY}
+      APP_DEBUG: "false"
+      APP_URL: ${SIAKAD_APP_URL:-https://siakad.staialittihad.ac.id}
+      
+      DB_CONNECTION: pgsql
+      DB_HOST: siakad-postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-siakad_stai_db}
+      DB_USERNAME: ${POSTGRES_USER:-siakad_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-SuperSecretPassword2026!}
+      
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      
+      REDIS_HOST: siakad-redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-RedisSecret2026!}
+      REDIS_PORT: 6379
+      
+      LMS_API_URL: ${LMS_API_URL:-https://api-lms.staialittihad.ac.id}
+      LMS_CLIENT_ID: ${LMS_CLIENT_ID:-salam_lms_client}
+      LMS_CLIENT_SECRET: ${LMS_CLIENT_SECRET:-salam_lms_client_secret_key}
+      
+      RUN_MIGRATIONS: "true"
+    volumes:
+      - siakad-storage:/var/www/html/storage
+    depends_on:
+      siakad-postgres:
+        condition: service_healthy
+      siakad-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - app-network
+
+  # -----------------------------------------------------------------------
+  # 5. BACKEND API: SALAM LMS (NODE.JS + EXPRESS + TYPESCRIPT)
+  # -----------------------------------------------------------------------
+  salam-backend:
+    container_name: salam-backend-api
+    build:
+      context: ./lms/backend
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-siakad_user}:${POSTGRES_PASSWORD:-SuperSecretPassword2026!}@siakad-postgres:5432/${POSTGRES_DB:-siakad_stai_db}
+      JWT_SECRET: ${JWT_SECRET:-salam_jwt_secret_production_stai_alittihad}
+      
+      SIAKAD_API_URL: ${SIAKAD_APP_URL:-https://siakad.staialittihad.ac.id}
+      SIAKAD_CLIENT_ID: ${LMS_CLIENT_ID:-salam_lms_client}
+      SIAKAD_CLIENT_SECRET: ${LMS_CLIENT_SECRET:-salam_lms_client_secret_key}
+      
+      S3_ENDPOINT: http://salam-minio:9000
+      S3_PUBLIC_URL: ${MINIO_PUBLIC_URL:-https://storage.staialittihad.ac.id}
+      S3_BUCKET: salam-uploads
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-MinioAdminSecret2026!}
+    depends_on:
+      siakad-postgres:
+        condition: service_healthy
+      salam-minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - app-network
+
+  # -----------------------------------------------------------------------
+  # 6. FRONTEND SPA: SALAM LMS (REACT + VITE + NGINX)
+  # -----------------------------------------------------------------------
+  salam-frontend:
+    container_name: salam-frontend-app
+    build:
+      context: ./lms
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${LMS_API_URL:-https://api-lms.staialittihad.ac.id}
+      VITE_SIAKAD_URL: ${SIAKAD_APP_URL:-https://siakad.staialittihad.ac.id}
+    depends_on:
+      - salam-backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app-network
+
+volumes:
+  postgres-data:
+    name: salam-siakad-postgres-data
+  redis-data:
+    name: salam-siakad-redis-data
+  minio-data:
+    name: salam-siakad-minio-data
+  siakad-storage:
+    name: salam-siakad-storage-data
+
+networks:
+  app-network:
+    name: salam-siakad-network
+    driver: bridge
