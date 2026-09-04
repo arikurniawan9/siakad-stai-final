@@ -85,9 +85,9 @@ services:
     environment:
       APP_NAME: "SIAKAD STAI AL-ITTIHAD"
       APP_ENV: production
-      APP_KEY: ${SIAKAD_APP_KEY}
-      APP_DEBUG: "false"
-      APP_URL: ${SIAKAD_APP_URL:-https://siakad.staialittihad.tech}
+      APP_KEY: ${SIAKAD_APP_KEY:-base64:Q9N+LbbjGcTAd333RQdcpvkepou6XHx17/p5IvNS02Y=}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${SIAKAD_APP_URL:-https://siakad-staialittihad.tech}
       
       DB_CONNECTION: pgsql
       DB_HOST: siakad-postgres
@@ -96,19 +96,20 @@ services:
       DB_USERNAME: ${POSTGRES_USER:-siakad_user}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-SuperSecretPassword2026!}
       
-      CACHE_STORE: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
+      CACHE_STORE: ${CACHE_STORE:-file}
+      SESSION_DRIVER: ${SESSION_DRIVER:-file}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-sync}
       
       REDIS_HOST: siakad-redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-RedisSecret2026!}
       REDIS_PORT: 6379
       
-      LMS_API_URL: ${LMS_API_URL:-https://api-lms.siakad-staialittihad.tech}
+      LMS_API_URL: ${LMS_API_URL:-https://lms.siakad-staialittihad.tech/api/v1}
       LMS_CLIENT_ID: ${LMS_CLIENT_ID:-salam_lms_client}
       LMS_CLIENT_SECRET: ${LMS_CLIENT_SECRET:-salam_lms_client_secret_key}
       
-      RUN_MIGRATIONS: "true"
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      RUN_SEEDER: ${RUN_SEEDER:-true}
     volumes:
       - siakad-storage:/var/www/html/storage
     depends_on:
