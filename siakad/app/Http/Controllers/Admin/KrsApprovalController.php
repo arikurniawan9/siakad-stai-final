@@ -22,6 +22,7 @@ class KrsApprovalController extends Controller
         $prodiFilter = $request->input('study_program');
         $yearFilter = $request->input('academic_year'); // e.g. 2026, 2025, 2024, 2023
         $periodFilter = $request->input('academic_period'); // period ID
+        $classFilter = $request->input('class_name'); // e.g. Kelas A, Kelas B, etc.
         $statusFilter = $request->input('status');
         $search = $request->input('search');
         $perPage = (int) $request->input('per_page', 20);
@@ -34,6 +35,15 @@ class KrsApprovalController extends Controller
             ->get();
 
         $batchYears = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
+
+        $rooms = DB::table('rooms')
+            ->where('is_active', true)
+            ->select('id', 'name', 'code', 'capacity')
+            ->orderBy('name', 'asc')
+            ->get();
+
+        $classNames = ['Kelas A', 'Kelas B', 'Kelas C', 'Kelas Reguler', 'Kelas Karyawan'];
+        $semesterLevels = [1, 2, 3, 4, 5, 6, 7, 8];
 
         $academicPeriods = DB::table('academic_periods')
             ->join('academic_years', 'academic_periods.academic_year_id', '=', 'academic_years.id')
@@ -88,7 +98,10 @@ class KrsApprovalController extends Controller
                            ->orWhere('username', 'ilike', "%{$search}%");
                     });
                 })
-                ->select('id', 'name', 'identity_number as nim', 'email', 'study_program', 'academic_advisor_id', 'created_at')
+                ->when($classFilter && $classFilter !== 'all', function ($q) use ($classFilter) {
+                    $q->where('class_type', $classFilter);
+                })
+                ->select('id', 'name', 'identity_number as nim', 'email', 'study_program', 'academic_advisor_id', 'class_type', 'created_at')
                 ->orderBy('identity_number', 'asc');
 
             $allStudents = $studentsQuery->get();
@@ -142,6 +155,7 @@ class KrsApprovalController extends Controller
                     'name' => $stu->name,
                     'email' => $stu->email,
                     'study_program' => $stu->study_program,
+                    'class_type' => $stu->class_type ?: '-',
                     'batch_year' => $yearFilter,
                     'advisor_name' => $advisors->get($stu->academic_advisor_id) ?? '-',
                     'krs_submission_id' => $sub?->id ?? null,
@@ -197,6 +211,18 @@ class KrsApprovalController extends Controller
                 'isSelectionComplete' => $isSelectionComplete,
                 'selectedProdiObj' => $selectedProdiObj,
                 'currentPeriodObj' => $currentPeriodObj,
+                'rooms' => $rooms,
+                'classNames' => $classNames,
+                'semesterLevels' => $semesterLevels,
+                'filters' => [
+                    'study_program' => $prodiFilter,
+                    'academic_year' => $yearFilter,
+                    'academic_period' => $selectedPeriodId,
+                    'class_name' => $classFilter,
+                    'status' => $statusFilter,
+                    'search' => $search,
+                    'per_page' => $perPage,
+                ],
             ]);
         }
 
@@ -209,14 +235,74 @@ class KrsApprovalController extends Controller
             'currentPeriodObj' => $currentPeriodObj,
             'selectedProdiObj' => $selectedProdiObj,
             'isSelectionComplete' => $isSelectionComplete,
+            'rooms' => $rooms,
+            'classNames' => $classNames,
+            'semesterLevels' => $semesterLevels,
             'stats' => $stats,
             'filters' => [
                 'study_program' => $prodiFilter,
                 'academic_year' => $yearFilter,
                 'academic_period' => $selectedPeriodId,
+                'class_name' => $classFilter,
                 'status' => $statusFilter,
                 'search' => $search,
                 'per_page' => $perPage,
+            ],
+        ]);
+    }
+
+    /**
+     * Halaman Khusus Pemaketan KRS Massal per Kelas & Ruangan (Dedicated Page)
+     */
+    public function packageView(Request $request): Response
+    {
+        $studyPrograms = DB::table('study_programs')
+            ->leftJoin('faculties', 'faculties.id', '=', 'study_programs.faculty_id')
+            ->select('study_programs.*', 'faculties.name as faculty_name')
+            ->orderBy('study_programs.id', 'asc')
+            ->get();
+
+        $batchYears = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
+
+        $academicPeriods = DB::table('academic_periods')
+            ->join('academic_years', 'academic_periods.academic_year_id', '=', 'academic_years.id')
+            ->select('academic_periods.*', 'academic_years.code as year_code', 'academic_years.name as year_name')
+            ->orderBy('academic_periods.id', 'desc')
+            ->get();
+
+        $activePeriod = $academicPeriods->firstWhere('is_active', true) ?? $academicPeriods->first();
+
+        $rooms = DB::table('rooms')
+            ->where('is_active', true)
+            ->select('id', 'name', 'code', 'capacity')
+            ->orderBy('name', 'asc')
+            ->get();
+
+        $classNames = ['Kelas A', 'Kelas B', 'Kelas C', 'Kelas Reguler', 'Kelas Karyawan'];
+        $semesterLevels = [1, 2, 3, 4, 5, 6, 7, 8];
+
+        $prodiFilter = $request->input('study_program', $studyPrograms->first()?->id ? (string) $studyPrograms->first()->id : '');
+        $yearFilter = $request->input('academic_year', '2026');
+        $periodFilter = $request->input('academic_period', $activePeriod?->id ? (string) $activePeriod->id : '1');
+        $semesterLevel = $request->input('semester_level', '1');
+        $className = $request->input('class_name', 'Kelas A');
+        $roomId = $request->input('room_id', $rooms->first()?->id ? (string) $rooms->first()->id : '');
+
+        return Inertia::render('Admin/KrsApproval/Package', [
+            'studyPrograms' => $studyPrograms,
+            'batchYears' => $batchYears,
+            'academicPeriods' => $academicPeriods,
+            'activePeriod' => $activePeriod,
+            'rooms' => $rooms,
+            'classNames' => $classNames,
+            'semesterLevels' => $semesterLevels,
+            'initialFilters' => [
+                'study_program' => $prodiFilter,
+                'academic_year' => $yearFilter,
+                'academic_period' => $periodFilter,
+                'semester_level' => $semesterLevel,
+                'class_name' => $className,
+                'room_id' => $roomId,
             ],
         ]);
     }
@@ -1135,5 +1221,346 @@ class KrsApprovalController extends Controller
             'success' => true,
             'message' => "Status KRS berhasil diubah menjadi {$newStatus}!"
         ], $data));
+    }
+
+    /**
+     * Ambil daftar seluruh mahasiswa angkatan & prodi untuk paket KRS massal
+     */
+    public function getStudentsForMassAssign(Request $request): JsonResponse
+    {
+        $prodiFilter = $request->input('study_program_id');
+        $yearFilter = $request->input('academic_year');
+        $periodId = (int) $request->input('academic_period_id');
+        $classFilter = $request->input('class_name');
+        $search = $request->input('search');
+
+        if (!$periodId) {
+            $activePeriod = DB::table('academic_periods')->where('is_active', true)->first();
+            $periodId = $activePeriod?->id ?? 1;
+        }
+
+        $prodiObj = null;
+        if ($prodiFilter) {
+            $prodiObj = DB::table('study_programs')
+                ->where('id', $prodiFilter)
+                ->orWhere('code', $prodiFilter)
+                ->orWhere('name', $prodiFilter)
+                ->first();
+        }
+
+        $prefix2 = $yearFilter ? substr($yearFilter, -2) : '';
+        $prefix4 = $yearFilter ? substr($yearFilter, 0, 4) : '';
+
+        $query = User::where('role', 'mahasiswa');
+
+        if ($prodiObj) {
+            $query->where(function ($sq) use ($prodiObj) {
+                $sq->where('study_program', $prodiObj->name)
+                   ->orWhere('study_program', "{$prodiObj->name} ({$prodiObj->degree})")
+                   ->orWhere('study_program', 'ilike', "%{$prodiObj->name}%")
+                   ->orWhere('study_program', 'ilike', "%{$prodiObj->code}%");
+            });
+        }
+
+        if ($yearFilter) {
+            $query->where(function ($sq) use ($prefix2, $prefix4) {
+                $sq->where('identity_number', 'like', "{$prefix2}%")
+                   ->orWhere('identity_number', 'like', "{$prefix4}%")
+                   ->orWhereYear('created_at', $prefix4);
+            });
+        }
+
+        if ($classFilter && $classFilter !== 'all') {
+            $query->where('class_type', $classFilter);
+        }
+
+        if ($search) {
+            $query->where(function ($sq) use ($search) {
+                $sq->where('name', 'ilike', "%{$search}%")
+                   ->orWhere('identity_number', 'ilike', "%{$search}%")
+                   ->orWhere('username', 'ilike', "%{$search}%");
+            });
+        }
+
+        $students = $query->select('id', 'name', 'identity_number as nim', 'email', 'study_program', 'class_type')
+            ->orderBy('identity_number', 'asc')
+            ->get();
+
+        $studentIds = $students->pluck('id')->toArray();
+
+        // Ambil submission KRS periode ini
+        $submissions = DB::table('krs_submissions')
+            ->where('academic_period_id', $periodId)
+            ->whereIn('student_id', $studentIds)
+            ->get()
+            ->keyBy('student_id');
+
+        $result = $students->map(function ($s) use ($submissions) {
+            $sub = $submissions->get($s->id);
+            return [
+                'id' => $s->id,
+                'nim' => $s->nim ?: '-',
+                'name' => $s->name,
+                'email' => $s->email,
+                'study_program' => $s->study_program,
+                'class_type' => $s->class_type ?: '-',
+                'has_krs' => !empty($sub),
+                'krs_status' => $sub ? $sub->status : 'BELUM_KRS',
+                'total_credits' => $sub ? (float) $sub->total_credits : 0,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'students' => $result,
+            'total' => $result->count(),
+        ]);
+    }
+
+    /**
+     * Ambil daftar penawaran mata kuliah (course_classes) untuk paket KRS massal
+     */
+    public function getOfferedClassesForMassAssign(Request $request): JsonResponse
+    {
+        $studyProgramId = $request->input('study_program_id');
+        $periodId = $request->input('academic_period_id');
+        $semesterLevel = $request->input('semester_level'); // 1, 2, 3, etc. or 'all'
+        $search = $request->input('search');
+
+        if (!$periodId) {
+            $activePeriod = DB::table('academic_periods')->where('is_active', true)->first();
+            $periodId = $activePeriod?->id ?? 1;
+        }
+
+        $studyProgram = null;
+        if ($studyProgramId) {
+            $studyProgram = DB::table('study_programs')
+                ->where('id', $studyProgramId)
+                ->orWhere('code', $studyProgramId)
+                ->orWhere('name', $studyProgramId)
+                ->first();
+        }
+
+        $query = DB::table('course_classes')
+            ->join('courses', 'course_classes.course_id', '=', 'courses.id')
+            ->leftJoin('class_schedules', 'course_classes.id', '=', 'class_schedules.course_class_id')
+            ->leftJoin('rooms', 'class_schedules.room_id', '=', 'rooms.id')
+            ->leftJoin('class_lecturers', function ($join) {
+                $join->on('course_classes.id', '=', 'class_lecturers.course_class_id')
+                     ->where('class_lecturers.is_primary', true);
+            })
+            ->leftJoin('users as lecturers', 'class_lecturers.lecturer_id', '=', 'lecturers.id')
+            ->where('course_classes.academic_period_id', $periodId)
+            ->where('course_classes.status', 'AKTIF');
+
+        if ($studyProgram) {
+            $query->where(function ($q) use ($studyProgram) {
+                $q->where('courses.study_program_id', $studyProgram->id)
+                  ->orWhereNull('courses.study_program_id');
+            });
+        }
+
+        if ($semesterLevel && $semesterLevel !== 'all') {
+            $query->where('courses.semester_level', (int) $semesterLevel);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('courses.name', 'ilike', "%{$search}%")
+                  ->orWhere('courses.code', 'ilike', "%{$search}%")
+                  ->orWhere('course_classes.name', 'ilike', "%{$search}%");
+            });
+        }
+
+        $classes = $query->select(
+            'course_classes.id as course_class_id',
+            'course_classes.name as class_name',
+            'course_classes.capacity',
+            'courses.id as course_id',
+            'courses.code as course_code',
+            'courses.name as course_name',
+            'courses.credits',
+            'courses.semester_level',
+            'courses.course_type',
+            'class_schedules.day_of_week',
+            'class_schedules.start_time',
+            'class_schedules.end_time',
+            'rooms.id as room_id',
+            'rooms.name as room_name',
+            'rooms.code as room_code',
+            'lecturers.name as lecturer_name'
+        )
+        ->orderBy('courses.semester_level', 'asc')
+        ->orderBy('courses.code', 'asc')
+        ->get();
+
+        // Hitung kuota terisi
+        $classIds = $classes->pluck('course_class_id')->toArray();
+        $enrolledCounts = DB::table('class_enrollments')
+            ->whereIn('course_class_id', $classIds)
+            ->select('course_class_id', DB::raw('count(*) as count'))
+            ->groupBy('course_class_id')
+            ->pluck('count', 'course_class_id');
+
+        $classes->transform(function ($c) use ($enrolledCounts) {
+            $c->enrolled_count = $enrolledCounts[$c->course_class_id] ?? 0;
+            return $c;
+        });
+
+        return response()->json([
+            'success' => true,
+            'classes' => $classes,
+            'total' => $classes->count(),
+        ]);
+    }
+
+    /**
+     * Daftarkan paket KRS / mata kuliah secara massal ke sekelompok mahasiswa per kelas / ruangan
+     */
+    public function massAssignClassKrs(Request $request): JsonResponse
+    {
+        $studentIds = (array) $request->input('student_ids', []);
+        $courseClassIds = (array) $request->input('course_class_ids', []);
+        $periodId = (int) $request->input('academic_period_id');
+        $targetStatus = $request->input('status', 'DISETUJUI'); // DISETUJUI atau DIAJUKAN
+        $className = $request->input('class_name'); // e.g. "Kelas A"
+        $roomId = $request->input('room_id');
+
+        if (empty($studentIds)) {
+            return response()->json(['success' => false, 'message' => 'Pilih minimal satu mahasiswa untuk dimasukkan ke kelas.'], 422);
+        }
+
+        if (empty($courseClassIds)) {
+            return response()->json(['success' => false, 'message' => 'Pilih minimal satu mata kuliah untuk dimasukkan ke KRS.'], 422);
+        }
+
+        if (!$periodId) {
+            $activePeriod = DB::table('academic_periods')->where('is_active', true)->first();
+            $periodId = $activePeriod?->id ?? 1;
+        }
+
+        $validClasses = DB::table('course_classes')
+            ->join('courses', 'course_classes.course_id', '=', 'courses.id')
+            ->whereIn('course_classes.id', $courseClassIds)
+            ->select('course_classes.id', 'course_classes.name', 'courses.credits')
+            ->get();
+
+        if ($validClasses->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Mata kuliah / kelas yang dipilih tidak valid.'], 422);
+        }
+
+        $processedStudents = 0;
+
+        DB::transaction(function () use (
+            $studentIds, $courseClassIds, $periodId, $targetStatus, $className, $roomId, 
+            &$processedStudents
+        ) {
+            foreach ($studentIds as $studentId) {
+                $student = User::find($studentId);
+                if (!$student) continue;
+
+                // Update class_type jika class_name diisi
+                if ($className) {
+                    $student->update(['class_type' => $className]);
+                }
+
+                // Cari atau buat pengajuan KRS mahasiswa pada periode ini
+                $submission = DB::table('krs_submissions')
+                    ->where('student_id', $studentId)
+                    ->where('academic_period_id', $periodId)
+                    ->first();
+
+                if (!$submission) {
+                    $submissionId = DB::table('krs_submissions')->insertGetId([
+                        'student_id' => $studentId,
+                        'academic_period_id' => $periodId,
+                        'total_credits' => 0,
+                        'max_credits_allowed' => 24,
+                        'status' => $targetStatus,
+                        'academic_advisor_id' => $student->academic_advisor_id,
+                        'submitted_at' => now(),
+                        'approved_at' => ($targetStatus === 'DISETUJUI') ? now() : null,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    $submissionId = $submission->id;
+                    $updateData = ['updated_at' => now()];
+                    if ($targetStatus === 'DISETUJUI') {
+                        $updateData['status'] = 'DISETUJUI';
+                        $updateData['approved_at'] = now();
+                    }
+                    DB::table('krs_submissions')->where('id', $submissionId)->update($updateData);
+                }
+
+                // Masukkan course_classes ke krs_items dan class_enrollments
+                foreach ($courseClassIds as $clsId) {
+                    DB::table('krs_items')->updateOrInsert(
+                        [
+                            'krs_submission_id' => $submissionId,
+                            'course_class_id' => $clsId,
+                        ],
+                        [
+                            'status' => $targetStatus,
+                            'updated_at' => now(),
+                        ]
+                    );
+
+                    if ($targetStatus === 'DISETUJUI') {
+                        DB::table('class_enrollments')->updateOrInsert(
+                            [
+                                'course_class_id' => $clsId,
+                                'student_id' => $studentId,
+                            ],
+                            [
+                                'status' => 'TERDAFTAR',
+                                'enrolled_at' => now(),
+                                'updated_at' => now(),
+                            ]
+                        );
+                    }
+                }
+
+                // Hitung total SKS
+                $sumCredits = DB::table('krs_items')
+                    ->join('course_classes', 'krs_items.course_class_id', '=', 'course_classes.id')
+                    ->join('courses', 'course_classes.course_id', '=', 'courses.id')
+                    ->where('krs_items.krs_submission_id', $submissionId)
+                    ->sum('courses.credits');
+
+                DB::table('krs_submissions')->where('id', $submissionId)->update([
+                    'total_credits' => $sumCredits,
+                    'updated_at' => now(),
+                ]);
+
+                $processedStudents++;
+            }
+
+            // Catat audit log
+            DB::table('audit_logs')->insert([
+                'user_id' => auth()->id() ?? 1,
+                'action' => 'KRS_MASS_ASSIGN_CLASS',
+                'target_entity' => 'KrsBatchClass',
+                'target_id' => (string) ($className ?? 'Batch'),
+                'details' => json_encode([
+                    'period_id' => $periodId,
+                    'class_name' => $className,
+                    'room_id' => $roomId,
+                    'students_count' => $processedStudents,
+                    'courses_count' => count($courseClassIds),
+                    'target_status' => $targetStatus,
+                ]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        $classLabel = $className ? "ke {$className}" : '';
+        return response()->json([
+            'success' => true,
+            'message' => "Berhasil mendaftarkan " . count($courseClassIds) . " mata kuliah {$classLabel} untuk {$processedStudents} mahasiswa!",
+            'students_count' => $processedStudents,
+            'courses_count' => count($courseClassIds),
+        ]);
     }
 }

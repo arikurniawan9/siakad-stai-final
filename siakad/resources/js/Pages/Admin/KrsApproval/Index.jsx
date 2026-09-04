@@ -19,6 +19,9 @@ export default function KrsApprovalIndex({
     currentPeriodObj = null,
     selectedProdiObj = null,
     isSelectionComplete = false,
+    rooms = [],
+    classNames = ['Kelas A', 'Kelas B', 'Kelas C', 'Kelas Reguler', 'Kelas Karyawan'],
+    semesterLevels = [1, 2, 3, 4, 5, 6, 7, 8],
     stats = {}, 
     filters = {} 
 }) {
@@ -26,6 +29,7 @@ export default function KrsApprovalIndex({
     const [prodi, setProdi] = useState(filters.study_program || '');
     const [year, setYear] = useState(filters.academic_year || '');
     const [period, setPeriod] = useState(filters.academic_period || (activePeriod?.id ? String(activePeriod.id) : ''));
+    const [selectedClass, setSelectedClass] = useState(filters.class_name || '');
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [perPage, setPerPage] = useState(filters.per_page || 20);
@@ -46,6 +50,9 @@ export default function KrsApprovalIndex({
 
     const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
     const periodDropdownRef = useRef(null);
+
+    const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
+    const classDropdownRef = useRef(null);
 
     // Modals & Detail States
     const [selectedStudent, setSelectedStudent] = useState(null);
@@ -75,6 +82,7 @@ export default function KrsApprovalIndex({
             study_program: prodi,
             academic_year: year,
             academic_period: period,
+            class_name: selectedClass,
             status: statusFilter,
             search,
             per_page: Number(perPage) !== 20 ? perPage : undefined,
@@ -91,7 +99,7 @@ export default function KrsApprovalIndex({
     };
 
     // Asynchronous In-Place Fetcher
-    const fetchKrsData = async (newProdi = prodi, newYear = year, newPeriod = period, newStatus = statusFilter, newSearch = search, page = 1) => {
+    const fetchKrsData = async (newProdi = prodi, newYear = year, newPeriod = period, newClass = selectedClass, newStatus = statusFilter, newSearch = search, page = 1) => {
         if (!newProdi || !newYear) {
             setIsSelectionActive(false);
             setStudentsData(null);
@@ -104,6 +112,7 @@ export default function KrsApprovalIndex({
             study_program: newProdi,
             academic_year: newYear,
             academic_period: newPeriod,
+            class_name: newClass,
             status: newStatus,
             search: newSearch,
             page: page > 1 ? page : undefined,
@@ -131,16 +140,18 @@ export default function KrsApprovalIndex({
         }
     };
 
-    const handleTriggerFilter = (newProdi = prodi, newYear = year, newPeriod = period) => {
+    const handleTriggerFilter = (newProdi = prodi, newYear = year, newPeriod = period, newClass = selectedClass) => {
         setProdi(newProdi);
         setYear(newYear);
         setPeriod(newPeriod);
-        fetchKrsData(newProdi, newYear, newPeriod, statusFilter, search, 1);
+        setSelectedClass(newClass);
+        fetchKrsData(newProdi, newYear, newPeriod, newClass, statusFilter, search, 1);
     };
 
     const handleResetFilter = () => {
         setProdi('');
         setYear('');
+        setSelectedClass('');
         setSearch('');
         setStatusFilter('');
         setIsSelectionActive(false);
@@ -158,6 +169,9 @@ export default function KrsApprovalIndex({
             }
             if (periodDropdownRef.current && !periodDropdownRef.current.contains(e.target)) {
                 setIsPeriodDropdownOpen(false);
+            }
+            if (classDropdownRef.current && !classDropdownRef.current.contains(e.target)) {
+                setIsClassDropdownOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -543,25 +557,34 @@ export default function KrsApprovalIndex({
                         </div>
 
                         {/* Action Buttons Toolbar */}
-                        {isSelectionActive && (
-                            <div className="flex items-center gap-2 self-start md:self-auto animate-fadeIn">
-                                {currentStats.pending > 0 && (
-                                    <button
-                                        type="button"
-                                        onClick={handleBulkApprove}
-                                        disabled={isActionLoading}
-                                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer disabled:opacity-50"
-                                    >
-                                        <Check className="w-3.5 h-3.5" />
-                                        <span>Setujui Semua ({currentStats.pending} Pengajuan)</span>
-                                    </button>
-                                )}
+                        <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+                            <Link
+                                href={`/admin/krs-approval/package${prodi && year ? `?study_program=${prodi}&academic_year=${year}&academic_period=${period}${selectedClass ? `&class_name=${selectedClass}` : ''}` : ''}`}
+                                className="px-3.5 py-1.5 bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-600 hover:from-teal-400 hover:to-emerald-400 text-white font-extrabold rounded-xl text-xs transition flex items-center space-x-1.5 shadow-md shadow-teal-950/40 cursor-pointer border border-teal-400/40 hover:scale-[1.02] active:scale-[0.98]"
+                                title="Buka Halaman Paket KRS Massal per Kelas & Ruangan"
+                            >
+                                <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                                <span>Paket KRS Massal (Kelas & Ruangan)</span>
+                            </Link>
 
+                            {isSelectionActive && currentStats.pending > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleBulkApprove}
+                                    disabled={isActionLoading}
+                                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                                >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Setujui Semua ({currentStats.pending} Pengajuan)</span>
+                                </button>
+                            )}
+
+                            {isSelectionActive && (
                                 <span className="px-3 py-1.5 bg-slate-800 text-teal-300 rounded-xl text-xs font-bold border border-slate-700">
                                     Semester: <strong className="text-white">{currentPeriod?.name || 'Aktif'}</strong>
                                 </span>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
 
                     {/* Integrated Sub-bar: Filter Prodi, Angkatan, & Semester */}
@@ -584,9 +607,30 @@ export default function KrsApprovalIndex({
                                         <span className="text-[11px] font-bold text-purple-300 bg-purple-950/80 px-2 py-0.5 rounded-md border border-purple-600/40">
                                             {currentPeriod?.name}
                                         </span>
+                                        {selectedClass ? (
+                                            <span className="text-[11px] font-bold text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-600/40 inline-flex items-center space-x-1">
+                                                <span>{selectedClass}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedClass('');
+                                                        handleTriggerFilter(prodi, year, period, '');
+                                                    }}
+                                                    className="hover:text-white cursor-pointer ml-0.5"
+                                                    title="Hapus Filter Kelas"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </span>
+                                        ) : (
+                                            <span className="text-[11px] font-medium text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-700/60">
+                                                Semua Kelas
+                                            </span>
+                                        )}
                                     </div>
                                 ) : (
-                                    <span className="text-slate-400 italic">Pilih Program Studi, Angkatan & Semester di samping</span>
+                                    <span className="text-slate-400 italic">Pilih Program Studi, Angkatan, Semester & Kelas di samping</span>
                                 )}
                             </div>
                         </div>
@@ -783,6 +827,87 @@ export default function KrsApprovalIndex({
                                 )}
                             </div>
 
+                            {/* 4. Dropdown Kelas / Rombel Popover */}
+                            <div ref={classDropdownRef} className="relative w-full sm:w-36">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsClassDropdownOpen(prev => !prev)}
+                                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition shadow-2xs cursor-pointer text-left border ${
+                                        isClassDropdownOpen 
+                                            ? 'border-emerald-400 ring-2 ring-emerald-500/30 bg-slate-800 text-white' 
+                                            : selectedClass 
+                                                ? 'border-emerald-500/50 bg-emerald-950/50 hover:bg-emerald-900/50 text-emerald-200 font-bold' 
+                                                : 'border-slate-700 bg-slate-800/90 hover:bg-slate-700/90 text-slate-300 font-medium'
+                                    }`}
+                                >
+                                    <div className="flex items-center space-x-1.5 truncate">
+                                        <Users className={`w-3.5 h-3.5 shrink-0 ${selectedClass ? 'text-emerald-400' : 'text-slate-400'}`} />
+                                        <span className="truncate">{selectedClass ? selectedClass : 'Semua Kelas'}</span>
+                                    </div>
+
+                                    <div className="flex items-center space-x-1 shrink-0 ml-1">
+                                        {selectedClass && (
+                                            <span
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedClass('');
+                                                    setIsClassDropdownOpen(false);
+                                                    handleTriggerFilter(prodi, year, period, '');
+                                                }}
+                                                className="p-0.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition cursor-pointer"
+                                                title="Reset Kelas"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </span>
+                                        )}
+                                        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                                            isClassDropdownOpen ? 'rotate-180 text-emerald-400' : ''
+                                        }`} />
+                                    </div>
+                                </button>
+
+                                {isClassDropdownOpen && (
+                                    <div className="absolute right-0 top-full mt-1.5 w-full sm:w-48 bg-white text-slate-900 rounded-xl border border-slate-200 shadow-2xl z-50 overflow-hidden animate-fadeIn p-2 space-y-1">
+                                        <div
+                                            onClick={() => {
+                                                setSelectedClass('');
+                                                setIsClassDropdownOpen(false);
+                                                handleTriggerFilter(prodi, year, period, '');
+                                            }}
+                                            className={`p-2 rounded-xl transition cursor-pointer flex items-center justify-between text-[11px] ${
+                                                !selectedClass 
+                                                    ? 'bg-emerald-50 border border-emerald-200 font-bold text-emerald-950' 
+                                                    : 'hover:bg-slate-50 text-slate-700'
+                                            }`}
+                                        >
+                                            <span className="font-bold">Semua Kelas</span>
+                                            {!selectedClass && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                                        </div>
+                                        {classNames.map((c) => {
+                                            const isSelected = selectedClass === c;
+                                            return (
+                                                <div
+                                                    key={c}
+                                                    onClick={() => {
+                                                        setSelectedClass(c);
+                                                        setIsClassDropdownOpen(false);
+                                                        handleTriggerFilter(prodi, year, period, c);
+                                                    }}
+                                                    className={`p-2 rounded-xl transition cursor-pointer flex items-center justify-between text-[11px] ${
+                                                        isSelected 
+                                                            ? 'bg-emerald-50 border border-emerald-200 font-bold text-emerald-950' 
+                                                            : 'hover:bg-slate-50 text-slate-700'
+                                                    }`}
+                                                >
+                                                    <span className="font-bold">{c}</span>
+                                                    {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Tombol Reset */}
                             {(prodi || year) && (
                                 <button
@@ -870,7 +995,7 @@ export default function KrsApprovalIndex({
                                     type="button"
                                     onClick={() => {
                                         setStatusFilter(st);
-                                        fetchKrsData(prodi, year, period, st, search, 1);
+                                        fetchKrsData(prodi, year, period, selectedClass, st, search, 1);
                                     }}
                                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                                         statusFilter === st 
@@ -891,7 +1016,7 @@ export default function KrsApprovalIndex({
                                 value={search}
                                 onChange={(e) => {
                                     setSearch(e.target.value);
-                                    fetchKrsData(prodi, year, period, statusFilter, e.target.value, 1);
+                                    fetchKrsData(prodi, year, period, selectedClass, statusFilter, e.target.value, 1);
                                 }}
                                 placeholder="Cari Nama / NIM..."
                                 className="w-full text-xs pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
@@ -909,6 +1034,7 @@ export default function KrsApprovalIndex({
                                     <th className="py-3 px-3.5 border-r border-slate-700">NIM</th>
                                     <th className="py-3 px-3.5 border-r border-slate-700">Nama</th>
                                     <th className="py-3 px-3.5 text-center w-24 border-r border-slate-700">Angkatan</th>
+                                    <th className="py-3 px-3.5 text-center w-28 border-r border-slate-700">Kelas</th>
                                     <th className="py-3 px-3.5 text-center w-24 border-r border-slate-700">SKS</th>
                                     <th className="py-3 px-3.5 text-center w-40">Status</th>
                                 </tr>
@@ -916,21 +1042,28 @@ export default function KrsApprovalIndex({
                             <tbody className="divide-y divide-slate-200">
                                 {!isSelectionActive ? (
                                     <tr>
-                                        <td colSpan="7" className="py-16 text-center text-slate-500">
+                                        <td colSpan="8" className="py-16 text-center text-slate-500">
                                             <div className="max-w-md mx-auto flex flex-col items-center">
                                                 <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mb-3">
                                                     <BookOpen className="w-6 h-6" />
                                                 </div>
                                                 <h4 className="font-bold text-slate-800 text-sm">Pilih Program Studi & Angkatan</h4>
                                                 <p className="text-xs text-slate-400 mt-1">
-                                                    Gunakan menu dropdown di bagian atas untuk menampilkan data rencana studi mahasiswa.
+                                                    Gunakan menu dropdown di bagian atas untuk menampilkan data rencana studi mahasiswa berdasarkan prodi, angkatan, semester, dan kelas.
                                                 </p>
+                                                <Link
+                                                    href={`/admin/krs-approval/package${prodi && year ? `?study_program=${prodi}&academic_year=${year}&academic_period=${period}${selectedClass ? `&class_name=${selectedClass}` : ''}` : ''}`}
+                                                    className="mt-4 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer"
+                                                >
+                                                    <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                                                    <span>Buka Halaman Paket KRS Massal per Kelas</span>
+                                                </Link>
                                             </div>
                                         </td>
                                     </tr>
                                 ) : isLoadingData ? (
                                     <tr>
-                                        <td colSpan="7" className="py-16 text-center text-slate-500">
+                                        <td colSpan="8" className="py-16 text-center text-slate-500">
                                             <div className="flex items-center justify-center space-x-2">
                                                 <Loader2 className="w-5 h-5 animate-spin text-teal-600" />
                                                 <span className="font-bold text-slate-700">Memuat data Rencana Studi...</span>
@@ -939,7 +1072,7 @@ export default function KrsApprovalIndex({
                                     </tr>
                                 ) : studentList.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="py-12 text-center text-slate-400">
+                                        <td colSpan="8" className="py-12 text-center text-slate-400">
                                             Tidak ada data mahasiswa yang cocok dengan filter yang dipilih.
                                         </td>
                                     </tr>
@@ -1045,6 +1178,17 @@ export default function KrsApprovalIndex({
                                                     {stu.batch_year}
                                                 </td>
 
+                                                {/* Kelas / Rombel */}
+                                                <td className="py-2.5 px-3.5 text-center border-r border-slate-100">
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                                                        stu.class_type && stu.class_type !== '-'
+                                                            ? 'bg-teal-50 text-teal-800 border border-teal-200' 
+                                                            : 'text-slate-400'
+                                                    }`}>
+                                                        {stu.class_type || '-'}
+                                                    </span>
+                                                </td>
+
                                                 {/* SKS */}
                                                 <td className="py-2.5 px-3.5 text-center font-mono font-bold text-slate-800 border-r border-slate-100">
                                                     {stu.credits > 0 ? Number(stu.credits).toFixed(2) : '-'}
@@ -1097,7 +1241,7 @@ export default function KrsApprovalIndex({
                                     <button
                                         key={p}
                                         type="button"
-                                        onClick={() => fetchKrsData(prodi, year, period, statusFilter, search, p)}
+                                        onClick={() => fetchKrsData(prodi, year, period, selectedClass, statusFilter, search, p)}
                                         className={`px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
                                             studentsData.current_page === p 
                                                 ? 'bg-slate-900 text-white' 

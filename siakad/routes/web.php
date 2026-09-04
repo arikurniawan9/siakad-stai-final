@@ -178,6 +178,7 @@ Route::middleware('auth')->group(function () {
 
         // 1. Rencana Studi (KRS)
         Route::get('/krs-approval', [KrsApprovalController::class, 'index'])->name('krs_approval.index');
+        Route::get('/krs-approval/package', [KrsApprovalController::class, 'packageView'])->name('krs_approval.package');
         Route::post('/krs-approval/{id}/approve', [KrsApprovalController::class, 'approve'])->name('krs_approval.approve');
         Route::post('/krs-approval/{id}/reject', [KrsApprovalController::class, 'reject'])->name('krs_approval.reject');
         Route::post('/krs-approval/bulk-approve', [KrsApprovalController::class, 'bulkApprove'])->name('krs_approval.bulk_approve');
@@ -188,6 +189,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/krs-approval/{student_id}/remove-course', [KrsApprovalController::class, 'removeCourseFromStudent'])->name('krs_approval.remove_course');
         Route::post('/krs-approval/{student_id}/batch-add-package', [KrsApprovalController::class, 'batchAddPackage'])->name('krs_approval.batch_add_package');
         Route::post('/krs-approval/{student_id}/update-status', [KrsApprovalController::class, 'updateKrsStatus'])->name('krs_approval.update_status');
+        
+        // Fitur Paket KRS Massal per Kelas & Ruangan
+        Route::get('/krs-approval/classes-courses-offered', [KrsApprovalController::class, 'getOfferedClassesForMassAssign'])->name('krs_approval.offered_classes');
+        Route::get('/krs-approval/students-by-batch', [KrsApprovalController::class, 'getStudentsForMassAssign'])->name('krs_approval.students_by_batch');
+        Route::post('/krs-approval/mass-assign-class', [KrsApprovalController::class, 'massAssignClassKrs'])->name('krs_approval.mass_assign');
 
         // 2. Penilaian Mahasiswa (Persentase, Per Kelas DPNA, Per Mahasiswa)
         Route::get('/grades', [GradeAdminController::class, 'index'])->name('grades.index');

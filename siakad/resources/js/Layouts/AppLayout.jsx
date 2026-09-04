@@ -8,7 +8,7 @@ import {
     Activity, Database, Terminal, ShieldCheck, AlertOctagon, Server,
     Users, ChevronLeft, ChevronRight, HardDrive, Cpu, Radio, Award,
     Megaphone, FileCheck, Sparkles, BookMarked, ArrowRightLeft, Layers, Sliders,
-    KeyRound, Trophy
+    KeyRound, Trophy, Zap
 } from 'lucide-react';
 
 export default function AppLayout({ title, children }) {
@@ -103,6 +103,9 @@ export default function AppLayout({ title, children }) {
         if (!href) return false;
         if (href === '/dashboard') {
             return pageUrl === '/dashboard';
+        }
+        if (href === '/admin/krs-approval') {
+            return pageUrl === '/admin/krs-approval' || (pageUrl.startsWith('/admin/krs-approval?') && !pageUrl.includes('/package'));
         }
         return pageUrl.startsWith(href);
     };
@@ -203,6 +206,14 @@ export default function AppLayout({ title, children }) {
                     ? 'bg-teal-500 text-white shadow-md shadow-teal-500/30' 
                     : 'bg-teal-500/15 text-teal-400 ring-1 ring-teal-500/30 group-hover:bg-teal-500 group-hover:text-white',
                 activeItemBg: 'bg-teal-950/40 text-teal-200 border-l-2 border-teal-400'
+            };
+        }
+        if (href.includes('/krs-approval/package')) {
+            return {
+                boxBg: isActive 
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/30' 
+                    : 'bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30 group-hover:bg-amber-500 group-hover:text-slate-950',
+                activeItemBg: 'bg-amber-950/40 text-amber-200 border-l-2 border-amber-400'
             };
         }
         if (href.includes('/krs-approval') || href.includes('/student/krs')) {
@@ -382,6 +393,7 @@ export default function AppLayout({ title, children }) {
         { label: 'Manajemen Akun & Pengguna', href: '/admin/users', icon: KeyRound },
         { header: 'AKADEMIK' },
         { label: 'Rencana Studi', href: '/admin/krs-approval', icon: BookOpen },
+        { label: 'Paket KRS Massal', href: '/admin/krs-approval/package', icon: Zap },
         { label: 'Penilaian', href: '/admin/grades', icon: Award },
         { label: 'Hasil Studi', href: '/admin/khs', icon: FileText },
         { label: 'Transkrip', href: '/admin/transcripts', icon: GraduationCap },
@@ -417,6 +429,7 @@ export default function AppLayout({ title, children }) {
         { label: 'Manajemen Akun & Pengguna', href: '/admin/users', icon: KeyRound },
         { header: 'AKADEMIK' },
         { label: 'Rencana Studi', href: '/admin/krs-approval', icon: BookOpen },
+        { label: 'Paket KRS Massal', href: '/admin/krs-approval/package', icon: Zap },
         { label: 'Penilaian', href: '/admin/grades', icon: Award },
         { label: 'Hasil Studi', href: '/admin/khs', icon: FileText },
         { label: 'Transkrip', href: '/admin/transcripts', icon: GraduationCap },
@@ -459,6 +472,7 @@ export default function AppLayout({ title, children }) {
                 { label: 'Data Mahasiswa', href: '/admin/students', icon: GraduationCap },
                 { header: 'AKADEMIK' },
                 { label: 'Rencana Studi', href: '/admin/krs-approval', icon: BookOpen },
+                { label: 'Paket KRS Massal', href: '/admin/krs-approval/package', icon: Zap },
                 { label: 'Penilaian', href: '/admin/grades', icon: Award },
                 { label: 'Hasil Studi', href: '/admin/khs', icon: FileText },
                 { label: 'Transkrip', href: '/admin/transcripts', icon: GraduationCap },
@@ -478,6 +492,7 @@ export default function AppLayout({ title, children }) {
                 { header: 'AKADEMIK & BIMBINGAN' },
                 { label: 'Bimbingan Akademik (Wali)', href: '/admin/academic-advising', icon: UserCheck },
                 { label: 'Rencana Studi (KRS)', href: '/admin/krs-approval', icon: BookOpen },
+                { label: 'Paket KRS Massal', href: '/admin/krs-approval/package', icon: Zap },
                 { label: 'Penilaian (DPNA)', href: '/admin/grades', icon: Award },
                 { label: 'Hasil Evaluasi EDOM', href: '/admin/edom', icon: Star },
             ];
