@@ -87,7 +87,7 @@ services:
       APP_ENV: production
       APP_KEY: ${SIAKAD_APP_KEY:-base64:Q9N+LbbjGcTAd333RQdcpvkepou6XHx17/p5IvNS02Y=}
       APP_DEBUG: ${APP_DEBUG:-true}
-      APP_URL: ${SIAKAD_APP_URL:-https://siakad-staialittihad.tech}
+      APP_URL: ${SIAKAD_APP_URL:-https://salam.stai-alittihad.ac.id}
       
       DB_CONNECTION: pgsql
       DB_HOST: siakad-postgres
@@ -104,7 +104,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-RedisSecret2026!}
       REDIS_PORT: 6379
       
-      LMS_API_URL: ${LMS_API_URL:-https://lms.siakad-staialittihad.tech/api/v1}
+      LMS_API_URL: ${LMS_API_URL:-https://lms.stai-alittihad.ac.id/api/v1}
       LMS_CLIENT_ID: ${LMS_CLIENT_ID:-salam_lms_client}
       LMS_CLIENT_SECRET: ${LMS_CLIENT_SECRET:-salam_lms_client_secret_key}
       
@@ -144,12 +144,12 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-siakad_user}:${POSTGRES_PASSWORD:-SuperSecretPassword2026!}@siakad-postgres:5432/${POSTGRES_DB:-siakad_stai_db}
       JWT_SECRET: ${JWT_SECRET:-salam_jwt_secret_production_stai_alittihad}
       
-      SIAKAD_API_URL: ${SIAKAD_APP_URL:-https://siakad.staialittihad.tech}
+      SIAKAD_API_URL: ${SIAKAD_APP_URL:-https://salam.stai-alittihad.ac.id}
       SIAKAD_CLIENT_ID: ${LMS_CLIENT_ID:-salam_lms_client}
       SIAKAD_CLIENT_SECRET: ${LMS_CLIENT_SECRET:-salam_lms_client_secret_key}
       
       S3_ENDPOINT: http://salam-minio:9000
-      S3_PUBLIC_URL: ${MINIO_PUBLIC_URL:-https://storage.siakad-staialittihad.tech}
+      S3_PUBLIC_URL: ${MINIO_PUBLIC_URL:-https://storage.stai-alittihad.ac.id}
       S3_BUCKET: salam-uploads
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-MinioAdminSecret2026!}
@@ -180,8 +180,8 @@ services:
     expose:
       - "80"
     environment:
-      VITE_API_URL: ${LMS_API_URL:-https://api-lms.siakad-staialittihad.tech}
-      VITE_SIAKAD_URL: ${SIAKAD_APP_URL:-https://siakad.staialittihad.tech}
+      VITE_API_URL: ${LMS_API_URL:-https://lms.stai-alittihad.ac.id/api/v1}
+      VITE_SIAKAD_URL: ${SIAKAD_APP_URL:-https://salam.stai-alittihad.ac.id}
     depends_on:
       - salam-backend
     healthcheck:
