@@ -17,7 +17,7 @@ export const ENV = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   
   // CORS Configuration
-  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:8080',
+  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:8080,https://salam.stai-alittihad.ac.id,https://lms.stai-alittihad.ac.id',
   
   // Object Storage / S3 / MinIO Configuration
   STORAGE_DRIVER: process.env.STORAGE_DRIVER || 'local', // 'local' | 's3' | 'minio'
@@ -28,7 +28,7 @@ export const ENV = {
   S3_SECRET_KEY: process.env.S3_SECRET_KEY || 'minioadmin',
   
   // SIAKAD Integration
-  SIAKAD_API_URL: process.env.SIAKAD_API_URL || 'https://siakad.stai-alittihad.ac.id/api/v1',
+  SIAKAD_API_URL: process.env.SIAKAD_API_URL || 'https://salam.stai-alittihad.ac.id/api/v1',
   SIAKAD_SYNC_KEY: process.env.SIAKAD_SYNC_KEY || 'secret_siakad_sync_token_2026',
 
   // Rate Limiting

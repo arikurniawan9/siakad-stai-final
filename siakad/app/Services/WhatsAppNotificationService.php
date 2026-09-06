@@ -101,7 +101,7 @@ class WhatsAppNotificationService
         $message .= "📌 Pertemuan ke: *{$meetingNumber}*\n";
         $message .= "🔑 Kode Darurat Presensi: *{$passcode}*\n\n";
         $message .= "Silakan masuk ke portal SALAM LMS untuk melakukan presensi mandiri (pindai QR atau input kode).\n";
-        $message .= "🔗 _https://lms.staialittihad.ac.id_\n\n";
+        $message .= "🔗 _https://lms.stai-alittihad.ac.id_\n\n";
         $message .= "Terima kasih.";
 
         return self::sendMessage($phone, $message);
@@ -119,7 +119,7 @@ class WhatsAppNotificationService
         $message .= "📚 Mata Kuliah: *{$courseName}*\n";
         $message .= "⏳ Batas Akhir: *{$dueDate}*\n\n";
         $message .= "Pastikan berkas tugas telah diunggah ke portal sebelum batas waktu berakhir untuk menghindari penalti keterlambatan.\n";
-        $message .= "🔗 _https://lms.staialittihad.ac.id/tugas_\n";
+        $message .= "🔗 _https://lms.stai-alittihad.ac.id/tugas_\n";
 
         return self::sendMessage($phone, $message);
     }
@@ -135,7 +135,7 @@ class WhatsAppNotificationService
         $message .= "📚 Mata Kuliah: *{$courseName}*\n";
         $message .= "🎖️ Nilai Huruf: *{$gradeLetter}* (Bobot: *{$gradePoint}*)\n\n";
         $message .= "KHS Digital ber-QR Code resmi dapat diunduh langsung melalui portal SIAKAD.\n";
-        $message .= "🔗 _https://siakad.staialittihad.ac.id/student/khs_\n";
+        $message .= "🔗 _https://salam.stai-alittihad.ac.id/student/khs_\n";
 
         return self::sendMessage($phone, $message);
     }

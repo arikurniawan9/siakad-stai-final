@@ -104,6 +104,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-RedisSecret2026!}
       REDIS_PORT: 6379
       
+      LMS_FRONTEND_URL: ${LMS_FRONTEND_URL:-https://lms.stai-alittihad.ac.id}
       LMS_API_URL: ${LMS_API_URL:-https://lms.stai-alittihad.ac.id/api/v1}
       LMS_CLIENT_ID: ${LMS_CLIENT_ID:-salam_lms_client}
       LMS_CLIENT_SECRET: ${LMS_CLIENT_SECRET:-salam_lms_client_secret_key}

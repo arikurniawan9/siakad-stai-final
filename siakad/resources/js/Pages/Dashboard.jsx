@@ -1069,7 +1069,7 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                             <Link href="/admin/facilities" className="p-3 bg-slate-50 hover:bg-emerald-50 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-800">
                                 🏛️ Gedung & Ruang
                             </Link>
-                            <a href="http://localhost:3001" target="_blank" rel="noreferrer" className="p-3 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-200 text-[11px] font-bold">
+                            <a href="/sso/lms" target="_blank" rel="noreferrer" className="p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 text-[11px] font-bold text-center transition">
                                 💻 SALAM LMS
                             </a>
                         </div>

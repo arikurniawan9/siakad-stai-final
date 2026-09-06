@@ -232,7 +232,7 @@ export async function siakadSsoExchange(req: Request, res: Response, next: NextF
     }
 
     // Panggil SIAKAD SSO Token Endpoint
-    const siakadUrl = process.env.SIAKAD_API_URL || 'http://localhost:8000/api/v1';
+    const siakadUrl = ENV.SIAKAD_API_URL || 'https://salam.stai-alittihad.ac.id/api/v1';
     const tokenResponse = await fetch(`${siakadUrl}/oauth/token`, {
       method: 'POST',
       headers: {

@@ -40,7 +40,7 @@ class LmsSyncController extends Controller
                 'total_enrollments' => $totalEnrollments,
                 'total_grades' => $totalGrades,
                 'lms_api_url' => env('LMS_API_URL', 'http://localhost:5000/api/v1'),
-                'lms_frontend_url' => 'http://localhost:8080',
+                'lms_frontend_url' => env('LMS_FRONTEND_URL', 'https://lms.stai-alittihad.ac.id'),
             ],
         ]);
     }

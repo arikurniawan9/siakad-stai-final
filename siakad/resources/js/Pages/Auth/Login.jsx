@@ -241,7 +241,7 @@ export default function Login() {
                 {/* Bottom Footer Link to LMS */}
                 <div className="mt-6 text-center text-xs text-slate-400">
                     Ingin belajar daring?{' '}
-                    <a href="http://localhost:3001" target="_blank" rel="noreferrer" className="font-bold text-emerald-400 hover:underline inline-flex items-center">
+                    <a href="https://lms.stai-alittihad.ac.id" target="_blank" rel="noreferrer" className="font-bold text-emerald-400 hover:underline inline-flex items-center">
                         Buka SALAM LMS STAI Al-Ittihad <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
                     </a>
                 </div>

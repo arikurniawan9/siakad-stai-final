@@ -65,7 +65,7 @@ export const LoginPage: React.FC = () => {
   }, []);
 
   const handleSiakadSsoRedirect = () => {
-    const siakadHost = (import.meta as any).env?.VITE_SIAKAD_URL || 'http://localhost:8000';
+    const siakadHost = (import.meta as any).env?.VITE_SIAKAD_URL || 'https://salam.stai-alittihad.ac.id';
     const redirectUri = window.location.origin + window.location.pathname;
     window.location.href = `${siakadHost}/oauth/authorize?client_id=salam_lms&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
   };

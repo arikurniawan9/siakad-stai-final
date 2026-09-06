@@ -19,7 +19,7 @@ class OAuthController extends Controller
     public function authorizeClient(Request $request): RedirectResponse
     {
         $clientId = $request->input('client_id', 'salam_lms');
-        $redirectUri = $request->input('redirect_uri', 'http://localhost:8080');
+        $redirectUri = $request->input('redirect_uri', env('LMS_FRONTEND_URL', 'https://lms.stai-alittihad.ac.id'));
         $state = $request->input('state', '');
 
         // Jika belum login ke SIAKAD, arahkan ke login dengan return URL
@@ -132,7 +132,7 @@ class OAuthController extends Controller
             return redirect()->route('login');
         }
 
-        $lmsUrl = env('LMS_FRONTEND_URL', 'http://localhost:8080');
+        $lmsUrl = env('LMS_FRONTEND_URL', 'https://lms.stai-alittihad.ac.id');
         return $this->authorizeClient(new Request([
             'client_id' => 'salam_lms',
             'redirect_uri' => $lmsUrl,

@@ -70,11 +70,11 @@ Di panel penyedia domain kampus (Cloudflare / Niagahoster / Rumahweb / IDCloudHo
 
 | Tipe | Nama Host / Subdomain | Target IP | Fungsi |
 | :---: | :--- | :---: | :--- |
-| **A** | `siakad.staialittihad.ac.id` | `<IP-PUBLIK-VPS>` | Portal Utama SIAKAD STAI |
-| **A** | `lms.staialittihad.ac.id` | `<IP-PUBLIK-VPS>` | Antarmuka SALAM LMS |
-| **A** | `api-lms.staialittihad.ac.id` | `<IP-PUBLIK-VPS>` | REST API Backend SALAM LMS |
-| **A** | `storage.staialittihad.ac.id` | `<IP-PUBLIK-VPS>` | MinIO S3 Object Storage |
-| **A** | `panel.staialittihad.ac.id` | `<IP-PUBLIK-VPS>` | Dasbor Manajemen Coolify |
+| **A** | `salam.stai-alittihad.ac.id` | `<IP-PUBLIK-VPS>` | Portal Utama SIAKAD STAI |
+| **A** | `lms.stai-alittihad.ac.id` | `<IP-PUBLIK-VPS>` | Antarmuka SALAM LMS |
+| **A** | `api-lms.stai-alittihad.ac.id` | `<IP-PUBLIK-VPS>` | REST API Backend SALAM LMS |
+| **A** | `storage.stai-alittihad.ac.id` | `<IP-PUBLIK-VPS>` | MinIO S3 Object Storage |
+| **A** | `panel.stai-alittihad.ac.id` | `<IP-PUBLIK-VPS>` | Dasbor Manajemen Coolify |
 
 > **Catatan Cloudflare**: Jika menggunakan Cloudflare, nonaktifkan opsi *Proxy (Grey Cloud)* sementara waktu saat pendaftaran SSL awal, lalu aktifkan kembali jika diperlukan.
 
@@ -101,10 +101,10 @@ Proyek ini telah dilengkapi dengan blueprint Docker siap pakai:
    - Masukkan path docker compose: `docker-compose.coolify.yml`.
 4. **Atur FQDN (Domain Traefik) di Coolify**:
    Pada tab masing-masing service di Coolify UI:
-   - **`siakad-app`**: `https://siakad.staialittihad.ac.id`
-   - **`salam-frontend`**: `https://lms.staialittihad.ac.id`
-   - **`salam-backend`**: `https://api-lms.staialittihad.ac.id`
-   - **`salam-minio`**: `https://storage.staialittihad.ac.id`
+   - **`siakad-app`**: `https://salam.stai-alittihad.ac.id`
+   - **`salam-frontend`**: `https://lms.stai-alittihad.ac.id`
+   - **`salam-backend`**: `https://api-lms.stai-alittihad.ac.id`
+   - **`salam-minio`**: `https://storage.stai-alittihad.ac.id`
 5. Masukkan seluruh variabel lingkungan (Environment Variables) pada menu **Environment Variables** di Coolify.
 6. Klik tombol **Deploy**. Coolify akan secara otomatis mengunduh image, membangun layer frontend & backend, dan mengonfigurasi SSL Let's Encrypt.
 
@@ -128,14 +128,15 @@ REDIS_PASSWORD=GantiDenganPasswordRedisKuat2026!
 # =========================================================================
 MINIO_ROOT_USER=stai_admin_s3
 MINIO_ROOT_PASSWORD=GantiPasswordMinioSuperKuat2026!
-MINIO_PUBLIC_URL=https://storage.staialittihad.ac.id
+MINIO_PUBLIC_URL=https://storage.stai-alittihad.ac.id
 
 # =========================================================================
 # 3. SIAKAD (LARAVEL 13)
 # =========================================================================
 SIAKAD_APP_KEY=base64:GENERATE_DENGAN_PHP_ARTISAN_KEY_GENERATE
-SIAKAD_APP_URL=https://siakad.staialittihad.ac.id
-LMS_API_URL=https://api-lms.staialittihad.ac.id
+SIAKAD_APP_URL=https://salam.stai-alittihad.ac.id
+LMS_FRONTEND_URL=https://lms.stai-alittihad.ac.id
+LMS_API_URL=https://api-lms.stai-alittihad.ac.id
 LMS_CLIENT_ID=salam_lms_client_prod
 LMS_CLIENT_SECRET=salam_prod_secret_token_9928_stai
 
@@ -184,10 +185,10 @@ docker exec -it salam-backend-api npm run seed
 Coolify secara bawaan menggunakan Traefik yang otomatis menerbitkan sertifikat SSL Let's Encrypt gratis dengan fitur *auto-renewal* setiap 60 hari.
 
 ### B. Konfigurasi Cross-Origin (CORS) & Cookie SSO
-Karena SIAKAD dan LMS berada pada domain yang sama (`*.staialittihad.ac.id`), otentikasi SSO OAuth2 dapat berbagi sesi atau token dengan aman:
-- Cookie Domain: `.staialittihad.ac.id`
+Karena SIAKAD dan LMS berada pada domain yang sama (`*.stai-alittihad.ac.id`), otentikasi SSO OAuth2 dapat berbagi sesi atau token dengan aman:
+- Cookie Domain: `.stai-alittihad.ac.id`
 - Header CORS di LMS Backend mengizinkan origin:
-  `https://siakad.staialittihad.ac.id` dan `https://lms.staialittihad.ac.id`.
+  `https://salam.stai-alittihad.ac.id` dan `https://lms.stai-alittihad.ac.id`.
 
 ---
 
@@ -210,14 +211,13 @@ docker exec -t siakad-postgres-db pg_dump -U siakad_prod_user siakad_stai_db | g
 ---
 
 ## ✅ 10. Daftar Periksa Pasca-Deployment (Verification Checklist)
-
 Lakukan pengujian fungsional berikut setelah proses deployment selesai:
 
-- [ ] **HTTPS & SSL**: Buka `https://siakad.staialittihad.ac.id` dan pastikan ikon gembok SSL valid (Let's Encrypt).
+- [ ] **HTTPS & SSL**: Buka `https://salam.stai-alittihad.ac.id` dan pastikan ikon gembok SSL valid (Let's Encrypt).
 - [ ] **Login Multi-Identifier & CAPTCHA**: Uji login dengan NIM `21010042` / password `salam123` dan selesaikan CAPTCHA 4-digit.
 - [ ] **Superadmin Impersonation**: Login sebagai `superadmin` dan lakukan aksi "Menyamar" ke akun Dosen / BAAK.
-- [ ] **Portal Verifikasi Publik QR**: Buka endpoint `https://siakad.staialittihad.ac.id/verify/sample-hash` dan pastikan stempel keabsahan muncul.
-- [ ] **Single Sign-On (SSO) ke LMS**: Masuk ke `https://lms.staialittihad.ac.id`, klik "Masuk dengan Akun SIAKAD" dan pastikan sesi tersinkronisasi.
+- [ ] **Portal Verifikasi Publik QR**: Buka endpoint `https://salam.stai-alittihad.ac.id/verify/sample-hash` dan pastikan stempel keabsahan muncul.
+- [ ] **Single Sign-On (SSO) ke LMS**: Masuk ke `https://lms.stai-alittihad.ac.id`, klik "Masuk dengan Akun SIAKAD" dan pastikan sesi tersinkronisasi.
 - [ ] **Presensi Dynamic QR LMS**: Buka sesi perkuliahan dosen dan pastikan QR Code berputar dinamis tiap 20-30 detik.
 - [ ] **CBT Anti-Cheating**: Buka modul ujian CBT mahasiswa dan pastikan fitur Auto-Fullscreen & Tab Lockdown aktif sempurna.
 - [ ] **Queue Worker**: Pastikan background worker berjalan normal (`docker exec -it siakad-core-app supervisorctl status`).

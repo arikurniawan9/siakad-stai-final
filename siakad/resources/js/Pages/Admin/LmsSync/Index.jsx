@@ -84,7 +84,7 @@ export default function LmsSyncIndex({ syncLogs = [], stats = {}, activePeriod =
                             <span>Tes Koneksi</span>
                         </button>
                         <a
-                            href={stats.lms_frontend_url || 'http://localhost:8080'}
+                            href={stats.lms_frontend_url || 'https://lms.stai-alittihad.ac.id'}
                             target="_blank"
                             rel="noreferrer"
                             className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-emerald-400 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
