@@ -89,7 +89,12 @@ class KrsApprovalController extends Controller
                 ->where(function ($sq) use ($prefix2, $prefix4) {
                     $sq->where('identity_number', 'like', "{$prefix2}%")
                        ->orWhere('identity_number', 'like', "{$prefix4}%")
-                       ->orWhereYear('created_at', $prefix4);
+                       ->orWhere(function ($fallback) use ($prefix4) {
+                           $fallback->where(function ($emptyNim) {
+                               $emptyNim->whereNull('identity_number')
+                                        ->orWhere('identity_number', '');
+                           })->whereYear('created_at', $prefix4);
+                       });
                 })
                 ->when($search, function ($q) use ($search) {
                     $q->where(function ($sq) use ($search) {
@@ -99,7 +104,7 @@ class KrsApprovalController extends Controller
                     });
                 })
                 ->when($classFilter && $classFilter !== 'all', function ($q) use ($classFilter) {
-                    $q->where('class_type', $classFilter);
+                    $q->where('class_type', 'ilike', $classFilter);
                 })
                 ->select('id', 'name', 'identity_number as nim', 'email', 'study_program', 'academic_advisor_id', 'class_type', 'created_at')
                 ->orderBy('identity_number', 'asc');
@@ -1266,12 +1271,17 @@ class KrsApprovalController extends Controller
             $query->where(function ($sq) use ($prefix2, $prefix4) {
                 $sq->where('identity_number', 'like', "{$prefix2}%")
                    ->orWhere('identity_number', 'like', "{$prefix4}%")
-                   ->orWhereYear('created_at', $prefix4);
+                   ->orWhere(function ($fallback) use ($prefix4) {
+                       $fallback->where(function ($emptyNim) {
+                           $emptyNim->whereNull('identity_number')
+                                    ->orWhere('identity_number', '');
+                       })->whereYear('created_at', $prefix4);
+                   });
             });
         }
 
         if ($classFilter && $classFilter !== 'all') {
-            $query->where('class_type', $classFilter);
+            $query->where('class_type', 'ilike', $classFilter);
         }
 
         if ($search) {
@@ -1528,12 +1538,25 @@ class KrsApprovalController extends Controller
                     ->where('krs_items.krs_submission_id', $submissionId)
                     ->sum('courses.credits');
 
+                $maxAllowed = max(24, (int) $sumCredits);
+
                 DB::table('krs_submissions')->where('id', $submissionId)->update([
                     'total_credits' => $sumCredits,
+                    'max_credits_allowed' => $maxAllowed,
                     'updated_at' => now(),
                 ]);
 
                 $processedStudents++;
+            }
+
+            // Simpan alokasi ruangan kuliah jika dipilih ke jadwal kelas
+            if ($roomId) {
+                DB::table('class_schedules')
+                    ->whereIn('course_class_id', $courseClassIds)
+                    ->update([
+                        'room_id' => $roomId,
+                        'updated_at' => now(),
+                    ]);
             }
 
             // Catat audit log
