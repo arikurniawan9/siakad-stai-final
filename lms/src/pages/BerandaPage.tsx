@@ -8,11 +8,18 @@ import {
   TrendingUp, 
   HelpCircle,
   ClipboardList,
-  FileSpreadsheet,
-  FileText,
-  Award,
   Bell,
-  Pin
+  Pin,
+  CheckSquare,
+  QrCode,
+  ExternalLink,
+  Layers,
+  Users,
+  UserCheck,
+  RefreshCw,
+  Settings,
+  ShieldCheck,
+  Activity
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardSubtitle, CardBody, CardFooter } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -23,6 +30,7 @@ import { calendarService } from '../services/calendarService';
 import { assignmentService } from '../services/assignmentService';
 import { quizService } from '../services/quizService';
 import { announcementService } from '../services/announcementService';
+import { academicService, AcademicClass } from '../services/academicService';
 import { KAMUS_UI } from '../constants/dictionary';
 
 export interface BerandaPageProps {
@@ -32,7 +40,8 @@ export interface BerandaPageProps {
 
 export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) => {
   const isStudent = user.role === 'mahasiswa';
-  const isLecturer = user.role === 'dosen' || user.role === 'dosen_pa' || user.role === 'administrator_sistem';
+  const isLecturer = user.role === 'dosen' || user.role === 'dosen_pa';
+  const isAdmin = user.role === 'admin_akademik' || user.role === 'administrator_sistem' || user.role === 'kaprodi' || user.role === 'pimpinan';
 
   // Data Progres Mahasiswa
   const courseProgress = isStudent ? progressService.getCourseProgress('cls-pai301-a', user.id, user.identityNumber || '21.01.0042', user.name) : null;
@@ -40,6 +49,39 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) =>
   // Data Urgent Dosen
   const unsubmittedAssignments = assignmentService.getSubmissions().filter((s) => s.status !== 'SUDAH_DINILAI').length;
   const uncorrectedQuizzes = quizService.getAttempts().filter((a) => a.needsManualGrading).length;
+
+  // Data Rombel Kelas Dosen (Tersinkronisasi Real Time dengan SIAKAD)
+  const [lecturerClasses, setLecturerClasses] = React.useState<AcademicClass[]>(() => {
+    const allClasses = academicService.getClasses();
+    if (!isLecturer) return allClasses;
+    const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+    const myClasses = allClasses.filter((c) => {
+      const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
+      const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
+      const matchId = c.lecturerId === user.id;
+      const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
+      return matchNidn || matchId || matchName;
+    });
+    return myClasses.length > 0 ? myClasses : allClasses.slice(0, 4);
+  });
+
+  React.useEffect(() => {
+    if (isLecturer) {
+      academicService.fetchClassesFromBackend().then((classes) => {
+        const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+        const myClasses = classes.filter((c) => {
+          const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
+          const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
+          const matchId = c.lecturerId === user.id;
+          const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
+          return matchNidn || matchId || matchName;
+        });
+        if (myClasses.length > 0) {
+          setLecturerClasses(myClasses);
+        }
+      });
+    }
+  }, [isLecturer, user.identityNumber, user.id, user.name]);
 
   // Batas Waktu Terdekat
   const upcomingEvents = calendarService.getUpcomingDeadlines().slice(0, 3);
@@ -69,7 +111,7 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) =>
                   Semester Ganjil 2026/2027
                 </Badge>
                 <Badge variant="primary" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', borderColor: 'transparent' }}>
-                  {user.role === 'mahasiswa' ? 'Mahasiswa Aktif' : 'Dosen Pengampu'}
+                  {user.roleLabel || (isStudent ? 'Mahasiswa Aktif' : isLecturer ? 'Dosen Pengampu' : 'Administrator Sistem')}
                 </Badge>
               </div>
 
@@ -77,117 +119,177 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) =>
                 Selamat Datang di SALAM LMS, {user.name}
               </h1>
               <p style={{ color: '#d1fae5', fontSize: 'var(--text-sm)' }}>
-                Sistem Aplikasi Layanan Akademik dan Mahasiswa STAI AL-ITTIHAD
+                Sistem Pembelajaran Daring STAI AL-ITTIHAD CIANJUR
               </p>
             </div>
 
             <div className="text-left md:text-right">
-              <div style={{ fontSize: 'var(--text-xs)', color: '#a7f3d0' }}>NIM / NIDN:</div>
-              <strong style={{ fontSize: 'var(--text-lg)', color: 'white' }}>{user.identityNumber}</strong>
+              <div style={{ fontSize: 'var(--text-xs)', color: '#a7f3d0' }}>
+                {isStudent ? 'NIM:' : isLecturer ? 'NIDN:' : 'ID Pengguna:'}
+              </div>
+              <strong style={{ fontSize: 'var(--text-lg)', color: 'white' }}>{user.identityNumber || user.id}</strong>
             </div>
           </div>
         </CardBody>
       </Card>
+
+      {/* Banner Informasi Sinkronisasi LMS & SIAKAD (Khusus Akses Administrator) */}
+      {isAdmin && (
+        <div 
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 rounded-lg"
+          style={{
+            backgroundColor: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            color: '#1e3a8a'
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <div style={{ padding: '6px', borderRadius: '8px', backgroundColor: '#dbeafe', color: '#1d4ed8', marginTop: '2px', flexShrink: 0 }}>
+              <Layers size={20} />
+            </div>
+            <div>
+              <strong style={{ fontSize: 'var(--text-sm)', display: 'block', color: '#1e3a8a' }}>
+                Status Integrasi &amp; Sinkronisasi SIAKAD
+              </strong>
+              <p style={{ fontSize: 'var(--text-xs)', color: '#3b82f6', margin: '2px 0 0' }}>
+                LMS terhubung dengan server induk SALAM SIAKAD untuk sinkronisasi master data mahasiswa, dosen, kurikulum, dan jadwal.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={RefreshCw}
+              onClick={() => onNavigate('/admin/sync')}
+              style={{ backgroundColor: 'white' }}
+            >
+              Sinkronisasi Data
+            </Button>
+            <a
+              href="http://salam.stai-alittihad.ac.id/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-sm inline-flex items-center gap-1.5"
+              style={{
+                backgroundColor: '#1d4ed8',
+                color: 'white',
+                fontWeight: 'var(--font-weight-semibold)',
+                fontSize: 'var(--text-xs)',
+                padding: '7px 14px',
+                borderRadius: 'var(--radius-md)',
+                textDecoration: 'none'
+              }}
+              title="Buka Sistem Informasi Akademik (SIAKAD)"
+            >
+              <ExternalLink size={14} />
+              <span>Portal SIAKAD</span>
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           MAHASISWA DASHBOARD
           ========================================================================= */}
       {isStudent && (
         <div className="flex flex-col gap-6">
-          {/* Pintasan Layanan Akademik Mahasiswa */}
+          {/* Kartu Aktivitas Belajar Daring Utama */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* KHS Card */}
+            {/* Mata Kuliah Daring Card */}
             <Card 
               style={{ cursor: 'pointer', transition: 'transform 0.2s', borderLeft: '4px solid var(--color-primary-600)' }}
-              onClick={() => onNavigate('/khs')}
+              onClick={() => onNavigate('/mata-kuliah')}
             >
               <CardBody style={{ padding: 'var(--space-4)' }}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Hasil Studi & Transkrip</div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Mata Kuliah Daring</div>
                     <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: 'var(--color-primary-700)', marginTop: '2px' }}>
-                      IPS: 3.89 • IPK: 3.91
+                      5 Kelas Daring
                     </div>
                     <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success-700)', marginTop: '4px' }}>
-                      Maksimal 24 SKS Semester Depan
+                      Materi &amp; RPS Sesi 1-16
                     </div>
                   </div>
                   <div style={{ padding: '8px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-50)', color: 'var(--color-primary-700)' }}>
-                    <FileSpreadsheet size={20} />
+                    <BookOpen size={20} />
                   </div>
                 </div>
               </CardBody>
             </Card>
 
-            {/* Buku Nilai Card */}
+            {/* Tugas & Asesmen Card */}
             <Card 
-              style={{ cursor: 'pointer', transition: 'transform 0.2s', borderLeft: '4px solid #8b5cf6' }}
-              onClick={() => onNavigate('/buku-nilai')}
+              style={{ cursor: 'pointer', transition: 'transform 0.2s', borderLeft: '4px solid #f59e0b' }}
+              onClick={() => onNavigate('/tugas')}
             >
               <CardBody style={{ padding: 'var(--space-4)' }}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Buku Nilai Perkuliahan</div>
-                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: '#7c3aed', marginTop: '2px' }}>
-                      Rata-rata: 92.20 (A)
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Tugas &amp; Asesmen</div>
+                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: '#d97706', marginTop: '2px' }}>
+                      2 Tugas Daring
                     </div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      5 Mata Kuliah Dinilai Formatif
+                    <div style={{ fontSize: 'var(--text-xs)', color: '#b45309', marginTop: '4px' }}>
+                      1 Mendekati Batas Waktu
+                    </div>
+                  </div>
+                  <div style={{ padding: '8px', borderRadius: 'var(--radius-md)', backgroundColor: '#fef3c7', color: '#d97706' }}>
+                    <CheckSquare size={20} />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Kuis & CBT Card */}
+            <Card 
+              style={{ cursor: 'pointer', transition: 'transform 0.2s', borderLeft: '4px solid #8b5cf6' }}
+              onClick={() => onNavigate('/kuis')}
+            >
+              <CardBody style={{ padding: 'var(--space-4)' }}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Kuis &amp; CBT Online</div>
+                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: '#7c3aed', marginTop: '2px' }}>
+                      1 Kuis Terjadwal
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: '#6d28d9', marginTop: '4px' }}>
+                      Ujian Berbatas Waktu
                     </div>
                   </div>
                   <div style={{ padding: '8px', borderRadius: 'var(--radius-md)', backgroundColor: '#f5f3ff', color: '#7c3aed' }}>
-                    <Award size={20} />
+                    <HelpCircle size={20} />
                   </div>
                 </div>
               </CardBody>
             </Card>
 
-            {/* KRS Card */}
-            <Card 
-              style={{ cursor: 'pointer', transition: 'transform 0.2s', borderLeft: '4px solid var(--color-success-600)' }}
-              onClick={() => onNavigate('/krs')}
-            >
-              <CardBody style={{ padding: 'var(--space-4)' }}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Rencana Studi (KRS)</div>
-                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: 'var(--color-success-700)', marginTop: '2px' }}>
-                      21 SKS (7 Mata Kuliah)
-                    </div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Status: Disetujui Dosen PA
-                    </div>
-                  </div>
-                  <div style={{ padding: '8px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-success-50)', color: 'var(--color-success-700)' }}>
-                    <FileText size={20} />
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
-
-            {/* Jadwal Card */}
+            {/* Presensi Pertemuan Card */}
             <Card 
               style={{ cursor: 'pointer', transition: 'transform 0.2s', borderLeft: '4px solid #0284c7' }}
-              onClick={() => onNavigate('/jadwal')}
+              onClick={() => onNavigate('/presensi')}
             >
               <CardBody style={{ padding: 'var(--space-4)' }}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Jadwal Perkuliahan</div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Presensi Pertemuan</div>
                     <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: '#0369a1', marginTop: '2px' }}>
-                      Senin s.d. Jumat
+                      100% Kehadiran
                     </div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Ruang Al-Ghazali & Smart Class
+                    <div style={{ fontSize: 'var(--text-xs)', color: '#0284c7', marginTop: '4px' }}>
+                      Scan QR &amp; Passcode Sesi
                     </div>
                   </div>
                   <div style={{ padding: '8px', borderRadius: 'var(--radius-md)', backgroundColor: '#f0f9ff', color: '#0284c7' }}>
-                    <Calendar size={20} />
+                    <QrCode size={20} />
                   </div>
                 </div>
               </CardBody>
             </Card>
           </div>
+
 
           {/* Top 2 Columns: Lanjutkan Belajar + Ringkasan Progres */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -463,7 +565,7 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) =>
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Kelas Kuliah Aktif</div>
-                  <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold' }}>2 Kelas</div>
+                  <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold' }}>{lecturerClasses.length} Kelas</div>
                 </div>
               </CardBody>
             </Card>
@@ -475,11 +577,12 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) =>
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Rata-Rata Progres Belajar</div>
-                  <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold' }}>65%</div>
+                  <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold' }}>78%</div>
                 </div>
               </CardBody>
             </Card>
           </div>
+
 
           {/* Dosen Action Links */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -514,29 +617,23 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) =>
                 </div>
               </CardHeader>
               <CardBody className="flex flex-col gap-3">
-                <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-slate-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                  <div className="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-1" style={{ marginBottom: '2px' }}>
-                    <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
-                      PAI-301: Ushul Fiqih & Qawaid Fiqhiyyah (Kelas A)
-                    </strong>
-                    <Badge variant="primary">28 Mahasiswa</Badge>
+                {lecturerClasses.map((cls) => (
+                  <div 
+                    key={cls.id} 
+                    style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-slate-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', cursor: 'pointer' }}
+                    onClick={() => onNavigate(`/mata-kuliah/${cls.id}`)}
+                  >
+                    <div className="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-1" style={{ marginBottom: '2px' }}>
+                      <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
+                        {cls.courseCode}: {cls.courseName} ({cls.name})
+                      </strong>
+                      <Badge variant="primary">{cls.studentCount} Mahasiswa</Badge>
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                      Prodi {cls.studyProgramCode || 'PAI'} • {cls.credits} SKS • {cls.schedules?.[0]?.dayOfWeek || 'Jadwal Teratur'} {cls.schedules?.[0]?.startTime ? `${cls.schedules[0].startTime} - ${cls.schedules[0].endTime}` : ''}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                    Prodi Pendidikan Agama Islam • 3 SKS
-                  </div>
-                </div>
-
-                <div style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-slate-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                  <div className="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-1" style={{ marginBottom: '2px' }}>
-                    <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
-                      HES-202: Fiqih Muamalah Kontemporer (Kelas B)
-                    </strong>
-                    <Badge variant="primary">24 Mahasiswa</Badge>
-                  </div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                    Prodi Hukum Ekonomi Syariah • 3 SKS
-                  </div>
-                </div>
+                ))}
               </CardBody>
               <CardFooter>
                 <Button variant="outline" size="sm" onClick={() => onNavigate('/mata-kuliah')}>
@@ -545,6 +642,189 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) =>
               </CardFooter>
             </Card>
           </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          ADMINISTRATOR DASHBOARD (KHUSUS ADMIN / PIMPINAN)
+          ========================================================================= */}
+      {isAdmin && (
+        <div className="flex flex-col gap-6">
+          {/* Admin Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card 
+              style={{ cursor: 'pointer', borderLeft: '4px solid var(--color-primary-600)' }}
+              onClick={() => onNavigate('/admin/mahasiswa')}
+            >
+              <CardBody style={{ padding: 'var(--space-4)' }}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Mahasiswa Terdaftar</div>
+                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: 'var(--color-primary-700)', marginTop: '2px' }}>
+                      120+ Mahasiswa
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success-700)', marginTop: '4px' }}>
+                      Sinkron dari SIAKAD
+                    </div>
+                  </div>
+                  <div style={{ padding: '8px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-50)', color: 'var(--color-primary-700)' }}>
+                    <Users size={20} />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            <Card 
+              style={{ cursor: 'pointer', borderLeft: '4px solid #0284c7' }}
+              onClick={() => onNavigate('/admin/dosen')}
+            >
+              <CardBody style={{ padding: 'var(--space-4)' }}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Dosen Pengampu</div>
+                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: '#0369a1', marginTop: '2px' }}>
+                      18 Dosen
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: '#0284c7', marginTop: '4px' }}>
+                      Aktif Mengajar
+                    </div>
+                  </div>
+                  <div style={{ padding: '8px', borderRadius: 'var(--radius-md)', backgroundColor: '#f0f9ff', color: '#0284c7' }}>
+                    <UserCheck size={20} />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            <Card 
+              style={{ cursor: 'pointer', borderLeft: '4px solid #8b5cf6' }}
+              onClick={() => onNavigate('/mata-kuliah')}
+            >
+              <CardBody style={{ padding: 'var(--space-4)' }}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Kelas Daring Aktif</div>
+                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: '#7c3aed', marginTop: '2px' }}>
+                      24 Rombel
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: '#6d28d9', marginTop: '4px' }}>
+                      Semester Ganjil
+                    </div>
+                  </div>
+                  <div style={{ padding: '8px', borderRadius: 'var(--radius-md)', backgroundColor: '#f5f3ff', color: '#7c3aed' }}>
+                    <BookOpen size={20} />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            <Card 
+              style={{ cursor: 'pointer', borderLeft: '4px solid #10b981' }}
+              onClick={() => onNavigate('/admin/monitoring')}
+            >
+              <CardBody style={{ padding: 'var(--space-4)' }}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Status Sistem LMS</div>
+                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: '#059669', marginTop: '2px' }}>
+                      Normal / Stabil
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: '#047857', marginTop: '4px' }}>
+                      100% Layanan Online
+                    </div>
+                  </div>
+                  <div style={{ padding: '8px', borderRadius: 'var(--radius-md)', backgroundColor: '#ecfdf5', color: '#059669' }}>
+                    <Activity size={20} />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+
+          {/* Quick Admin Navigation Grid */}
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle>Menu Utama Manajemen Administrator</CardTitle>
+                <CardSubtitle>Kelola data akademik, integrasi server SIAKAD, dan konfigurasi LMS</CardSubtitle>
+              </div>
+            </CardHeader>
+            <CardBody>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <Button 
+                  variant="outline" 
+                  icon={RefreshCw} 
+                  onClick={() => onNavigate('/admin/sync')}
+                  className="justify-start p-3 h-auto"
+                >
+                  <div className="text-left">
+                    <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Sinkronisasi SIAKAD</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Tarik data master dari portal resmi</div>
+                  </div>
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  icon={Users} 
+                  onClick={() => onNavigate('/admin/mahasiswa')}
+                  className="justify-start p-3 h-auto"
+                >
+                  <div className="text-left">
+                    <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Manajemen Mahasiswa</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Daftar akun &amp; status akademik</div>
+                  </div>
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  icon={UserCheck} 
+                  onClick={() => onNavigate('/admin/dosen')}
+                  className="justify-start p-3 h-auto"
+                >
+                  <div className="text-left">
+                    <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Manajemen Dosen</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Homebase &amp; penugasan mengajar</div>
+                  </div>
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  icon={TrendingUp} 
+                  onClick={() => onNavigate('/admin/monitoring')}
+                  className="justify-start p-3 h-auto"
+                >
+                  <div className="text-left">
+                    <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Monitoring Pembelajaran</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Capaian &amp; aktivitas perkuliahan</div>
+                  </div>
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  icon={ShieldCheck} 
+                  onClick={() => onNavigate('/admin/audit')}
+                  className="justify-start p-3 h-auto"
+                >
+                  <div className="text-left">
+                    <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Audit Log Aktivitas</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Catatan akses &amp; rekam jejak pengguna</div>
+                  </div>
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  icon={Settings} 
+                  onClick={() => onNavigate('/admin/pengaturan')}
+                  className="justify-start p-3 h-auto"
+                >
+                  <div className="text-left">
+                    <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Pengaturan Sistem</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Konfigurasi parameter &amp; gateway API</div>
+                  </div>
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
         </div>
       )}
     </div>

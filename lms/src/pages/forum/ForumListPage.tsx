@@ -17,6 +17,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Pagination';
 import { DiscussionThread } from '../../types/forum';
 import { forumService } from '../../services/forumService';
+import { academicService, AcademicClass } from '../../services/academicService';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/feedback/ToastContext';
 import { KAMUS_UI } from '../../constants/dictionary';
@@ -28,9 +29,13 @@ export interface ForumListPageProps {
 export const ForumListPage: React.FC<ForumListPageProps> = ({ onSelectThread }) => {
   const { user } = useAuth();
   const toast = useToast();
+  const isLecturer = user?.role === 'dosen' || user?.role === 'dosen_pa';
 
   const [threads, setThreads] = useState<DiscussionThread[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<AcademicClass[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterClass, setFilterClass] = useState<string>('SEMUA');
   const [filterMeeting, setFilterMeeting] = useState<string>('SEMUA');
   const [createModal, setCreateModal] = useState(false);
 
@@ -50,23 +55,57 @@ export const ForumListPage: React.FC<ForumListPageProps> = ({ onSelectThread }) 
 
   useEffect(() => {
     loadThreads();
-  }, []);
+
+    let classes = academicService.getClasses();
+    if (isLecturer && user) {
+      const filtered = classes.filter(c =>
+        c.lecturerNidn === user.identityNumber ||
+        c.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
+        c.classLecturerName?.toLowerCase().includes(user.name.toLowerCase())
+      );
+      if (filtered.length > 0) classes = filtered;
+    }
+    setAvailableClasses(classes);
+    if (classes.length > 0) {
+      setSelectedClassId(classes[0].id);
+    }
+
+    academicService.fetchClassesFromBackend().then(() => {
+      let updated = academicService.getClasses();
+      if (isLecturer && user) {
+        const filtered = updated.filter(c =>
+          c.lecturerNidn === user.identityNumber ||
+          c.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
+          c.classLecturerName?.toLowerCase().includes(user.name.toLowerCase())
+        );
+        if (filtered.length > 0) updated = filtered;
+      }
+      setAvailableClasses(updated);
+      if (updated.length > 0 && !selectedClassId) {
+        setSelectedClassId(updated[0].id);
+      }
+    });
+  }, [user, isLecturer]);
 
   const handleCreateThread = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
     try {
+      const activeClass = availableClasses.find(c => c.id === selectedClassId) || availableClasses[0];
+      const classId = activeClass ? activeClass.id : 'cls-20261-pai301-a';
+      const courseName = activeClass ? `${activeClass.courseCode} - ${activeClass.courseName}` : 'PAI-301 - Fiqih Mawaris';
+
       const created = forumService.createThread({
-        classId: 'cls-pai301-a',
-        meetingId: `mtg-pai301a-0${meetingNumber}`,
-        courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah',
+        classId,
+        meetingId: `mtg-${classId.replace(/[^a-zA-Z0-9]/g, '')}-0${meetingNumber}`,
+        courseName,
         meetingNumber,
         title,
         content,
         authorId: user.id,
         authorName: user.name,
-        authorNimOrNidn: user.identityNumber || '21.01.0042',
+        authorNimOrNidn: user.identityNumber || '2112087501',
         authorRole: user.role,
         tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean)
       });
@@ -86,12 +125,13 @@ export const ForumListPage: React.FC<ForumListPageProps> = ({ onSelectThread }) 
   // Auto reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterMeeting]);
+  }, [searchQuery, filterClass, filterMeeting]);
 
-  const hasActiveFilters = searchQuery !== '' || filterMeeting !== 'SEMUA';
+  const hasActiveFilters = searchQuery !== '' || filterClass !== 'SEMUA' || filterMeeting !== 'SEMUA';
 
   const handleResetFilters = () => {
     setSearchQuery('');
+    setFilterClass('SEMUA');
     setFilterMeeting('SEMUA');
     setCurrentPage(1);
   };
@@ -104,9 +144,15 @@ export const ForumListPage: React.FC<ForumListPageProps> = ({ onSelectThread }) 
         t.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesMeeting = filterMeeting === 'SEMUA' || t.meetingNumber?.toString() === filterMeeting;
-      return matchesSearch && matchesMeeting;
+
+      const matchesClass = filterClass === 'SEMUA' || 
+        t.classId === filterClass || 
+        (filterClass === 'cls-20261-pai301-a' && t.classId === 'cls-pai301-a') ||
+        (filterClass === 'cls-pai301-a' && t.classId === 'cls-20261-pai301-a');
+
+      return matchesSearch && matchesMeeting && matchesClass;
     });
-  }, [threads, searchQuery, filterMeeting]);
+  }, [threads, searchQuery, filterMeeting, filterClass]);
 
   // Paginated Threads
   const totalPages = Math.ceil(filteredThreads.length / pageSize) || 1;
@@ -145,14 +191,30 @@ export const ForumListPage: React.FC<ForumListPageProps> = ({ onSelectThread }) 
 
             <select
               className="form-select"
-              value={filterMeeting}
-              onChange={(e) => setFilterMeeting(e.target.value)}
+              value={filterClass}
+              onChange={(e) => setFilterClass(e.target.value)}
               style={{ width: 'auto', minWidth: '220px' }}
             >
+              <option value="SEMUA">Semua Kelas Kuliah</option>
+              {availableClasses.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.courseCode} - {cls.courseName} ({cls.className || cls.section})
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="form-select"
+              value={filterMeeting}
+              onChange={(e) => setFilterMeeting(e.target.value)}
+              style={{ width: 'auto', minWidth: '180px' }}
+            >
               <option value="SEMUA">Semua Sesi Pertemuan</option>
-              <option value="1">Pertemuan 1: Pengantar Ushul Fiqih</option>
-              <option value="2">Pertemuan 2: Kaidah Lughawiyah</option>
-              <option value="3">Pertemuan 3: Sumber Hukum Islam</option>
+              {Array.from({ length: 14 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={String(m)}>
+                  Pertemuan {m}
+                </option>
+              ))}
             </select>
 
             {hasActiveFilters && (
@@ -289,6 +351,21 @@ export const ForumListPage: React.FC<ForumListPageProps> = ({ onSelectThread }) 
         maxWidth="600px"
       >
         <form onSubmit={handleCreateThread} className="flex flex-col gap-4">
+          <div className="form-group">
+            <label className="form-label">Pilih Kelas Perkuliahan:</label>
+            <select
+              className="form-select"
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+            >
+              {availableClasses.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.courseCode} - {cls.courseName} ({cls.className || cls.section})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <Input
             label="Judul Topik Diskusi"
             placeholder="Tuliskan pokok bahasan atau pertanyaan diskusi..."
@@ -304,10 +381,11 @@ export const ForumListPage: React.FC<ForumListPageProps> = ({ onSelectThread }) 
               value={meetingNumber}
               onChange={(e) => setMeetingNumber(parseInt(e.target.value) || 1)}
             >
-              <option value={1}>Pertemuan 1: Pengantar Ushul Fiqih</option>
-              <option value={2}>Pertemuan 2: Kaidah Lughawiyah</option>
-              <option value={3}>Pertemuan 3: Sumber Hukum Islam</option>
-              <option value={4}>Pertemuan 4: Metodologi Ijtihad</option>
+              {Array.from({ length: 14 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  Pertemuan {m}
+                </option>
+              ))}
             </select>
           </div>
 

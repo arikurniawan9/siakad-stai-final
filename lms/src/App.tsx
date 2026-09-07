@@ -55,7 +55,7 @@ import { Card, CardHeader, CardTitle, CardSubtitle, CardBody } from './component
 import { Button } from './components/ui/Button';
 import { Badge } from './components/ui/Badge';
 import { Table, Column } from './components/ui/Table';
-import { ShieldCheck, ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
 import { runRbacTests, TestCaseResult } from './tests/auth.test';
 import { runLearningTests, LearningTestResult } from './tests/learning.test';
 import { runVideoTests, VideoTestResult } from './tests/video.test';
@@ -78,7 +78,7 @@ import './styles/layout.css';
 import './styles/components.css';
 
 function MainAppContent() {
-  const { user, isAuthenticated, switchRole } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [activePath, setActivePath] = useState<string>(() => {
     const p = typeof window !== 'undefined' ? window.location.pathname : '/';
     return p && p !== '/login' ? p : '/';
@@ -1687,70 +1687,10 @@ function MainAppContent() {
 
     if (activePath === '/') {
       return (
-        <div className="flex flex-col gap-6">
-          {/* Status Bar Fase 12 */}
-          <div 
-            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3" 
-            style={{ 
-              backgroundColor: 'var(--color-primary-50)', 
-              padding: 'var(--space-3) var(--space-4)', 
-              borderRadius: 'var(--radius-md)', 
-              border: '1px solid var(--color-primary-200)' 
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={18} color="var(--color-primary-800)" />
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-900)', fontWeight: 'var(--font-weight-medium)' }}>
-                <strong>Fase 12 Selesai:</strong> Audit Keamanan IDOR, Sanitasi Upload, RBAC, Anti-Cheat & Aksesibilitas Terverifikasi.
-              </span>
-            </div>
-
-            <div className="flex gap-2 flex-wrap">
-              <Button 
-                variant="primary" 
-                size="sm" 
-                icon={ShieldCheck} 
-                onClick={() => {
-                  if (user?.role !== 'administrator_sistem' && user?.role !== 'admin_akademik') {
-                    switchRole('administrator_sistem');
-                  }
-                  setActivePath('/admin/keamanan');
-                }}
-              >
-                Pusat Keamanan & QA
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentView('khs_test')}>
-                Uji Modul KHS
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentView('krs_test')}>
-                Uji Modul KRS &amp; PA
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentView('announcement_test')}>
-                Uji Pengumuman
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentView('profile_test')}>
-                Uji Profil Mahasiswa
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentView('lecturer_profile_test')}>
-                Uji Profil Dosen
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentView('student_security_test')}>
-                Uji Keamanan Akun
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentView('security_test')}>
-                Uji Keamanan QA
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setCurrentView('showcase')}>
-                Katalog UI Kit
-              </Button>
-            </div>
-          </div>
-
-          <BerandaPage 
-            user={user} 
-            onNavigate={handleNavigate} 
-          />
-        </div>
+        <BerandaPage 
+          user={user} 
+          onNavigate={handleNavigate} 
+        />
       );
     }
 
@@ -1764,7 +1704,7 @@ function MainAppContent() {
           <CardBody style={{ textAlign: 'center', padding: 'var(--space-10)' }}>
             <h3 style={{ marginBottom: 'var(--space-2)' }}>Modul {activePath.replace('/', '').toUpperCase()}</h3>
             <p style={{ color: 'var(--text-muted)', maxWidth: '460px', margin: '0 auto var(--space-4)' }}>
-              Struktur data dan otorisasi untuk halaman ini telah siap. Fitur bisnis modul ini akan dibangun pada fase selanjutnya.
+              Halaman ini sedang dalam pemeliharaan atau pengembangan sistem. Silakan kembali ke beranda utama.
             </p>
             <Button variant="primary" onClick={() => handleNavigate('/')}>
               Kembali ke Beranda

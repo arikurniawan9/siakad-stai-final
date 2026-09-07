@@ -6,6 +6,7 @@ import {
   UpdateGradePayload 
 } from '../types/gradeAdmin';
 import { apiClient } from '../api/client';
+import { academicService } from './academicService';
 
 export class GradeAdminService {
   /**
@@ -16,16 +17,14 @@ export class GradeAdminService {
       return await apiClient.get<GradeSummaryStats>('/academic/grades/summary');
     } catch {
       return {
-        averageCampusScore: 88.85,
-        totalGradesRecorded: 10,
+        averageCampusScore: 89.95,
+        totalGradesRecorded: 1,
         passRatePercent: 100.0,
         gradeDistribution: [
-          { grade: 'A', count: 4 },
-          { grade: 'A-', count: 4 },
-          { grade: 'B+', count: 2 }
+          { grade: 'A', count: 1 }
         ],
-        totalClasses: 6,
-        publishedClasses: 5
+        totalClasses: 7,
+        publishedClasses: 1
       };
     }
   }
@@ -37,44 +36,25 @@ export class GradeAdminService {
     try {
       return await apiClient.get<ClassGradeSummary[]>('/academic/grades/classes');
     } catch {
-      return [
-        {
-          classId: 'cls-pai301-a',
-          className: 'Kelas A',
-          academicYear: '2026/2027 Ganjil',
-          courseCode: 'PAI-301',
-          courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah',
-          credits: 3,
-          studyProgramName: 'Pendidikan Agama Islam',
-          studyProgramCode: 'PAI',
-          lecturerName: 'Dr. H. M. Ridwan, M.Ag',
-          enrolledCount: 35,
-          gradedCount: 2,
-          averageScore: 93.52,
-          highestScore: 94.85,
-          lowestScore: 92.20,
-          status: 'DITERBITKAN',
-          publishedAt: '2026-08-17T09:00:00Z'
-        },
-        {
-          classId: 'cls-mpi101-a',
-          className: 'Kelas A',
-          academicYear: '2026/2027 Ganjil',
-          courseCode: 'MPI-101',
-          courseName: 'Dasar-Dasar Manajemen Pendidikan',
-          credits: 3,
-          studyProgramName: 'Manajemen Pendidikan Islam',
-          studyProgramCode: 'MPI',
-          lecturerName: 'Dr. KH. Dedi Supriyadi, M.Ag',
-          enrolledCount: 30,
-          gradedCount: 2,
-          averageScore: 91.07,
-          highestScore: 94.65,
-          lowestScore: 87.50,
-          status: 'DITERBITKAN',
-          publishedAt: '2026-08-17T09:00:00Z'
-        }
-      ];
+      const classes = academicService.getClasses();
+      return classes.map((c) => ({
+        classId: c.id,
+        className: c.className || c.section || 'Kelas A',
+        academicYear: c.academicPeriodName || 'Semester Ganjil 2026/2027',
+        courseCode: c.courseCode,
+        courseName: c.courseName,
+        credits: c.credits,
+        studyProgramName: c.studyProgramCode === 'PAI' ? 'Pendidikan Agama Islam' : c.studyProgramCode === 'PIAUD' ? 'Pendidikan Islam Anak Usia Dini' : 'Mata Kuliah Umum',
+        studyProgramCode: c.studyProgramCode,
+        lecturerName: c.lecturerName,
+        enrolledCount: c.studentCount || 1,
+        gradedCount: 1,
+        averageScore: 89.95,
+        highestScore: 89.95,
+        lowestScore: 89.95,
+        status: 'DITERBITKAN',
+        publishedAt: '2026-08-20T09:00:00Z'
+      }));
     }
   }
 
@@ -85,11 +65,30 @@ export class GradeAdminService {
     try {
       return await apiClient.get<StudentCourseGrade[]>(`/academic/grades/classes/${classId}/students`);
     } catch {
+      const members = academicService.getClassMembers(classId);
+      if (members.length > 0) {
+        return members.map((m) => ({
+          enrollmentId: m.id,
+          studentId: m.studentId,
+          studentName: m.studentName,
+          studentNim: m.studentNim,
+          studyProgramCode: 'PAI',
+          presenceScore: 92.0,
+          assignmentScore: 88.0,
+          quizScore: 90.0,
+          midtermScore: 88.0,
+          finalExamScore: 91.0,
+          finalScore: 89.95,
+          letterGrade: 'A',
+          gradePoint: 4.0,
+          status: 'DITERBITKAN'
+        }));
+      }
       return [
         {
-          enrollmentId: 'enr-01',
+          enrollmentId: 'enr-af-01',
           studentId: 'usr-mhs-01',
-          studentName: 'Ahmad Fauzi',
+          studentName: 'Ahmad Fauzi Rahman',
           studentNim: '21.01.0042',
           studyProgramCode: 'PAI',
           presenceScore: 95.0,
@@ -97,23 +96,7 @@ export class GradeAdminService {
           quizScore: 88.0,
           midtermScore: 92.0,
           finalExamScore: 94.0,
-          finalScore: 92.2,
-          letterGrade: 'A',
-          gradePoint: 4.0,
-          status: 'DITERBITKAN'
-        },
-        {
-          enrollmentId: 'enr-02',
-          studentId: 'usr-mhs-02',
-          studentName: 'Siti Fatimah Zahra',
-          studentNim: '22.01.0015',
-          studyProgramCode: 'PAI',
-          presenceScore: 100.0,
-          assignmentScore: 94.0,
-          quizScore: 95.0,
-          midtermScore: 92.0,
-          finalExamScore: 96.0,
-          finalScore: 94.85,
+          finalScore: 89.95,
           letterGrade: 'A',
           gradePoint: 4.0,
           status: 'DITERBITKAN'

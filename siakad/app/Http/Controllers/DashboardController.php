@@ -137,11 +137,75 @@ class DashboardController extends Controller
             } catch (\Throwable $e) {}
         }
 
+        // 4. DATA KHUSUS DOSEN & DOSEN PA
+        $lecturerClasses = [];
+        $lecturerStats = [];
+        if (in_array($role, ['dosen', 'dosen_pa', 'kaprodi'])) {
+            try {
+                $activePeriod = DB::table('academic_periods')->where('is_active', true)->first();
+                $periodId = $activePeriod?->id ?? 1;
+
+                $myClasses = DB::table('course_classes')
+                    ->join('courses', 'course_classes.course_id', '=', 'courses.id')
+                    ->join('class_lecturers', 'course_classes.id', '=', 'class_lecturers.course_class_id')
+                    ->leftJoin('class_schedules', 'course_classes.id', '=', 'class_schedules.course_class_id')
+                    ->leftJoin('rooms', 'class_schedules.room_id', '=', 'rooms.id')
+                    ->where('class_lecturers.lecturer_id', $user->id)
+                    ->where('course_classes.academic_period_id', $periodId)
+                    ->select(
+                        'course_classes.*',
+                        'courses.code as course_code',
+                        'courses.name as course_name',
+                        'courses.credits',
+                        'courses.semester_level',
+                        'rooms.name as room_name'
+                    )
+                    ->orderBy('courses.code', 'asc')
+                    ->get();
+
+                $classesWithSummary = $myClasses->map(function ($cls) {
+                    $enrolled = DB::table('class_enrollments')->where('course_class_id', $cls->id)->count();
+                    $grades = DB::table('course_grades')->where('course_class_id', $cls->id)->get();
+                    $graded = $grades->where('final_score', '>', 0)->count();
+                    $isLocked = $grades->where('is_locked', true)->count() > 0;
+                    $avgScore = $grades->avg('final_score') ?? 0;
+
+                    $cls->enrolled_count = $enrolled;
+                    $cls->graded_count = $graded;
+                    $cls->is_locked = $isLocked;
+                    $cls->avg_score = round($avgScore, 2);
+                    $cls->is_completed = ($enrolled > 0 && $graded >= $enrolled);
+                    return $cls;
+                });
+
+                $advisingCount = 0;
+                if ($role === 'dosen_pa' || $role === 'kaprodi') {
+                    $advisingCount = DB::table('users')
+                        ->where('role', 'mahasiswa')
+                        ->where('academic_advisor_id', $user->id)
+                        ->count();
+                }
+
+                $lecturerClasses = $classesWithSummary;
+                $lecturerStats = [
+                    'total_classes' => $classesWithSummary->count(),
+                    'total_credits' => (float)$classesWithSummary->sum('credits'),
+                    'total_students' => (int)$classesWithSummary->sum('enrolled_count'),
+                    'completed_classes' => $classesWithSummary->where('is_completed', true)->count(),
+                    'locked_classes' => $classesWithSummary->where('is_locked', true)->count(),
+                    'open_classes' => $classesWithSummary->where('is_locked', false)->count(),
+                    'advising_students' => $advisingCount,
+                ];
+            } catch (\Throwable $e) {}
+        }
+
         return Inertia::render('Dashboard', [
             'stats' => $stats,
             'systemMetrics' => $systemMetrics,
             'auditFeed' => $auditFeed,
             'recentBsiTransactions' => $recentBsiTransactions,
+            'lecturerClasses' => $lecturerClasses,
+            'lecturerStats' => $lecturerStats,
         ]);
     }
 }

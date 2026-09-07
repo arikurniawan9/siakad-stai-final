@@ -8,6 +8,7 @@ import {
   UpdateLecturerProfilePayload 
 } from '../types/lecturerProfile';
 import { UserAuthProfile } from '../types/auth';
+import { academicService } from './academicService';
 
 const STORAGE_KEY_LECTURER_PROFILE = 'salam_lecturer_full_profile';
 
@@ -145,75 +146,112 @@ class LecturerProfileService {
    * Mengambil data profil lengkap dosen pengampu sesuai akun yang login
    */
   public getProfile(user: UserAuthProfile): LecturerFullProfile {
+    let baseProfile: LecturerFullProfile | null = null;
+
     try {
       const raw = localStorage.getItem(`${STORAGE_KEY_LECTURER_PROFILE}_${user.id}`);
       if (raw) {
-        return JSON.parse(raw);
+        baseProfile = JSON.parse(raw);
       }
     } catch {
       // ignore
     }
 
-    // Cek apakah ada profil predefined untuk ID user
-    if (INITIAL_LECTURER_PROFILES[user.id]) {
-      return INITIAL_LECTURER_PROFILES[user.id];
+    if (!baseProfile) {
+      if (INITIAL_LECTURER_PROFILES[user.id]) {
+        baseProfile = { ...INITIAL_LECTURER_PROFILES[user.id] };
+      } else {
+        baseProfile = {
+          id: `prf-dsn-${user.id}`,
+          userId: user.id,
+          nidn: user.identityNumber || '2112087501',
+          nik: '3203011208750001',
+          name: user.name,
+          titleWithDegree: user.name,
+          arabicName: 'الأستاذ المحاضر',
+          email: user.email,
+          personalEmail: `${user.username}@gmail.com`,
+          phoneNumber: '0812-9988-7766',
+          birthPlace: 'Cianjur',
+          birthDate: '1980-01-01',
+          gender: 'LAKI_LAKI',
+          religion: 'Islam',
+          avatarUrl: user.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=250&auto=format&fit=crop&q=80',
+
+          streetAddress: 'Jl. Raya Bandung Km. 03, Bojong',
+          village: 'Bojong',
+          district: 'Karangtengah',
+          regency: 'Kabupaten Cianjur',
+          province: 'Jawa Barat',
+          postalCode: '43281',
+
+          faculty: user.studyProgram?.includes('Fakultas') ? user.studyProgram : 'Tarbiyah & Keguruan Islam',
+          studyProgram: user.studyProgram || 'Pendidikan Agama Islam (PAI)',
+          academicPosition: 'Lektor (300)',
+          rankAndGrade: 'Penata / III-c',
+          employmentStatus: 'DOSEN_TETAP',
+          isSerdos: true,
+          serdosNumber: `${user.identityNumber}-SERDOS`,
+
+          totalTeachingCredits: 12,
+          mentoredStudentsCount: 20,
+          thesisStudentsCount: 6,
+
+          teachingCourses: [
+            { code: 'PAI-301', name: 'Ushul Fiqih & Qawaid Fiqhiyyah', credits: 3, classes: ['Kelas A'], totalStudents: 36 }
+          ],
+
+          educationHistory: [
+            { degree: 'S1', degreeName: 'Sarjana Pendidikan Islam (S.Pd.I)', institution: 'UIN Bandung', graduationYear: '2002', major: 'Pendidikan Agama Islam' },
+            { degree: 'S2', degreeName: 'Magister Agama (M.Ag)', institution: 'UIN Jakarta', graduationYear: '2008', major: 'Studi Islam' }
+          ],
+
+          publications: [
+            { id: 'pub-def-01', title: 'Metode Pembelajaran Kitab Kuning di Era Transformasi Digital', type: 'JURNAL_NASIONAL', publisher: 'Jurnal STAI Al-Ittihad', year: '2024' }
+          ],
+
+          ktdVerificationCode: `KTD-STAI-ITD-${user.identityNumber}-AUTH`,
+          ktdValidUntil: '31 Agustus 2028'
+        };
+      }
     }
 
-    // Default template jika user adalah dosen lain yang login
-    const defaultProfile: LecturerFullProfile = {
-      id: `prf-dsn-${user.id}`,
-      userId: user.id,
-      nidn: user.identityNumber || '2112087501',
-      nik: '3203011208750001',
-      name: user.name,
-      titleWithDegree: user.name,
-      arabicName: 'الأستاذ المحاضر',
-      email: user.email,
-      personalEmail: `${user.username}@gmail.com`,
-      phoneNumber: '0812-9988-7766',
-      birthPlace: 'Cianjur',
-      birthDate: '1980-01-01',
-      gender: 'LAKI_LAKI',
-      religion: 'Islam',
-      avatarUrl: user.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=250&auto=format&fit=crop&q=80',
+    // Sinkronisasi dinamis Beban Mengajar Dosen dengan kelas riil SIAKAD
+    const classes = academicService.getClasses();
+    const myClasses = classes.filter(c =>
+      (user.identityNumber && c.lecturerNidn === user.identityNumber) ||
+      c.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
+      c.classLecturerName?.toLowerCase().includes(user.name.toLowerCase())
+    );
 
-      streetAddress: 'Jl. Raya Bandung Km. 03, Bojong',
-      village: 'Bojong',
-      district: 'Karangtengah',
-      regency: 'Kabupaten Cianjur',
-      province: 'Jawa Barat',
-      postalCode: '43281',
+    if (myClasses.length > 0) {
+      const courseMap = new Map<string, { code: string; name: string; credits: number; classes: string[]; totalStudents: number }>();
+      let totalCredits = 0;
+      for (const cls of myClasses) {
+        totalCredits += cls.credits;
+        const key = cls.courseCode;
+        const className = cls.className || cls.section || cls.name || 'Kelas A';
+        const existing = courseMap.get(key);
+        if (existing) {
+          if (!existing.classes.includes(className)) {
+            existing.classes.push(className);
+          }
+          existing.totalStudents += cls.studentCount || 0;
+        } else {
+          courseMap.set(key, {
+            code: cls.courseCode,
+            name: cls.courseName,
+            credits: cls.credits,
+            classes: [className],
+            totalStudents: cls.studentCount || 0
+          });
+        }
+      }
+      baseProfile.teachingCourses = Array.from(courseMap.values());
+      baseProfile.totalTeachingCredits = totalCredits;
+    }
 
-      faculty: user.studyProgram?.includes('Fakultas') ? user.studyProgram : 'Tarbiyah & Keguruan Islam',
-      studyProgram: user.studyProgram || 'Pendidikan Agama Islam (PAI)',
-      academicPosition: 'Lektor (300)',
-      rankAndGrade: 'Penata / III-c',
-      employmentStatus: 'DOSEN_TETAP',
-      isSerdos: true,
-      serdosNumber: `${user.identityNumber}-SERDOS`,
-
-      totalTeachingCredits: 12,
-      mentoredStudentsCount: 20,
-      thesisStudentsCount: 6,
-
-      teachingCourses: [
-        { code: 'PAI-301', name: 'Ushul Fiqih & Qawaid Fiqhiyyah', credits: 3, classes: ['Kelas A'], totalStudents: 36 }
-      ],
-
-      educationHistory: [
-        { degree: 'S1', degreeName: 'Sarjana Pendidikan Islam (S.Pd.I)', institution: 'UIN Bandung', graduationYear: '2002', major: 'Pendidikan Agama Islam' },
-        { degree: 'S2', degreeName: 'Magister Agama (M.Ag)', institution: 'UIN Jakarta', graduationYear: '2008', major: 'Studi Islam' }
-      ],
-
-      publications: [
-        { id: 'pub-def-01', title: 'Metode Pembelajaran Kitab Kuning di Era Transformasi Digital', type: 'JURNAL_NASIONAL', publisher: 'Jurnal STAI Al-Ittihad', year: '2024' }
-      ],
-
-      ktdVerificationCode: `KTD-STAI-ITD-${user.identityNumber}-AUTH`,
-      ktdValidUntil: '31 Agustus 2028'
-    };
-
-    return defaultProfile;
+    return baseProfile;
   }
 
   /**

@@ -473,7 +473,7 @@ class LearningService {
     try {
       const data = localStorage.getItem(RPS_KEY);
       const map = data ? JSON.parse(data) : INITIAL_RPS_MAP;
-      return map[classId] || INITIAL_RPS_MAP['cls-pai301-a'];
+      return map[classId] || (classId === 'cls-20261-pai301-a' ? map['cls-pai301-a'] : undefined) || INITIAL_RPS_MAP['cls-pai301-a'];
     } catch {
       return INITIAL_RPS_MAP['cls-pai301-a'];
     }
@@ -502,7 +502,38 @@ class LearningService {
   }
 
   public getMeetingsByClass(classId: string, isStudent = false): CourseMeeting[] {
-    const all = this.getMeetingsData().filter((m) => m.classId === classId);
+    let all = this.getMeetingsData().filter((m) => 
+      m.classId === classId || 
+      (classId === 'cls-20261-pai301-a' && m.classId === 'cls-pai301-a') ||
+      (classId === 'cls-pai301-a' && m.classId === 'cls-20261-pai301-a')
+    );
+
+    // Jika kelas belum memiliki data pertemuan, otomatis buatkan 14 sesi pertemuan perkuliahan semester
+    if (all.length === 0) {
+      const generated: CourseMeeting[] = Array.from({ length: 14 }, (_, idx) => {
+        const num = idx + 1;
+        const pad = num < 10 ? `0${num}` : `${num}`;
+        return {
+          id: `mtg-${classId}-${pad}`,
+          classId: classId,
+          meetingNumber: num,
+          title: `Pertemuan #${num}: Perkuliahan Sesi ${num}`,
+          topic: `Rencana Pembelajaran Semester (RPS) Pokok Bahasan Ke-${num}`,
+          description: `Kajian materi, pemaparan konsep, studi kasus terapan, dan evaluasi perkuliahan pertemuan ke-${num}.`,
+          scheduledDate: '2026-09-07',
+          startTime: '08:00',
+          endTime: '09:40',
+          orderIndex: num,
+          status: 'DITERBITKAN',
+          publishedAt: new Date().toISOString(),
+          materials: []
+        };
+      });
+      const current = this.getMeetingsData();
+      current.push(...generated);
+      this.saveMeetingsData(current);
+      all = generated;
+    }
     
     // Mahasiswa hanya dapat melihat pertemuan berstatus DITERBITKAN
     if (isStudent) {

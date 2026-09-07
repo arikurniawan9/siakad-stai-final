@@ -15,7 +15,9 @@ import {
   Send, 
   UserCheck, 
   UploadCloud,
-  X
+  X,
+  Layers,
+  ExternalLink
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardSubtitle, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -549,6 +551,48 @@ export const NilaiAdminPage: React.FC = () => {
             Segarkan Data
           </Button>
         </div>
+      </div>
+
+      {/* Banner Informasi Penyelarasan Nilai DPNA SIAKAD */}
+      <div 
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3.5 rounded-lg"
+        style={{
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          color: '#1e3a8a'
+        }}
+      >
+        <div className="flex items-start gap-2.5">
+          <Layers size={18} color="#1d4ed8" style={{ marginTop: '2px', flexShrink: 0 }} />
+          <div>
+            <span style={{ fontWeight: 'var(--font-weight-bold)', fontSize: 'var(--text-xs)', display: 'block' }}>
+              Input Lembar DPNA Resmi &amp; Penguncian Nilai (Grade Lock) di SALAM SIAKAD
+            </span>
+            <span style={{ fontSize: 'var(--text-xs)', color: '#2563eb' }}>
+              Pengisian nilai akhir resmi (DPNA), pembobotan nilai institusi, impor/ekspor Excel resmi, cetak PDF DPNA ber-barcode, dan penguncian nilai permanen diproses di portal <strong>SALAM SIAKAD</strong>. Modul LMS ini menyajikan rekapan nilai aktivitas perkuliahan daring.
+            </span>
+          </div>
+        </div>
+
+        <a
+          href="http://salam.stai-alittihad.ac.id/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-sm inline-flex items-center gap-1.5 flex-shrink-0"
+          style={{
+            backgroundColor: '#1d4ed8',
+            color: 'white',
+            fontWeight: 'var(--font-weight-semibold)',
+            fontSize: 'var(--text-xs)',
+            padding: '5px 12px',
+            borderRadius: 'var(--radius-md)',
+            textDecoration: 'none'
+          }}
+          title="Buka Modul Nilai DPNA di SALAM SIAKAD"
+        >
+          <ExternalLink size={13} />
+          <span>Buka DPNA SIAKAD</span>
+        </a>
       </div>
 
       {/* 2. Kartu Metrik Ringkasan (Executive Metric Cards) */}

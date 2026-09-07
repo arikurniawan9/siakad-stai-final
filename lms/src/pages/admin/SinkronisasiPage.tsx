@@ -6,7 +6,8 @@ import {
   Users, 
   CheckCircle2, 
   CheckCircle,
-  Play
+  Play,
+  ExternalLink
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardSubtitle, CardBody } from '../../components/ui/Card';
 import { Table, Column } from '../../components/ui/Table';
@@ -243,11 +244,22 @@ export const SinkronisasiPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1>Sinkronisasi Akademik & Manajemen Kelas</h1>
-          <p>Integrasi data master periode, prodi, kurikulum, mata kuliah, dan kelas perkuliahan SALAM</p>
+          <h1>Sinkronisasi Data SIAKAD &amp; Manajemen Kelas Daring</h1>
+          <p>Jembatan integrasi data master dari SALAM SIAKAD (Mahasiswa, Dosen, Kurikulum, &amp; Jadwal) ke platform LMS STAI Al-Ittihad</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href="http://salam.stai-alittihad.ac.id/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-outline inline-flex items-center gap-1.5"
+            style={{ textDecoration: 'none' }}
+            title="Buka Portal SALAM SIAKAD"
+          >
+            <ExternalLink size={15} />
+            <span>Portal SIAKAD</span>
+          </a>
           <Button 
             variant="primary" 
             icon={RefreshCw} 

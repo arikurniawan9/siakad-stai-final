@@ -8,6 +8,9 @@ export interface NavItem {
   icon: LucideIcon;
   badge?: string | number;
   roles?: UserRole[];
+  isExternal?: boolean;
+  externalUrl?: string;
+  description?: string;
 }
 
 export interface NavGroup {

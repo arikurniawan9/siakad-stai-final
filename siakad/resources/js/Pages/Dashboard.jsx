@@ -10,10 +10,17 @@ import {
     HardDrive, Cpu, Radio, ShieldCheck, Database,
     Server, Terminal, AlertOctagon, Check, Play,
     Megaphone, TrendingUp, Award, FileCheck, Sliders, Send, Key, Landmark,
-    UserCheck2, ShieldAlert, Settings
+    UserCheck2, ShieldAlert, Settings, FileSpreadsheet, Printer, Download, Lock, Unlock, ArrowRight
 } from 'lucide-react';
 
-export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = [], recentBsiTransactions = [] }) {
+export default function Dashboard({ 
+    stats = {}, 
+    systemMetrics = {}, 
+    auditFeed = [], 
+    recentBsiTransactions = [],
+    lecturerClasses = [],
+    lecturerStats = {}
+}) {
     const { auth, academic } = usePage().props;
     const user = auth?.user || {};
     const role = user.role || 'mahasiswa';
@@ -1050,9 +1057,221 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                 )}
 
                 {/* ========================================================================= */}
-                {/* 4. KHUSUS ROLE LAINNYA */}
+                {/* 4. KHUSUS DOSEN & DOSEN PA (PORTAL AKADEMIK DOSEN) */}
                 {/* ========================================================================= */}
-                {(role === 'keuangan' || role === 'kaprodi' || role === 'dosen' || role === 'dosen_pa') && (
+                {(role === 'dosen' || role === 'dosen_pa') && (
+                    <div className="space-y-4">
+                        {/* Header Banner Dosen */}
+                        <div className="bg-gradient-to-r from-teal-950 via-slate-900 to-slate-900 rounded-2xl p-4 sm:p-5 text-white shadow-md border border-teal-800/40">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                <div>
+                                    <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 text-[10px] font-black mb-1">
+                                        <Award className="w-3 h-3 text-teal-400" />
+                                        <span>PORTAL DOSEN PENGAMPU {role === 'dosen_pa' ? '& PEMBIMBING AKADEMIK (PA)' : ''}</span>
+                                    </div>
+                                    <h2 className="text-base sm:text-lg font-black tracking-tight">
+                                        {greeting.text}, {user.name} {greeting.emoji}
+                                    </h2>
+                                    <p className="text-[11px] text-teal-200 mt-0.5">
+                                        NIDN: <span className="font-mono font-bold text-white">{user.identity_number || '-'}</span> • {user.study_program || 'STAI Al-Ittihad Cianjur'}
+                                    </p>
+                                    <p className="text-[11px] text-slate-300 mt-1 italic max-w-xl">
+                                        "{quote.text}" — <span className="font-semibold text-teal-300">{quote.author}</span>
+                                    </p>
+                                </div>
+
+                                {academic?.active_period && (
+                                    <div className="bg-white/10 rounded-xl p-3 border border-white/10 text-left shrink-0">
+                                        <p className="text-[9px] text-teal-300 uppercase font-bold">Semester Aktif</p>
+                                        <p className="text-xs font-extrabold text-white">{academic.active_period.name}</p>
+                                        <p className="text-[10px] text-emerald-300 mt-0.5">Sync Penilaian Terbuka</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 4 Stat Cards Dosen */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Kelas Mengajar</span>
+                                <p className="text-base sm:text-lg font-black text-slate-900 mt-1">{lecturerStats.total_classes || 0} Kelas</p>
+                                <p className="text-[10px] text-emerald-600 font-semibold">{lecturerStats.total_credits || 0} Total SKS</p>
+                            </div>
+                            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Mahasiswa Diajar</span>
+                                <p className="text-base sm:text-lg font-black text-slate-900 mt-1">{lecturerStats.total_students || 0} Mahasiswa</p>
+                                <p className="text-[10px] text-blue-600 font-semibold">Aktif Terdaftar</p>
+                            </div>
+                            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">Status Input DPNA</span>
+                                <p className="text-base sm:text-lg font-black text-emerald-700 mt-1">
+                                    {lecturerStats.completed_classes || 0} Selesai
+                                </p>
+                                <p className="text-[10px] text-amber-600 font-semibold">
+                                    {lecturerStats.open_classes || 0} Kelas Belum Lengkap
+                                </p>
+                            </div>
+                            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase">
+                                    {role === 'dosen_pa' ? 'Mahasiswa Bimbingan' : 'Nilai Terkunci'}
+                                </span>
+                                <p className="text-base sm:text-lg font-black text-purple-700 mt-1">
+                                    {role === 'dosen_pa' 
+                                        ? `${lecturerStats.advising_students || 0} Mahasiswa` 
+                                        : `${lecturerStats.locked_classes || 0} Kelas (Lock)`}
+                                </p>
+                                <p className="text-[10px] text-purple-600 font-semibold">
+                                    {role === 'dosen_pa' ? 'Perwalian Aktif' : 'DPNA Resmi'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* DAFTAR MATA KULIAH & KELAS YANG DIAMPU */}
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4 sm:p-5 space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
+                                <div>
+                                    <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase flex items-center space-x-2">
+                                        <BookOpen className="w-4 h-4 text-emerald-600" />
+                                        <span>Mata Kuliah & Kelas yang Diampu Semester Ini</span>
+                                    </h3>
+                                    <p className="text-[11px] text-slate-500">
+                                        Menampilkan seluruh mata kuliah yang Anda ampu beserta status pengisian lembar nilai DPNA.
+                                    </p>
+                                </div>
+                                <Link 
+                                    href="/admin/grades"
+                                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center space-x-1"
+                                >
+                                    <span>Buka Semua di Modul Penilaian</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
+
+                            {lecturerClasses.length === 0 ? (
+                                <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                                    <Award className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
+                                    <p className="text-xs font-bold text-slate-600">Belum ada kelas perkuliahan yang ditugaskan.</p>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">Hubungi BAAK jika Anda telah ditugaskan mengampu mata kuliah pada semester ini.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {lecturerClasses.map((cls) => (
+                                        <div 
+                                            key={cls.id}
+                                            className="p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-emerald-300 hover:shadow-xs transition flex flex-col md:flex-row md:items-center justify-between gap-3"
+                                        >
+                                            {/* Info MK & Kelas */}
+                                            <div className="space-y-1">
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                        {cls.course_code}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-800">
+                                                        Kelas {cls.name}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                                                        {cls.credits} SKS
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-500">
+                                                        Semester {cls.semester_level || 1}
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-sm font-black text-slate-900">
+                                                    {cls.course_name}
+                                                </h4>
+                                                <p className="text-[11px] text-slate-500 flex items-center space-x-2">
+                                                    <span>🏛️ {cls.room_name || 'Ruang Kuliah'}</span>
+                                                    <span>•</span>
+                                                    <span>👥 <strong>{cls.enrolled_count}</strong> Mahasiswa Terdaftar</span>
+                                                </p>
+                                            </div>
+
+                                            {/* Status Nilai DPNA */}
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {cls.is_locked ? (
+                                                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                        <Lock className="w-3 h-3" />
+                                                        <span>DPNA Terkunci</span>
+                                                    </span>
+                                                ) : cls.is_completed ? (
+                                                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-300">
+                                                        <CheckCircle2 className="w-3 h-3" />
+                                                        <span>Nilai Lengkap</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                                                        <Clock className="w-3 h-3" />
+                                                        <span>{cls.graded_count}/{cls.enrolled_count} Terinput</span>
+                                                    </span>
+                                                )}
+
+                                                <div className="flex items-center space-x-1.5 ml-auto md:ml-0">
+                                                    <Link
+                                                        href={`/admin/grades/${cls.id}`}
+                                                        className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-xs"
+                                                    >
+                                                        <Award className="w-3.5 h-3.5" />
+                                                        <span>Input Nilai DPNA</span>
+                                                    </Link>
+
+                                                    <a
+                                                        href={`/admin/grades/${cls.id}/export-excel`}
+                                                        download
+                                                        title="Ekspor DPNA ke Excel (.xls)"
+                                                        className="p-1.5 bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg transition"
+                                                    >
+                                                        <FileSpreadsheet className="w-4 h-4" />
+                                                    </a>
+
+                                                    <a
+                                                        href={`/admin/grades/${cls.id}/export-pdf`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        title="Cetak DPNA Resmi (PDF)"
+                                                        className="p-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg transition"
+                                                    >
+                                                        <Printer className="w-4 h-4" />
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* PINTASAN CEPAT MENU DOSEN */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                            <Link href="/admin/grades" className="p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl transition text-left space-y-1">
+                                <Award className="w-5 h-5 text-emerald-600" />
+                                <p className="text-xs font-black text-slate-900">Modul DPNA</p>
+                                <p className="text-[10px] text-slate-500">Lembar Penilaian</p>
+                            </Link>
+                            {role === 'dosen_pa' && (
+                                <Link href="/admin/academic-advising" className="p-3 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl transition text-left space-y-1">
+                                    <UserCheck2 className="w-5 h-5 text-blue-600" />
+                                    <p className="text-xs font-black text-slate-900">Bimbingan PA</p>
+                                    <p className="text-[10px] text-slate-500">Persetujuan KRS</p>
+                                </Link>
+                            )}
+                            <Link href="/admin/schedules" className="p-3 bg-white hover:bg-purple-50 border border-slate-200 rounded-xl transition text-left space-y-1">
+                                <Clock className="w-5 h-5 text-purple-600" />
+                                <p className="text-xs font-black text-slate-900">Jadwal Kuliah</p>
+                                <p className="text-[10px] text-slate-500">Waktu & Ruangan</p>
+                            </Link>
+                            <a href="https://lms.stai-alittihad.ac.id" target="_blank" rel="noreferrer" className="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition text-left space-y-1">
+                                <GraduationCap className="w-5 h-5 text-emerald-700" />
+                                <p className="text-xs font-black text-emerald-900">SALAM LMS</p>
+                                <p className="text-[10px] text-emerald-700">E-Learning Kampus</p>
+                            </a>
+                        </div>
+                    </div>
+                )}
+
+                {/* ========================================================================= */}
+                {/* 5. KHUSUS KEUANGAN & KAPRODI */}
+                {/* ========================================================================= */}
+                {(role === 'keuangan' || role === 'kaprodi') && (
                     <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
                         <div>
                             <h3 className="text-sm font-black text-slate-900">
@@ -1062,14 +1281,17 @@ export default function Dashboard({ stats = {}, systemMetrics = {}, auditFeed = 
                                 "{quote.text}" — <span className="font-semibold text-slate-700">{quote.author}</span>
                             </p>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                            <Link href="/admin/grades" className="p-3 bg-slate-50 hover:bg-emerald-50 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-800">
+                                🎖️ Penilaian DPNA
+                            </Link>
                             <Link href="/admin/curricula" className="p-3 bg-slate-50 hover:bg-emerald-50 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-800">
                                 📚 Kurikulum
                             </Link>
                             <Link href="/admin/facilities" className="p-3 bg-slate-50 hover:bg-emerald-50 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-800">
                                 🏛️ Gedung & Ruang
                             </Link>
-                            <a href="/sso/lms" target="_blank" rel="noreferrer" className="p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 text-[11px] font-bold text-center transition">
+                            <a href="https://lms.stai-alittihad.ac.id" target="_blank" rel="noreferrer" className="p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 text-[11px] font-bold text-center transition">
                                 💻 SALAM LMS
                             </a>
                         </div>

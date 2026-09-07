@@ -140,11 +140,33 @@ export const PresensiPerkuliahanPage: React.FC = () => {
   }, [user]);
 
   const loadClasses = () => {
-    const clsList = academicService.getClasses();
-    setClasses(clsList);
-    if (clsList.length > 0 && !selectedClassId) {
-      setSelectedClassId(clsList[0].id);
-    }
+    const applyFiltered = (clsList: any[]) => {
+      let filtered = clsList;
+      if (isLecturer && user) {
+        const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+        const myClasses = clsList.filter((c) => {
+          const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
+          const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
+          const matchId = c.lecturerId === user.id;
+          const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
+          return matchNidn || matchId || matchName;
+        });
+        if (myClasses.length > 0) {
+          filtered = myClasses;
+        }
+      }
+      setClasses(filtered);
+      if (filtered.length > 0 && (!selectedClassId || !filtered.some(c => c.id === selectedClassId))) {
+        setSelectedClassId(filtered[0].id);
+      }
+    };
+
+    applyFiltered(academicService.getClasses());
+    academicService.fetchClassesFromBackend().then(backendClasses => {
+      if (backendClasses && backendClasses.length > 0) {
+        applyFiltered(backendClasses);
+      }
+    }).catch(() => {});
   };
 
   const loadStudentHistory = async () => {

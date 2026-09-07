@@ -56,12 +56,14 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
   const [selectedScheduleDetail, setSelectedScheduleDetail] = useState<StudentScheduleItem | null>(null);
   const [printPreviewModal, setPrintPreviewModal] = useState<boolean>(false);
 
+  const isLecturer = user?.role === 'dosen' || user?.role === 'dosen_pa';
+
   // Load data
   useEffect(() => {
     const studentId = user?.id || 'usr-mhs-01';
-    const sumData = studentScheduleService.getScheduleSummary(studentId);
-    const tableData = studentScheduleService.getWeeklyTimetable(studentId);
-    const rawSchedules = studentScheduleService.getStudentSchedules(studentId);
+    const sumData = studentScheduleService.getScheduleSummary(studentId, user?.role, user?.identityNumber, user?.name);
+    const tableData = studentScheduleService.getWeeklyTimetable(studentId, user?.role, user?.identityNumber, user?.name);
+    const rawSchedules = studentScheduleService.getStudentSchedules(studentId, user?.role, user?.identityNumber, user?.name);
     setSummary(sumData);
     setTimetableDays(tableData);
     setAllSchedules(rawSchedules);
@@ -155,13 +157,15 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
           <div className="flex items-center gap-2 flex-wrap" style={{ marginBottom: 'var(--space-1)' }}>
             <Badge variant="primary">Semester Ganjil 2026/2027</Badge>
             <Badge variant="default">Tahun Akademik 2026/2027</Badge>
-            <Badge variant="success">Status: Aktif Kuliah</Badge>
+            <Badge variant="success">Status: {isLecturer ? 'Dosen Aktif Mengajar' : 'Aktif Kuliah'}</Badge>
           </div>
           <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)' }}>
-            {KAMUS_UI.JADWAL_KULIAH} Mahasiswa
+            {isLecturer ? 'Jadwal Mengajar Dosen' : `${KAMUS_UI.JADWAL_KULIAH} Mahasiswa`}
           </h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
-            Jadwal waktu, alokasi ruangan, dosen pengampu, dan akses pembelajaran LMS STAI AL-ITTIHAD.
+            {isLecturer 
+              ? 'Jadwal tatap muka perkuliahan, alokasi ruang kelas, dan rombel bimbingan STAI AL-ITTIHAD.' 
+              : 'Jadwal waktu, alokasi ruangan, dosen pengampu, dan akses pembelajaran LMS STAI AL-ITTIHAD.'}
           </p>
         </div>
 

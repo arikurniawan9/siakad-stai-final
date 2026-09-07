@@ -12,11 +12,11 @@ const PARTICIPATION_STORAGE_KEY = 'salam_forum_participations';
 export const INITIAL_THREADS: DiscussionThread[] = [
   {
     id: 'thr-01',
-    classId: 'cls-pai301-a',
+    classId: 'cls-20261-pai301-a',
     meetingId: 'mtg-pai301a-01',
-    courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah',
+    courseName: 'Fiqih Mawaris',
     meetingNumber: 1,
-    title: 'Diskusi Sesi 1: Relevansi Kaidah Ushul Fiqih dalam Merespon Isu AI & Finansial',
+    title: 'Diskusi Sesi 1: Relevansi Kaidah Fiqih Mawaris dalam Sengketa Waris Kontemporer',
     content: 'Assalamu\'alaikum wr. wb. Mahasiswa sekalian, silakan sampaikan pandangan Anda mengenai bagaimana metodologi ushul fiqih klasik (seperti istihsan dan maslahah mursalah) mendudukkan keabsahan transaksi otomatis berbasis Artificial Intelligence (AI) dan Smart Contract.',
     authorId: 'usr-dsn-01',
     authorName: 'Dr. H. M. Ridwan, M.Ag',
@@ -111,7 +111,11 @@ class ForumService {
       const raw = localStorage.getItem(THREADS_STORAGE_KEY);
       let list: DiscussionThread[] = raw ? JSON.parse(raw) : INITIAL_THREADS;
       if (classId) {
-        list = list.filter((t) => t.classId === classId);
+        list = list.filter((t) => 
+          t.classId === classId || 
+          (classId === 'cls-20261-pai301-a' && t.classId === 'cls-pai301-a') ||
+          (classId === 'cls-pai301-a' && t.classId === 'cls-20261-pai301-a')
+        );
       }
       if (meetingId) {
         list = list.filter((t) => t.meetingId === meetingId);

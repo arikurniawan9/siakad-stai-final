@@ -14,7 +14,8 @@ import {
   BarChart3, 
   GraduationCap, 
   MessageSquare,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardSubtitle, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -352,6 +353,48 @@ export const KhsMahasiswaPage: React.FC<KhsMahasiswaPageProps> = ({
             </Button>
           )}
         </div>
+      </div>
+
+      {/* Banner Integrasi SIAKAD */}
+      <div 
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3.5 rounded-lg"
+        style={{
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          color: '#1e3a8a'
+        }}
+      >
+        <div className="flex items-start gap-2.5">
+          <Layers size={18} color="#1d4ed8" style={{ marginTop: '2px', flexShrink: 0 }} />
+          <div>
+            <span style={{ fontWeight: 'var(--font-weight-bold)', fontSize: 'var(--text-xs)', display: 'block' }}>
+              Penerbitan KHS Resmi &amp; Transkrip Akademik di SALAM SIAKAD
+            </span>
+            <span style={{ fontSize: 'var(--text-xs)', color: '#2563eb' }}>
+              Kartu Hasil Studi resmi ber-barcode, pengesahan digital Ketua Prodi, dan transkrip akademik resmi diterbitkan melalui portal <strong>SALAM SIAKAD</strong>. Data nilai pada LMS menampilkan rekapan hasil aktivitas perkuliahan daring.
+            </span>
+          </div>
+        </div>
+
+        <a
+          href="http://salam.stai-alittihad.ac.id/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-sm inline-flex items-center gap-1.5 flex-shrink-0"
+          style={{
+            backgroundColor: '#1d4ed8',
+            color: 'white',
+            fontWeight: 'var(--font-weight-semibold)',
+            fontSize: 'var(--text-xs)',
+            padding: '5px 12px',
+            borderRadius: 'var(--radius-md)',
+            textDecoration: 'none'
+          }}
+          title="Buka Portal SALAM SIAKAD"
+        >
+          <ExternalLink size={13} />
+          <span>Buka di SIAKAD</span>
+        </a>
       </div>
 
       {/* 2. Kartu Rangkuman Prestasi Akademik (Scorecards) */}

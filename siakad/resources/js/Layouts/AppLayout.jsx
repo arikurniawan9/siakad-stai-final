@@ -482,18 +482,35 @@ export default function AppLayout({ title, children }) {
                 { label: 'Data Kuisioner', href: '/admin/edom', icon: Star },
             ];
         }
-        if (role === 'dosen_pa' || role === 'dosen') {
+        if (role === 'dosen') {
             return [
                 { label: 'Dasbor Dosen', href: '/dashboard', icon: LayoutDashboard },
+                { header: 'PERKULIAHAN & PENILAIAN' },
+                { label: 'Penilaian (DPNA)', href: '/admin/grades', icon: Award, highlight: true },
+                { label: 'Jadwal Kuliah', href: '/admin/schedules', icon: School },
                 { header: 'STRUKTUR KURIKULUM' },
                 { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
                 { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
                 { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
-                { header: 'AKADEMIK & BIMBINGAN' },
+                { header: 'EVALUASI MUTU' },
+                { label: 'Hasil Evaluasi EDOM', href: '/admin/edom', icon: Star },
+            ];
+        }
+        if (role === 'dosen_pa') {
+            return [
+                { label: 'Dasbor Dosen PA', href: '/dashboard', icon: LayoutDashboard },
+                { header: 'BIMBINGAN & PERWALIAN' },
                 { label: 'Bimbingan Akademik (Wali)', href: '/admin/academic-advising', icon: UserCheck },
                 { label: 'Rencana Studi (KRS)', href: '/admin/krs-approval', icon: BookOpen },
                 { label: 'Paket KRS Massal', href: '/admin/krs-approval/package', icon: Zap },
-                { label: 'Penilaian (DPNA)', href: '/admin/grades', icon: Award },
+                { header: 'PERKULIAHAN & PENILAIAN' },
+                { label: 'Penilaian (DPNA)', href: '/admin/grades', icon: Award, highlight: true },
+                { label: 'Jadwal Kuliah', href: '/admin/schedules', icon: School },
+                { header: 'STRUKTUR KURIKULUM' },
+                { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
+                { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
+                { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
+                { header: 'EVALUASI MUTU' },
                 { label: 'Hasil Evaluasi EDOM', href: '/admin/edom', icon: Star },
             ];
         }

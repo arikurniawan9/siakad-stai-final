@@ -119,11 +119,11 @@ export const INITIAL_BANK_QUESTIONS: BankQuestion[] = [
 export const INITIAL_QUIZZES: Quiz[] = [
   {
     id: 'qz-pai301-01',
-    classId: 'cls-pai301-a',
+    classId: 'cls-20261-pai301-a',
     meetingId: 'mtg-pai301a-02',
-    courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah',
+    courseName: 'Fiqih Mawaris',
     meetingNumber: 2,
-    title: 'Kuis Evaluasi Sesi 2: Kaidah Lughawiyah & Sumber Hukum',
+    title: 'Kuis Evaluasi Sesi 2: Kaidah Kewarisan & Ashabah',
     description: 'Kuis pemahaman konsep hukum syar\'i, kaidah kebahasaan, dan metodologi ijtihad ushuliyah.',
     instructions: '1. Kuis terdiri dari 5 butir soal (Pilihan Ganda 5 Opsi A-E, Benar/Salah, Isian Singkat, dan Esai).\n2. Dilengkapi teks ayat/hadits berbahasa Arab dan gambar referensi.\n3. Waktu pengerjaan adalah 30 menit.',
     durationMinutes: 30,
@@ -230,7 +230,11 @@ class QuizService {
       const raw = localStorage.getItem(QUIZZES_STORAGE_KEY);
       let list: Quiz[] = raw ? JSON.parse(raw) : INITIAL_QUIZZES;
       if (classId) {
-        list = list.filter((q) => q.classId === classId);
+        list = list.filter((q) => 
+          q.classId === classId || 
+          (classId === 'cls-20261-pai301-a' && q.classId === 'cls-pai301-a') ||
+          (classId === 'cls-pai301-a' && q.classId === 'cls-20261-pai301-a')
+        );
       }
       if (isStudent) {
         list = list.filter((q) => q.status === 'DITERBITKAN');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, PanelLeftClose } from 'lucide-react';
+import { LogOut, PanelLeftClose, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getNavigationByRole } from '../../constants/navigation';
 import { KAMUS_UI } from '../../constants/dictionary';
@@ -60,8 +60,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             {!isCollapsed && (
               <div className="sidebar-brand-text">
-                <div className="sidebar-brand-title">SALAM</div>
-                <div className="sidebar-brand-subtitle">STAI AL-ITTIHAD</div>
+                <div className="sidebar-brand-title">SALAM LMS</div>
+                <div className="sidebar-brand-subtitle">PEMBELAJARAN DARING</div>
               </div>
             )}
           </div>
@@ -100,7 +100,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         className={`nav-link ${isActive ? 'active' : ''}`}
                         onClick={() => {
-                          onNavigate(item.path);
+                          if (item.isExternal && item.externalUrl) {
+                            window.open(item.externalUrl, '_blank', 'noopener,noreferrer');
+                          } else {
+                            onNavigate(item.path);
+                          }
                           onClose();
                         }}
                         title={isCollapsed ? item.label : undefined}
@@ -131,6 +135,58 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           ))}
         </nav>
+
+        {/* Quick Link Bridge ke SALAM SIAKAD */}
+        {!isCollapsed ? (
+          <div style={{ padding: '8px 12px', margin: '0 8px 8px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-50)', border: '1px solid var(--color-primary-200)' }}>
+            <a
+              href="http://salam.stai-alittihad.ac.id/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                color: 'var(--color-primary-900)',
+                textDecoration: 'none',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--font-weight-semibold)'
+              }}
+              title="Akses Sistem Informasi Akademik Resmi (KRS, KHS, Tagihan, DPNA)"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ExternalLink size={14} color="var(--color-primary-700)" />
+                <span>Portal SALAM SIAKAD</span>
+              </div>
+              <span style={{ fontSize: '10px', backgroundColor: 'var(--color-primary-200)', color: 'var(--color-primary-900)', padding: '1px 5px', borderRadius: '4px' }}>
+                Resmi
+              </span>
+            </a>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+            <a
+              href="http://salam.stai-alittihad.ac.id/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                width: '38px',
+                height: '38px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--color-primary-50)',
+                color: 'var(--color-primary-800)',
+                textDecoration: 'none',
+                border: '1px solid var(--color-primary-200)'
+              }}
+              title="Buka Portal SALAM SIAKAD (Resmi)"
+            >
+              <ExternalLink size={16} />
+            </a>
+          </div>
+        )}
 
         {/* Sidebar Footer / Logout */}
         <div className="sidebar-footer">

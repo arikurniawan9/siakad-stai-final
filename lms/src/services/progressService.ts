@@ -11,6 +11,7 @@ import { quizService } from './quizService';
 import { assignmentService } from './assignmentService';
 import { forumService } from './forumService';
 import { auditService } from './auditService';
+import { academicService } from './academicService';
 
 const MANUAL_PROGRESS_STORAGE_KEY = 'salam_manual_activity_progress';
 
@@ -297,7 +298,56 @@ class ProgressService {
     studentNim: string,
     studentName: string
   ): CourseProgressSummary {
-    const activities = CLASS_ACTIVITIES.filter((a) => a.classId === classId);
+    const targetClass = academicService.getClassById(classId);
+    let activities = CLASS_ACTIVITIES.filter((a) => 
+      a.classId === classId || 
+      (classId === 'cls-20261-pai301-a' && a.classId === 'cls-pai301-a') ||
+      (classId === 'cls-pai301-a' && a.classId === 'cls-20261-pai301-a')
+    );
+
+    // Jika aktivitas belum dikonfigurasi khusus, sediakan aktivitas standar per pertemuan
+    if (activities.length === 0) {
+      const courseTitle = targetClass ? `${targetClass.courseCode} - ${targetClass.courseName}` : 'Mata Kuliah';
+      activities = [
+        {
+          id: `act-${classId}-01`,
+          classId,
+          meetingId: `mtg-${classId}-01`,
+          meetingNumber: 1,
+          courseName: courseTitle,
+          title: 'Materi RPS & Kontrak Perkuliahan',
+          type: 'MATERI',
+          resourceId: `mat-${classId}-01`,
+          isMandatory: true,
+          rule: { type: 'MATERI', allowManualOverride: true }
+        },
+        {
+          id: `act-${classId}-02`,
+          classId,
+          meetingId: `mtg-${classId}-01`,
+          meetingNumber: 1,
+          courseName: courseTitle,
+          title: 'Forum Diskusi Pengantar Kuliah',
+          type: 'FORUM_DISKUSI',
+          resourceId: `thr-${classId}-01`,
+          isMandatory: true,
+          rule: { type: 'FORUM_DISKUSI', requiresDiscussionPost: true }
+        },
+        {
+          id: `act-${classId}-03`,
+          classId,
+          meetingId: `mtg-${classId}-02`,
+          meetingNumber: 2,
+          courseName: courseTitle,
+          title: 'Tugas Makalah / Analisis Studi Kasus',
+          type: 'TUGAS',
+          resourceId: `asg-${classId}-01`,
+          isMandatory: true,
+          rule: { type: 'TUGAS', requiresSubmission: true }
+        }
+      ];
+    }
+
     const meetingMap: Record<number, LearningActivityItem[]> = {};
 
     activities.forEach((act) => {
@@ -320,9 +370,9 @@ class ProgressService {
       const pct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
 
       return {
-        meetingId: `mtg-pai301a-0${mtgNum}`,
+        meetingId: `mtg-${classId}-0${mtgNum}`,
         meetingNumber: mtgNum,
-        title: `Pertemuan ${mtgNum}: ${mtgNum === 1 ? 'Pengantar Ushul Fiqih' : mtgNum === 2 ? 'Kaidah Lughawiyah' : 'Sumber Hukum & Fatwa DSN'}`,
+        title: `Pertemuan ${mtgNum}: Sesi Perkuliahan ${mtgNum}`,
         totalActivities: total,
         completedActivities: completedCount,
         progressPercentage: pct,
@@ -349,8 +399,8 @@ class ProgressService {
 
     return {
       classId,
-      courseCode: 'PAI-301',
-      courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah (Kelas A)',
+      courseCode: targetClass ? targetClass.courseCode : 'PAI-301',
+      courseName: targetClass ? `${targetClass.courseName} (${targetClass.className || targetClass.section || 'Kelas A'})` : 'Ushul Fiqih & Qawaid Fiqhiyyah (Kelas A)',
       studentId,
       studentNim,
       studentName,
@@ -366,13 +416,12 @@ class ProgressService {
    * HITUNG RINGKASAN KELAS KESELURUHAN UNTUK DOSEN
    */
   public getClassProgressList(classId: string): StudentClassProgressSummary[] {
-    const students = [
-      { id: 'usr-mhs-01', nim: '21.01.0042', name: 'Ahmad Fauzi' },
-      { id: 'usr-mhs-02', nim: '21.01.0043', name: 'Siti Nurhaliza' },
-      { id: 'usr-mhs-03', nim: '21.01.0044', name: 'Muhammad Rizki' },
-      { id: 'usr-mhs-04', nim: '21.01.0045', name: 'Dewi Lestari' },
-      { id: 'usr-mhs-05', nim: '21.01.0046', name: 'Bambang Sudarsono' },
-    ];
+    const members = academicService.getClassMembers(classId);
+    const students = members.length > 0 
+      ? members.map(m => ({ id: m.studentId, nim: m.studentNim, name: m.studentName }))
+      : [
+          { id: 'usr-mhs-01', nim: '21.01.0042', name: 'Ahmad Fauzi Rahman' }
+        ];
 
     return students.map((s) => {
       const prog = this.getCourseProgress(classId, s.id, s.nim, s.name);
@@ -388,7 +437,7 @@ class ProgressService {
         completedActivities: prog.completedActivities,
         overallPercentage: prog.overallPercentage,
         status,
-        lastActiveAt: '2026-09-02T10:00:00Z'
+        lastActiveAt: new Date().toISOString()
       };
     });
   }

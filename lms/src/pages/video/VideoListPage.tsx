@@ -14,6 +14,7 @@ import { Select } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
 import { InteractiveVideo } from '../../types/video';
 import { videoService } from '../../services/videoService';
+import { academicService, AcademicClass } from '../../services/academicService';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/feedback/ToastContext';
 import { KAMUS_UI } from '../../constants/dictionary';
@@ -31,8 +32,25 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
   // Create Video Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newCourseName, setNewCourseName] = useState('Ushul Fiqih & Qawaid Fiqhiyyah');
-  const [newClassId, setNewClassId] = useState('cls-pai301-a');
+  const isStudent = user?.role === 'mahasiswa';
+  const isLecturer = user?.role === 'dosen' || user?.role === 'dosen_pa' || user?.role === 'kaprodi' || user?.role === 'administrator_sistem';
+
+  const [availableClasses, setAvailableClasses] = useState<AcademicClass[]>(() => {
+    const all = academicService.getClasses();
+    if (!isLecturer || !user) return all;
+    const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+    const filtered = all.filter((c) => {
+      const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
+      const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
+      const matchId = c.lecturerId === user.id;
+      const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
+      return matchNidn || matchId || matchName;
+    });
+    return filtered.length > 0 ? filtered : all;
+  });
+
+  const [newCourseName, setNewCourseName] = useState(() => availableClasses[0]?.courseName || 'Fiqih Mawaris');
+  const [newClassId, setNewClassId] = useState(() => availableClasses[0]?.id || 'cls-20261-pai301-a');
   const [newMeetingNumber, setNewMeetingNumber] = useState(1);
   const [newDescription, setNewDescription] = useState('');
   const [newVideoUrl, setNewVideoUrl] = useState('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
@@ -40,8 +58,27 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
   const [newMinPercentage, setNewMinPercentage] = useState(80);
   const [newAllowFastForward, setNewAllowFastForward] = useState(false);
 
-  const isStudent = user?.role === 'mahasiswa';
-  const isLecturer = user?.role === 'dosen' || user?.role === 'dosen_pa' || user?.role === 'kaprodi' || user?.role === 'administrator_sistem';
+  useEffect(() => {
+    academicService.fetchClassesFromBackend().then((classes) => {
+      if (classes && classes.length > 0) {
+        if (isLecturer && user) {
+          const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+          const filtered = classes.filter((c) => {
+            const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
+            const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
+            const matchId = c.lecturerId === user.id;
+            const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
+            return matchNidn || matchId || matchName;
+          });
+          if (filtered.length > 0) {
+            setAvailableClasses(filtered);
+            return;
+          }
+        }
+        setAvailableClasses(classes);
+      }
+    }).catch(() => {});
+  }, [isLecturer, user]);
 
   const loadVideos = () => {
     const vids = videoService.getAllVideos(undefined, isStudent);
@@ -284,16 +321,15 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
               </label>
               <Select
                 value={newClassId}
-                options={[
-                  { value: 'cls-pai301-a', label: 'Ushul Fiqih & Qawaid Fiqhiyyah (PAI-301-A)' },
-                  { value: 'cls-pai101-b', label: 'Ulumul Qur\'an & Studi Kitab (PAI-101-B)' }
-                ]}
+                options={availableClasses.map((c) => ({
+                  value: c.id,
+                  label: `${c.courseCode} — ${c.courseName} (${c.name})`
+                }))}
                 onChange={(e) => {
                   setNewClassId(e.target.value);
-                  if (e.target.value === 'cls-pai301-a') {
-                    setNewCourseName('Ushul Fiqih & Qawaid Fiqhiyyah');
-                  } else {
-                    setNewCourseName('Ulumul Qur\'an & Studi Kitab Turats');
+                  const found = availableClasses.find((c) => c.id === e.target.value);
+                  if (found) {
+                    setNewCourseName(found.courseName);
                   }
                 }}
               />

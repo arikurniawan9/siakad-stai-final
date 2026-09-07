@@ -14,7 +14,9 @@ import {
   Send, 
   Unlock, 
   Eye, 
-  Award
+  Award,
+  Layers,
+  ExternalLink
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardSubtitle, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -289,6 +291,48 @@ export const BimbinganPaPage: React.FC = () => {
             buttonLabel="Ekspor Rekap Bimbingan" 
           />
         </div>
+      </div>
+
+      {/* Banner Integrasi SIAKAD */}
+      <div 
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3.5 rounded-lg"
+        style={{
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          color: '#1e3a8a'
+        }}
+      >
+        <div className="flex items-start gap-2.5">
+          <Layers size={18} color="#1d4ed8" style={{ marginTop: '2px', flexShrink: 0 }} />
+          <div>
+            <span style={{ fontWeight: 'var(--font-weight-bold)', fontSize: 'var(--text-xs)', display: 'block' }}>
+              Persetujuan &amp; Validasi Resmi KRS di SALAM SIAKAD
+            </span>
+            <span style={{ fontSize: 'var(--text-xs)', color: '#2563eb' }}>
+              Validasi resmi beban SKS dan pengesahan Kartu Rencana Studi mahasiswa bimbingan secara institusi diproses melalui portal <strong>SALAM SIAKAD</strong>. Modul di bawah menyajikan rekap bimbingan untuk koordinasi perkuliahan daring.
+            </span>
+          </div>
+        </div>
+
+        <a
+          href="http://salam.stai-alittihad.ac.id/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-sm inline-flex items-center gap-1.5 flex-shrink-0"
+          style={{
+            backgroundColor: '#1d4ed8',
+            color: 'white',
+            fontWeight: 'var(--font-weight-semibold)',
+            fontSize: 'var(--text-xs)',
+            padding: '5px 12px',
+            borderRadius: 'var(--radius-md)',
+            textDecoration: 'none'
+          }}
+          title="Buka Modul Bimbingan di SALAM SIAKAD"
+        >
+          <ExternalLink size={13} />
+          <span>Buka di SIAKAD</span>
+        </a>
       </div>
 
       {/* 2. Executive Stat Cards */}

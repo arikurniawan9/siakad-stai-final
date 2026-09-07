@@ -61,11 +61,23 @@ export const MataKuliahListPage: React.FC<MataKuliahListPageProps> = ({ onSelect
 
   // Filter kelas berdasarkan peran
   const roleFilteredClasses = classes.filter((cls) => {
-    if (isLecturer && user?.identityNumber) {
+    if (isLecturer && user) {
       // Dosen melihat kelas yang diampunya
-      return cls.lecturerNidn === user.identityNumber || cls.lecturerId === user.id;
+      const userNidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+      const clsNidn = (cls.lecturerNidn || '').replace(/[^0-9]/g, '');
+      return (
+        (clsNidn && userNidn && clsNidn === userNidn) ||
+        cls.lecturerId === user.id ||
+        cls.lecturerNidn === user.identityNumber ||
+        cls.lecturerName.toLowerCase().includes(user.name.toLowerCase())
+      );
     }
-    return true; // Mahasiswa & Admin melihat semua kelas terdaftar
+    if (isStudent && user) {
+      // Mahasiswa melihat kelas yang diambilnya sesuai KRS / SIAKAD
+      const userNim = (user.identityNumber || user.username || '').replace(/[^0-9]/g, '');
+      return academicService.isStudentEnrolledInClass(cls.id, userNim, user.id);
+    }
+    return true; // Admin Akademik, Kaprodi, Pimpinan, dan Superadmin melihat semua kelas
   });
 
   const filteredClasses = useMemo(() => {
@@ -97,7 +109,9 @@ export const MataKuliahListPage: React.FC<MataKuliahListPageProps> = ({ onSelect
           <p>
             {isStudent 
               ? 'Daftar mata kuliah aktif yang Anda ikuti pada Semester Ganjil 2026/2027' 
-              : 'Daftar kelas perkuliahan yang Anda ampu pada semester aktif'}
+              : isLecturer
+                ? 'Daftar kelas perkuliahan yang Anda ampu pada semester aktif'
+                : 'Daftar seluruh kelas perkuliahan terintegrasi SIAKAD STAI Al-Ittihad'}
           </p>
         </div>
 
@@ -128,8 +142,10 @@ export const MataKuliahListPage: React.FC<MataKuliahListPageProps> = ({ onSelect
             >
               <option value="SEMUA">Semua Program Studi</option>
               <option value="PAI">Pendidikan Agama Islam (PAI)</option>
+              <option value="PIAUD">Pendidikan Islam Anak Usia Dini (PIAUD)</option>
               <option value="MPI">Manajemen Pendidikan Islam (MPI)</option>
               <option value="ES">Ekonomi Syariah (ES)</option>
+              <option value="MKU">Mata Kuliah Umum (MKU)</option>
             </select>
 
             {hasActiveFilters && (

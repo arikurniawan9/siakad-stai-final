@@ -11,11 +11,11 @@ const PROGRESS_STORAGE_KEY = 'salam_video_progress';
 export const INITIAL_INTERACTIVE_VIDEOS: InteractiveVideo[] = [
   {
     id: 'vid-ushul-01',
-    classId: 'cls-pai301-a',
+    classId: 'cls-20261-pai301-a',
     meetingId: 'mtg-pai301a-01',
-    courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah',
+    courseName: 'Fiqih Mawaris',
     meetingNumber: 1,
-    title: 'Konsep Dasar Ushul Fiqih & Sejarah Pembentukan Mazhab',
+    title: 'Konsep Dasar Kewarisan Islam & Rukun Mawaris',
     description: 'Video pembelajaran interaktif yang menguraikan perbedaan esensial antara Fiqih dan Ushul Fiqih, disertai pertanyaan reflektif di beberapa titik materi.',
     videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
     durationSeconds: 300, // 5 menit simulasi
@@ -205,7 +205,11 @@ class VideoService {
   public getAllVideos(classId?: string, isStudent = false): InteractiveVideo[] {
     let videos = this.getVideos();
     if (classId) {
-      videos = videos.filter((v) => v.classId === classId);
+      videos = videos.filter((v) => 
+        v.classId === classId || 
+        (classId === 'cls-20261-pai301-a' && v.classId === 'cls-pai301-a') ||
+        (classId === 'cls-pai301-a' && v.classId === 'cls-20261-pai301-a')
+      );
     }
     if (isStudent) {
       videos = videos.filter((v) => v.status === 'DITERBITKAN');
@@ -217,7 +221,7 @@ class VideoService {
     return this.getVideos().filter((v) => {
       if (v.status !== 'DITERBITKAN') return false;
       if (v.meetingId === meetingId) return true;
-      if (classId && meetingNumber !== undefined && v.classId === classId && v.meetingNumber === meetingNumber) return true;
+      if (classId && meetingNumber !== undefined && (v.classId === classId || (classId === 'cls-20261-pai301-a' && v.classId === 'cls-pai301-a')) && v.meetingNumber === meetingNumber) return true;
       if (meetingId && v.meetingId) {
         const cleanMtgId = meetingId.replace(/[-_]/g, '').toLowerCase();
         const cleanVidMtgId = v.meetingId.replace(/[-_]/g, '').toLowerCase();

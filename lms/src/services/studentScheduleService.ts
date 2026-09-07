@@ -4,6 +4,7 @@ import {
   StudentTimetableDay,
   ClassScheduleStatus 
 } from '../types/studentSchedule';
+import { academicService, AcademicClass } from './academicService';
 
 export const STUDENT_SCHEDULES_MOCK: StudentScheduleItem[] = [
   {
@@ -251,6 +252,81 @@ export class StudentScheduleService {
     return days[dayIndex] || 'Senin';
   }
 
+  private dayToTitleCase(day: string): 'Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu' {
+    const d = (day || '').toUpperCase();
+    if (d === 'SELASA') return 'Selasa';
+    if (d === 'RABU') return 'Rabu';
+    if (d === 'KAMIS') return 'Kamis';
+    if (d === 'JUMAT') return 'Jumat';
+    if (d === 'SABTU') return 'Sabtu';
+    return 'Senin';
+  }
+
+  private dayToIndex(day: string): number {
+    const d = (day || '').toUpperCase();
+    if (d === 'SENIN') return 1;
+    if (d === 'SELASA') return 2;
+    if (d === 'RABU') return 3;
+    if (d === 'KAMIS') return 4;
+    if (d === 'JUMAT') return 5;
+    if (d === 'SABTU') return 6;
+    return 1;
+  }
+
+  private mapClassToSchedules(cls: AcademicClass, now: Date): StudentScheduleItem[] {
+    const schs = cls.schedules && cls.schedules.length > 0 ? cls.schedules : [
+      {
+        id: `sch-${cls.id}`,
+        dayOfWeek: 'SENIN' as any,
+        startTime: '08:00',
+        endTime: '09:40',
+        room: 'Ruang Kuliah',
+        isOnline: false
+      }
+    ];
+
+    return schs.map((s: any, idx: number) => {
+      const [sh, sm] = (s.startTime || '08:00').split(':').map(Number);
+      const [eh, em] = (s.endTime || '09:40').split(':').map(Number);
+      const duration = (eh * 60 + em) - (sh * 60 + sm);
+      const dayName = this.dayToTitleCase(s.dayOfWeek);
+
+      const item: StudentScheduleItem = {
+        id: `${cls.id}-${s.id || idx}`,
+        classId: cls.id,
+        courseCode: cls.courseCode,
+        courseName: cls.courseName,
+        className: cls.name,
+        credits: cls.credits,
+        courseType: cls.courseCode.startsWith('MKU') ? 'WAJIB_INSTITUSI' : 'WAJIB_PRODI',
+        dayOfWeek: dayName,
+        dayIndex: this.dayToIndex(s.dayOfWeek),
+        startTime: s.startTime || '08:00',
+        endTime: s.endTime || '09:40',
+        durationMinutes: duration > 0 ? duration : 100,
+        roomId: `rm-${cls.id}`,
+        roomName: s.room || 'Ruang Kuliah',
+        roomCode: s.room ? s.room.split(' ')[0] : 'R-101',
+        building: 'Kampus STAI AL-ITTIHAD',
+        floor: 'Lantai 1',
+        roomType: s.room && s.room.toLowerCase().includes('lab') ? 'LABORATORIUM' : 'TEORI',
+        lecturerId: cls.lecturerId,
+        lecturerName: cls.lecturerName,
+        lecturerNidn: cls.lecturerNidn || '2112087501',
+        deliveryMode: s.isOnline ? 'DARING' : 'TATAP_MUKA',
+        status: 'AKAN_DATANG',
+        nextTopicTitle: `Materi Perkuliahan: ${cls.courseName}`,
+        nextMeetingNumber: 1,
+        activeAssignmentCount: 1,
+        activeQuizCount: 0,
+        enrolledCount: cls.studentCount || 1
+      };
+
+      item.status = this.computeRealtimeStatus(item, now);
+      return item;
+    });
+  }
+
   /**
    * Menghitung status dinamis berdasarkan jam & hari sekarang
    */
@@ -276,21 +352,59 @@ export class StudentScheduleService {
   }
 
   /**
-   * Mengambil seluruh jadwal mahasiswa dengan status realtime
+   * Mengambil seluruh jadwal dengan status realtime (Dosen / Mahasiswa)
    */
-  getStudentSchedules(_studentId?: string): StudentScheduleItem[] {
+  getStudentSchedules(
+    userIdentifier?: string, 
+    userRole?: string, 
+    identityNumber?: string, 
+    userName?: string
+  ): StudentScheduleItem[] {
     const now = new Date();
-    return STUDENT_SCHEDULES_MOCK.map((item) => ({
-      ...item,
-      status: this.computeRealtimeStatus(item, now)
+    const isLecturer = userRole === 'dosen' || userRole === 'dosen_pa';
+    const isStudent = userRole === 'mahasiswa';
+    const cleanIdNum = (identityNumber || '').replace(/[^0-9]/g, '');
+
+    const allClasses = academicService.getClasses();
+    let targetClasses = allClasses;
+
+    if (isLecturer) {
+      const filtered = allClasses.filter((c) => {
+        const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
+        const matchNidn = cleanIdNum && cNidn && (cleanIdNum === cNidn || cNidn.includes(cleanIdNum) || cleanIdNum.includes(cNidn));
+        const matchId = c.lecturerId === userIdentifier;
+        const matchName = userName && c.lecturerName && c.lecturerName.toLowerCase().includes(userName.toLowerCase().trim());
+        return matchNidn || matchId || matchName;
+      });
+      targetClasses = filtered.length > 0 ? filtered : allClasses.slice(0, 4);
+    } else if (isStudent) {
+      const filtered = allClasses.filter((c) => 
+        academicService.isStudentEnrolledInClass(c.id, identityNumber || '21.01.0042', userIdentifier)
+      );
+      targetClasses = filtered.length > 0 ? filtered : allClasses.slice(0, 4);
+    }
+
+    const items: StudentScheduleItem[] = [];
+    targetClasses.forEach((c) => {
+      items.push(...this.mapClassToSchedules(c, now));
+    });
+
+    return items.length > 0 ? items : STUDENT_SCHEDULES_MOCK.map((m) => ({
+      ...m,
+      status: this.computeRealtimeStatus(m, now)
     }));
   }
 
   /**
-   * Mengambil ringkasan eksekutif jadwal mahasiswa
+   * Mengambil ringkasan eksekutif jadwal
    */
-  getScheduleSummary(studentId = 'usr-mhs-01'): StudentScheduleSummary {
-    const schedules = this.getStudentSchedules(studentId);
+  getScheduleSummary(
+    studentId = 'usr-mhs-01',
+    userRole?: string,
+    identityNumber?: string,
+    userName?: string
+  ): StudentScheduleSummary {
+    const schedules = this.getStudentSchedules(studentId, userRole, identityNumber, userName);
     const now = new Date();
     const currentDayName = this.getDayNameId(now.getDay());
     const todaySchedules = schedules.filter((s) => s.dayOfWeek === currentDayName);
@@ -323,7 +437,7 @@ export class StudentScheduleService {
       if (nextDays.length > 0) {
         upcomingSchedule = nextDays[0];
         timeUntilUpcoming = `Hari ${upcomingSchedule.dayOfWeek}, pukul ${upcomingSchedule.startTime} WIB`;
-      } else {
+      } else if (schedules.length > 0) {
         upcomingSchedule = schedules[0];
         timeUntilUpcoming = `Hari ${upcomingSchedule.dayOfWeek} depan, pukul ${upcomingSchedule.startTime} WIB`;
       }
@@ -331,8 +445,8 @@ export class StudentScheduleService {
 
     return {
       studentId,
-      studentName: 'Ahmad Fauzi Rahman',
-      studentNim: '21.01.0042',
+      studentName: userName || (userRole === 'dosen' ? 'Dr. H. M. Ridwan, M.Ag' : 'Ahmad Fauzi Rahman'),
+      studentNim: identityNumber || '21.01.0042',
       studyProgram: 'Pendidikan Agama Islam (PAI)',
       studyProgramCode: 'PAI',
       academicPeriodName: 'Semester Ganjil 2026/2027',
@@ -351,8 +465,13 @@ export class StudentScheduleService {
   /**
    * Mengambil matriks jadwal mingguan (Senin - Sabtu)
    */
-  getWeeklyTimetable(studentId = 'usr-mhs-01'): StudentTimetableDay[] {
-    const schedules = this.getStudentSchedules(studentId);
+  getWeeklyTimetable(
+    studentId = 'usr-mhs-01',
+    userRole?: string,
+    identityNumber?: string,
+    userName?: string
+  ): StudentTimetableDay[] {
+    const schedules = this.getStudentSchedules(studentId, userRole, identityNumber, userName);
     const now = new Date();
     const currentDayIndex = now.getDay(); // 0: Min, 1: Sen, 2: Sel, dst.
 

@@ -30,6 +30,7 @@ import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { QuizQuestionItem, QuestionType, QuestionDifficulty, BankQuestion } from '../../types/quiz';
 import { quizService } from '../../services/quizService';
+import { academicService } from '../../services/academicService';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/feedback/ToastContext';
 
@@ -532,8 +533,46 @@ export const QuizCreatePage: React.FC<QuizCreatePageProps> = ({ onBack, onCreate
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 16));
   const [endDate, setEndDate] = useState(() => new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 16));
 
+  const isLecturerRole = user?.role === 'dosen' || user?.role === 'dosen_pa';
+  const [coursesList, setCoursesList] = useState<{ classId: string; code: string; name: string }[]>(() => {
+    const allClasses = academicService.getClasses();
+    let target = allClasses;
+    if (isLecturerRole && user) {
+      const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+      const filtered = allClasses.filter((c) => {
+        const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
+        const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
+        const matchId = c.lecturerId === user.id;
+        const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
+        return matchNidn || matchId || matchName;
+      });
+      if (filtered.length > 0) target = filtered;
+    }
+    return target.map((c) => ({ classId: c.id, code: c.courseCode, name: `${c.courseName} (${c.name})` }));
+  });
+
+  useEffect(() => {
+    academicService.fetchClassesFromBackend().then((classes) => {
+      if (classes && classes.length > 0) {
+        let target = classes;
+        if (isLecturerRole && user) {
+          const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+          const filtered = classes.filter((c) => {
+            const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
+            const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
+            const matchId = c.lecturerId === user.id;
+            const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
+            return matchNidn || matchId || matchName;
+          });
+          if (filtered.length > 0) target = filtered;
+        }
+        setCoursesList(target.map((c) => ({ classId: c.id, code: c.courseCode, name: `${c.courseName} (${c.name})` })));
+      }
+    }).catch(() => {});
+  }, [isLecturerRole, user]);
+
   const totalPoints = questions.reduce((s, q) => s + q.points, 0);
-  const course = AVAILABLE_COURSES[selectedCourseIdx];
+  const course = coursesList[selectedCourseIdx] || coursesList[0] || AVAILABLE_COURSES[0];
   const incompleteCount = questions.filter(
     (q) => !q.questionText.trim() ||
       (q.type === 'PILIHAN_GANDA' && (!q.optA.trim() || !q.optB.trim())) ||
@@ -726,7 +765,7 @@ export const QuizCreatePage: React.FC<QuizCreatePageProps> = ({ onBack, onCreate
             </label>
             <select className="form-select" value={selectedCourseIdx}
               onChange={(e) => setSelectedCourseIdx(Number(e.target.value))}>
-              {AVAILABLE_COURSES.map((c, idx) => (
+              {coursesList.map((c, idx) => (
                 <option key={c.classId} value={idx}>[{c.code}] {c.name}</option>
               ))}
             </select>

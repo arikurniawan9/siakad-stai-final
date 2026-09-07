@@ -252,7 +252,7 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
   }, [allMaterials, materialFilterType, materialSearchQuery]);
 
   const loadData = () => {
-    const cls = academicService.getClasses().find((c) => c.id === classId);
+    const cls = academicService.getClassById(classId) || academicService.getClasses().find((c) => c.id === classId || c.code === classId);
     if (cls) setClassInfo(cls);
     const existingRps = learningService.getRPS(classId) || DEFAULT_EMPTY_RPS;
     setRps(existingRps);

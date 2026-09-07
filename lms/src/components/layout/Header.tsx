@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, LogOut, PanelLeftClose, PanelLeftOpen, Maximize2, Minimize2 } from 'lucide-react';
+import { Menu, LogOut, PanelLeftClose, PanelLeftOpen, Maximize2, Minimize2, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/roles';
 import { ROLE_LABELS } from '../../constants/permissions';
@@ -28,6 +28,12 @@ export const Header: React.FC<HeaderProps> = ({
 
   if (!user) return null;
 
+  const canSwitchRole = 
+    user.role === 'administrator_sistem' || 
+    user.role === 'admin_akademik' ||
+    user.originalRole === 'administrator_sistem' ||
+    user.originalRole === 'admin_akademik';
+
   return (
     <header className="header-topbar">
       <div className="header-left">
@@ -55,45 +61,99 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
         
-        {/* Role Switcher Selector for RBAC evaluation */}
-        <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-          <span 
-            className="hidden sm:inline-block"
-            style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 'var(--font-weight-semibold)', whiteSpace: 'nowrap' }}
-          >
-            Peran:
-          </span>
-          <select 
-            value={user.role} 
-            onChange={(e) => switchRole(e.target.value as UserRole)}
-            className="form-select"
-            aria-label="Pilih Peran Pengguna"
+        {/* Role Display: Dropdown selector ONLY for Admin & Superadmin */}
+        {canSwitchRole ? (
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+            <span 
+              className="hidden sm:inline-block"
+              style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 'var(--font-weight-semibold)', whiteSpace: 'nowrap' }}
+            >
+              Simulasi Peran:
+            </span>
+            <select 
+              value={user.role} 
+              onChange={(e) => switchRole(e.target.value as UserRole)}
+              className="form-select"
+              aria-label="Pilih Peran Pengguna (Khusus Admin & Superadmin)"
+              style={{ 
+                padding: '4px 8px', 
+                fontSize: 'var(--text-xs)', 
+                fontWeight: 'var(--font-weight-semibold)',
+                width: 'auto',
+                maxWidth: 'min(180px, 40vw)',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: 'var(--color-primary-50)',
+                color: 'var(--color-primary-900)',
+                borderColor: 'var(--color-primary-200)',
+                cursor: 'pointer',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap'
+              }}
+              title="Fitur Khusus Admin & Superadmin untuk simulasi tampilan peran"
+            >
+              {REGISTERED_USERS.map((u) => (
+                <option key={u.id} value={u.role}>
+                  {ROLE_LABELS[u.role]}: {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div 
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full" 
             style={{ 
-              padding: '4px 8px', 
-              fontSize: 'var(--text-xs)', 
-              fontWeight: 'var(--font-weight-semibold)',
-              width: 'auto',
-              maxWidth: 'min(160px, 40vw)',
-              borderRadius: 'var(--radius-full)',
-              backgroundColor: 'var(--color-primary-50)',
+              backgroundColor: 'var(--color-primary-50)', 
+              border: '1px solid var(--color-primary-200)',
+              fontSize: 'var(--text-xs)',
               color: 'var(--color-primary-900)',
-              borderColor: 'var(--color-primary-200)',
-              cursor: 'pointer',
-              textOverflow: 'ellipsis',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap'
+              fontWeight: 600
             }}
           >
-            {REGISTERED_USERS.map((u) => (
-              <option key={u.id} value={u.role}>
-                {ROLE_LABELS[u.role]}: {u.name}
-              </option>
-            ))}
-          </select>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-success-main)', display: 'inline-block' }}></span>
+            <span>{user.roleLabel || ROLE_LABELS[user.role]}</span>
+          </div>
+        )}
+
+        {/* LMS Indicator Badge */}
+        <div 
+          className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full" 
+          style={{ 
+            backgroundColor: 'var(--color-primary-50)', 
+            border: '1px solid var(--color-primary-200)',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-primary-900)',
+            fontWeight: 'var(--font-weight-semibold)'
+          }}
+          title="Sistem Pembelajaran Daring (Terintegrasi SALAM SIAKAD)"
+        >
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-success-main)', display: 'inline-block' }}></span>
+          <span>LMS Pembelajaran Daring</span>
         </div>
       </div>
 
       <div className="header-right">
+        {/* Direct Link / Bridge to SALAM SIAKAD */}
+        <a
+          href="http://salam.stai-alittihad.ac.id/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-outline btn-sm hidden sm:inline-flex items-center gap-1.5"
+          style={{
+            borderColor: 'var(--color-primary-300)',
+            color: 'var(--color-primary-800)',
+            backgroundColor: 'var(--color-primary-50)',
+            fontWeight: 'var(--font-weight-semibold)',
+            fontSize: 'var(--text-xs)',
+            padding: '4px 10px',
+            textDecoration: 'none',
+            borderRadius: 'var(--radius-full)'
+          }}
+          title="Buka Sistem Informasi Akademik Resmi (SALAM SIAKAD)"
+        >
+          <ExternalLink size={13} />
+          <span>Portal SALAM SIAKAD</span>
+        </a>
         {/* Focus Mode Toggle (Layar Penuh / Hide All Navs) */}
         {onToggleFocusMode && (
           <button

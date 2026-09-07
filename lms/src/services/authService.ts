@@ -115,7 +115,8 @@ class AuthService {
             role: mappedRole,
             roleLabel: ROLE_LABELS[mappedRole] || mappedRole,
             studyProgram: apiUser.studyProgram || apiUser.study_program || 'Pendidikan Agama Islam (S1)',
-            permissions: ROLE_PERMISSIONS[mappedRole] || ROLE_PERMISSIONS.mahasiswa
+            permissions: ROLE_PERMISSIONS[mappedRole] || ROLE_PERMISSIONS.mahasiswa,
+            originalRole: mappedRole
           };
 
           const now = Date.now();
@@ -193,8 +194,13 @@ class AuthService {
       userAgent: navigator.userAgent
     };
 
+    const userWithOriginal: UserAuthProfile = {
+      ...user,
+      originalRole: user.role
+    };
+
     // Simpan ke storage
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user, session }));
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: userWithOriginal, session }));
 
     // Audit log login sukses
     auditService.record(
@@ -207,7 +213,7 @@ class AuthService {
       'SUKSES'
     );
 
-    return { user, session };
+    return { user: userWithOriginal, session };
   }
 
   public getStoredSession(): { user: UserAuthProfile; session: UserSession } | null {
@@ -218,7 +224,7 @@ class AuthService {
 
       // Cek apakah expired
       if (Date.now() > data.session.expiresAt) {
-        this.logout(data.user);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
         return null;
       }
 
@@ -249,7 +255,10 @@ class AuthService {
   }
 
   public switchRoleDemo(role: UserRole): { user: UserAuthProfile; session: UserSession } {
-    const user = REGISTERED_USERS.find((u) => u.role === role) || {
+    const currentSession = this.getStoredSession();
+    const originalRole = currentSession?.user?.originalRole || currentSession?.user?.role || role;
+
+    const baseUser = REGISTERED_USERS.find((u) => u.role === role) || {
       id: `usr-${role}-demo`,
       username: `user_${role}`,
       name: `Pengguna ${ROLE_LABELS[role]}`,
@@ -259,6 +268,11 @@ class AuthService {
       roleLabel: ROLE_LABELS[role],
       studyProgram: 'STAI Al-Ittihad',
       permissions: ROLE_PERMISSIONS[role],
+    };
+
+    const user: UserAuthProfile = {
+      ...baseUser,
+      originalRole
     };
 
     const now = Date.now();

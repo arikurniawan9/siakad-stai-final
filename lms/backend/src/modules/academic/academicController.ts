@@ -8,14 +8,32 @@ export async function getClasses(req: AuthenticatedRequest, res: Response, next:
     let query = `
       SELECT 
         cc.id,
+        cc.code as "classCode",
         cc.name as "className",
-        COALESCE(ap.name, '2026/2027 Ganjil') as "academicYear",
+        COALESCE(ap.name, 'Semester Ganjil 2026/2027') as "academicYear",
+        c.id as "courseId",
         c.code as "courseCode",
         c.name as "courseName",
         c.credits,
-        COALESCE(sp.name, 'Pendidikan Agama Islam') as "studyProgram",
+        COALESCE(sp.code, CASE 
+          WHEN c.code LIKE 'PAI%' THEN 'PAI'
+          WHEN c.code LIKE 'STAIPD%' THEN 'PIAUD'
+          WHEN c.code LIKE 'MKU%' THEN 'MKU'
+          ELSE 'PAI'
+        END) as "studyProgramCode",
+        COALESCE(sp.name, CASE 
+          WHEN c.code LIKE 'PAI%' THEN 'Pendidikan Agama Islam'
+          WHEN c.code LIKE 'STAIPD%' THEN 'Pendidikan Islam Anak Usia Dini'
+          WHEN c.code LIKE 'MKU%' THEN 'Mata Kuliah Umum'
+          ELSE 'Pendidikan Agama Islam'
+        END) as "studyProgram",
+        cl.lecturer_id as "lecturerId",
         COALESCE(u.name, 'Dr. H. M. Ridwan, M.Ag') as "lecturerName",
         COALESCE(u.identity_number, '2112087501') as "lecturerNidn",
+        cs.day_of_week as "dayOfWeek",
+        cs.start_time as "startTime",
+        cs.end_time as "endTime",
+        r.name as "roomName",
         (SELECT COUNT(*) FROM class_enrollments ce WHERE ce.course_class_id = cc.id) as "enrolledCount"
       FROM course_classes cc
       JOIN courses c ON c.id = cc.course_id
@@ -23,15 +41,20 @@ export async function getClasses(req: AuthenticatedRequest, res: Response, next:
       LEFT JOIN study_programs sp ON sp.id = c.study_program_id
       LEFT JOIN class_lecturers cl ON cl.course_class_id = cc.id AND cl.is_primary = TRUE
       LEFT JOIN users u ON u.id = cl.lecturer_id
+      LEFT JOIN class_schedules cs ON cs.course_class_id = cc.id
+      LEFT JOIN rooms r ON r.id = cs.room_id
       WHERE cc.status = 'AKTIF'
     `;
     const params: any[] = [];
 
     // Filter berdasarkan peran pengguna
     if (user.role === 'mahasiswa') {
-      query += ` AND cc.id IN (SELECT course_class_id FROM class_enrollments WHERE student_id = $1)`;
+      query += ` AND (
+        cc.id IN (SELECT course_class_id FROM class_enrollments WHERE student_id = $1)
+        OR cc.id IN (SELECT ki.course_class_id FROM krs_items ki JOIN krs_submissions ks ON ks.id = ki.krs_submission_id WHERE ks.student_id = $1 AND ki.status = 'DISETUJUI')
+      )`;
       params.push(user.id);
-    } else if (user.role === 'dosen') {
+    } else if (user.role === 'dosen' || user.role === 'dosen_pa') {
       query += ` AND cc.id IN (SELECT course_class_id FROM class_lecturers WHERE lecturer_id = $1)`;
       params.push(user.id);
     }

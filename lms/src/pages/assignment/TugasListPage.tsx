@@ -35,6 +35,7 @@ import {
   SubmissionType 
 } from '../../types/assignment';
 import { assignmentService, RUBRIC_PRESETS } from '../../services/assignmentService';
+import { academicService, AcademicClass } from '../../services/academicService';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/feedback/ToastContext';
 import { KAMUS_UI } from '../../constants/dictionary';
@@ -72,8 +73,46 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [assignmentToDelete, setAssignmentToDelete] = useState<Assignment | null>(null);
 
+  // Available Classes from SIAKAD
+  const isLecturerRole = user?.role === 'dosen' || user?.role === 'dosen_pa';
+  const [availableClasses, setAvailableClasses] = useState<AcademicClass[]>(() => {
+    const all = academicService.getClasses();
+    if (!isLecturerRole || !user) return all;
+    const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+    const filtered = all.filter((c) => {
+      const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
+      const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
+      const matchId = c.lecturerId === user.id;
+      const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
+      return matchNidn || matchId || matchName;
+    });
+    return filtered.length > 0 ? filtered : all;
+  });
+
+  useEffect(() => {
+    academicService.fetchClassesFromBackend().then((classes) => {
+      if (classes && classes.length > 0) {
+        if (isLecturerRole && user) {
+          const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+          const filtered = classes.filter((c) => {
+            const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
+            const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
+            const matchId = c.lecturerId === user.id;
+            const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
+            return matchNidn || matchId || matchName;
+          });
+          if (filtered.length > 0) {
+            setAvailableClasses(filtered);
+            return;
+          }
+        }
+        setAvailableClasses(classes);
+      }
+    }).catch(() => {});
+  }, [isLecturerRole, user]);
+
   // Form States
-  const [formClassId, setFormClassId] = useState('cls-pai301-a');
+  const [formClassId, setFormClassId] = useState('cls-20261-pai301-a');
   const [formMeetingNumber, setFormMeetingNumber] = useState(3);
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
@@ -895,9 +934,11 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
                   value={formClassId} 
                   onChange={(e) => setFormClassId(e.target.value)}
                 >
-                  <option value="cls-pai301-a">PAI-3A — Ushul Fiqih (Reguler Pagi)</option>
-                  <option value="cls-pai302-a">PAI-3B — Hadits Tarbawi (Reguler Pagi)</option>
-                  <option value="cls-pai303-a">PAI-5A — Kurikulum PAI (Reguler Siang)</option>
+                  {availableClasses.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.courseCode}: {cls.courseName} ({cls.name})
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>

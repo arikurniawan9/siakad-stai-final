@@ -200,6 +200,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/grades/{id}', [GradeAdminController::class, 'show'])->name('grades.show');
         Route::post('/grades/{id}/update', [GradeAdminController::class, 'updateGrades'])->name('grades.update');
         Route::post('/grades/{id}/toggle-lock', [GradeAdminController::class, 'toggleLock'])->name('grades.toggle_lock');
+        Route::get('/grades/{id}/export-excel', [GradeAdminController::class, 'exportExcel'])->name('grades.export_excel');
+        Route::get('/grades/{id}/template-excel', [GradeAdminController::class, 'downloadTemplate'])->name('grades.template_excel');
+        Route::get('/grades/{id}/export-pdf', [GradeAdminController::class, 'printPdf'])->name('grades.export_pdf');
 
         // 3. Hasil Studi (KHS)
         Route::get('/khs', [KhsAdminController::class, 'index'])->name('khs.index');

@@ -60,6 +60,7 @@ export interface UserAuthProfile {
   email: string;
   role: UserRole;
   roleLabel: string;
+  originalRole?: UserRole;
   studyProgram?: string;
   permissions: Permission[];
   avatarUrl?: string;

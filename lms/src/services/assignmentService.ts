@@ -205,16 +205,16 @@ export const RUBRIC_PRESETS: { id: string; name: string; description: string; ru
 export const INITIAL_ASSIGNMENTS: Assignment[] = [
   {
     id: 'asg-pai301-01',
-    classId: 'cls-pai301-a',
+    classId: 'cls-20261-pai301-a',
     meetingId: 'mtg-pai301a-03',
-    courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah',
-    className: 'PAI-3A (Reguler Pagi)',
+    courseName: 'Fiqih Mawaris',
+    className: 'PAI-301 (Kelas A)',
     meetingNumber: 3,
-    title: 'Tugas Analisis Literatur: Studi Kasus Istinbath Hukum Kontemporer',
-    description: 'Menyusun makalah analisis penerapan kaidah Ushul Fiqih dalam menyelesaikan problematika fatwa Dewan Syariah Nasional (DSN-MUI).',
-    instructions: '1. Makalah ditulis dalam format ilmiah (minimal 5 halaman, maksimal 12 halaman).\n2. Format berkas wajib berupa PDF (.pdf) atau Word Document (.docx).\n3. Sertakan minimal 3 rujukan kitab turats ushul fiqih dan 2 jurnal ilmiah terakreditasi.\n4. Pengumpulan melewati batas waktu akan dikenakan pemotongan nilai 10%.',
-    attachmentName: 'Panduan_Format_Makalah_PAI301.pdf',
-    attachmentUrl: '/api/v1/storage/files/templates/Panduan_Format_Makalah_PAI301.pdf',
+    title: 'Tugas Analisis Fiqih Mawaris: Studi Kasus Ashabah dan Hijab Gugur Waris',
+    description: 'Menyusun makalah analisis penerapan kaidah pembagian waris Islam dalam menyelesaikan problematika sengketa waris keluarga kontemporer.',
+    instructions: '1. Makalah ditulis dalam format ilmiah (minimal 5 halaman, maksimal 12 halaman).\n2. Format berkas wajib berupa PDF (.pdf) atau Word Document (.docx).\n3. Sertakan rujukan dalil Al-Qur\'an, As-Sunnah, dan pendapat ulama empat madzhab.\n4. Pengumpulan melewati batas waktu akan dikenakan pemotongan nilai 10%.',
+    attachmentName: 'Panduan_Format_Makalah_Mawaris.pdf',
+    attachmentUrl: '/api/v1/storage/files/templates/Panduan_Format_Makalah_Mawaris.pdf',
     openDate: '2026-09-01T00:00:00Z',
     dueDate: '2026-10-15T23:59:59Z',
     maxScore: 100,
@@ -231,17 +231,17 @@ export const INITIAL_ASSIGNMENTS: Assignment[] = [
     rubric: RUBRIC_PRESETS[0].rubric
   },
   {
-    id: 'asg-pai302-01',
-    classId: 'cls-pai302-a',
-    meetingId: 'mtg-pai302a-04',
-    courseName: 'Hadits Tarbawi',
-    className: 'PAI-3B (Reguler Pagi)',
-    meetingNumber: 4,
-    title: 'Tugas Takhrij & Studi Sanad: Hadits Keutamaan Menuntut Ilmu',
-    description: 'Melakukan takhrij hadits riwayat Abu Dawud dan Ibnu Majah mengenai kewajiban thalabul ilmi serta implikasi pedagogisnya.',
-    instructions: '1. Tuliskan matan hadits lengkap beserta harakat dan artinya.\n2. Buat skema sanad dan kesimpulan derajat keshahihan hadits.\n3. Jelaskan 3 implikasi nilai edukatif hadits dalam konteks pendidikan era digital.\n4. Unggah berkas dokumen PDF/Word.',
-    attachmentName: 'Format_Lembar_Kerja_Takhrij_Hadits.docx',
-    attachmentUrl: '/api/v1/storage/files/templates/Format_Lembar_Kerja_Takhrij_Hadits.docx',
+    id: 'asg-pai101-01',
+    classId: 'cls-20261-pai101-a',
+    meetingId: 'mtg-pai101a-03',
+    courseName: 'Ulumul Qur\'an',
+    className: 'PAI-101 (Kelas A)',
+    meetingNumber: 3,
+    title: 'Tugas Telaah Asbabun Nuzul & Makkiyah-Madaniyyah',
+    description: 'Melakukan telaah kritis terhadap latar belakang historis turunnya ayat hukum dan karakteristik surat Makkiyah-Madaniyyah.',
+    instructions: '1. Tuliskan ayat pilihan beserta terjemah dan telaah asbabun nuzul menurut riwayat mu\'tamad.\n2. Jelaskan implikasi kaidah Makki-Madani dalam memahami konteks hukum.\n3. Unggah berkas dokumen PDF/Word.',
+    attachmentName: 'Format_Lembar_Kerja_Ulumul_Quran.docx',
+    attachmentUrl: '/api/v1/storage/files/templates/Format_Lembar_Kerja_Ulumul_Quran.docx',
     openDate: '2026-09-05T00:00:00Z',
     dueDate: '2026-10-25T23:59:59Z',
     maxScore: 100,
@@ -258,17 +258,17 @@ export const INITIAL_ASSIGNMENTS: Assignment[] = [
     rubric: RUBRIC_PRESETS[1].rubric
   },
   {
-    id: 'asg-pai303-01',
-    classId: 'cls-pai303-a',
-    meetingId: 'mtg-pai303a-05',
-    courseName: 'Pengembangan Kurikulum PAI',
-    className: 'PAI-5A (Reguler Siang)',
-    meetingNumber: 5,
-    title: 'Tugas Perancangan Modul Ajar Kurikulum Merdeka PAI',
-    description: 'Menyusun perangkat modul ajar PAI fase D/E dengan mengintegrasikan Profil Pelajar Pancasila dan Rahmatan lil Alamin.',
-    instructions: '1. Pilih salah satu capaian pembelajaran (CP) materi PAI tingkat SMP atau SMA.\n2. Rancang tujuan pembelajaran, asesmen diagnostik, formatif, dan sumatif.\n3. Sertakan lembar kerja peserta didik (LKPD) yang menarik.\n4. Format berkas PDF atau Word.',
-    attachmentName: 'Template_Modul_Ajar_PAI_Kemendikbud.pdf',
-    attachmentUrl: '/api/v1/storage/files/templates/Template_Modul_Ajar_PAI_Kemendikbud.pdf',
+    id: 'asg-pai202-01',
+    classId: 'cls-20261-pai202-a',
+    meetingId: 'mtg-pai202a-02',
+    courseName: 'Fiqih Ibadah & Muamalah',
+    className: 'PAI-202 (Kelas A)',
+    meetingNumber: 2,
+    title: 'Tugas Perancangan Simulasi Akad Muamalah Kontemporer',
+    description: 'Menyusun analisis struktur rukun dan syarat sah akad Murabahah & Ijarah pada lembaga keuangan syariah.',
+    instructions: '1. Pilih 1 produk perbankan/fintech syariah untuk dianalisis kesesuaian syariahnya.\n2. Uraikan alur akad dan potensi gharar/riba yang dihindari.\n3. Format berkas PDF atau Word.',
+    attachmentName: 'Template_Analisis_Akad_Muamalah.pdf',
+    attachmentUrl: '/api/v1/storage/files/templates/Template_Analisis_Akad_Muamalah.pdf',
     openDate: '2026-09-10T00:00:00Z',
     dueDate: '2026-11-05T23:59:59Z',
     maxScore: 100,
@@ -283,6 +283,33 @@ export const INITIAL_ASSIGNMENTS: Assignment[] = [
     createdAt: '2026-09-10T08:00:00Z',
     updatedAt: '2026-09-10T08:00:00Z',
     rubric: RUBRIC_PRESETS[2].rubric
+  },
+  {
+    id: 'asg-staipd213-01',
+    classId: 'cls-staipd213-pd2',
+    meetingId: 'mtg-staipd213-02',
+    courseName: 'Bahasa Arab II',
+    className: 'STAIPD213 (Kelas PD2)',
+    meetingNumber: 2,
+    title: 'Tugas Penerjemahan Teks & Analisis Tarkib Nahwiyah',
+    description: 'Menerjemahkan teks bacaan bertema pendidikan anak usia dini ke dalam bahasa Indonesia dan mengidentifikasi tarkib fi\'il dan fa\'il.',
+    instructions: '1. Tuliskan teks Arab lengkap dengan harakat.\n2. Terjemahkan secara akurat sesuai kaidah bahasa.\n3. Cantumkan i\'rab dari 5 kata bergaris bawah.',
+    attachmentName: 'Teks_Latihan_Bahasa_Arab_II.pdf',
+    attachmentUrl: '/api/v1/storage/files/templates/Teks_Latihan_Bahasa_Arab_II.pdf',
+    openDate: '2026-09-12T00:00:00Z',
+    dueDate: '2026-11-10T23:59:59Z',
+    maxScore: 100,
+    allowLateSubmission: true,
+    latePenaltyPercentage: 5,
+    allowResubmission: true,
+    maxResubmissions: 2,
+    submissionType: 'BERKAS_UNGGAHAN',
+    allowedFileExtensions: ['.pdf', '.docx'],
+    maxFileSizeBytes: 10485760,
+    status: 'DITERBITKAN',
+    createdAt: '2026-09-12T08:00:00Z',
+    updatedAt: '2026-09-12T08:00:00Z',
+    rubric: RUBRIC_PRESETS[0].rubric
   }
 ];
 
@@ -381,7 +408,11 @@ class AssignmentService {
       }
 
       if (classId) {
-        list = list.filter((a) => a.classId === classId);
+        list = list.filter((a) => 
+          a.classId === classId || 
+          (classId === 'cls-20261-pai301-a' && a.classId === 'cls-pai301-a') ||
+          (classId === 'cls-pai301-a' && a.classId === 'cls-20261-pai301-a')
+        );
       }
       if (isStudent) {
         list = list.filter((a) => a.status === 'DITERBITKAN');

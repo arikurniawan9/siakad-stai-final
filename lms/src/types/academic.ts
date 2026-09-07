@@ -70,6 +70,9 @@ export interface AcademicClass {
   sourceSystem: string;
   createdAt: string;
   updatedAt: string;
+  className?: string;
+  section?: string;
+  classLecturerName?: string;
 }
 
 export interface ClassMember {

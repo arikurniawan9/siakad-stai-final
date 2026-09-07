@@ -51,13 +51,37 @@ export const ProgresKelasDosenPage: React.FC<ProgresKelasDosenPageProps> = ({
 
   // Load lecturer classes
   useEffect(() => {
-    const allClasses = academicService.getClasses();
-    // If logged in as lecturer, show their classes or all classes
+    const isLecturer = user?.role === 'dosen' || user?.role === 'dosen_pa';
+    let allClasses = academicService.getClasses();
+    if (isLecturer && user) {
+      const filtered = allClasses.filter(c =>
+        c.lecturerNidn === user.identityNumber ||
+        c.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
+        c.classLecturerName?.toLowerCase().includes(user.name.toLowerCase())
+      );
+      if (filtered.length > 0) allClasses = filtered;
+    }
     setAvailableClasses(allClasses);
-    if (!selectedClassId && allClasses.length > 0) {
+    if ((!selectedClassId || !allClasses.some(c => c.id === selectedClassId)) && allClasses.length > 0) {
       setSelectedClassId(allClasses[0].id);
     }
-  }, []);
+
+    academicService.fetchClassesFromBackend().then(() => {
+      let updated = academicService.getClasses();
+      if (isLecturer && user) {
+        const filtered = updated.filter(c =>
+          c.lecturerNidn === user.identityNumber ||
+          c.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
+          c.classLecturerName?.toLowerCase().includes(user.name.toLowerCase())
+        );
+        if (filtered.length > 0) updated = filtered;
+      }
+      setAvailableClasses(updated);
+      if (updated.length > 0 && !selectedClassId) {
+        setSelectedClassId(updated[0].id);
+      }
+    });
+  }, [user]);
 
   const activeClass = useMemo(() => {
     return availableClasses.find((c) => c.id === selectedClassId) || availableClasses[0];
