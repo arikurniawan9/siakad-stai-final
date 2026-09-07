@@ -52,6 +52,7 @@ import {
 } from '../../types/attendance';
 import { AcademicClass } from '../../types/academic';
 import { CourseMeeting } from '../../types/learning';
+import { PremiumSelect, PremiumSelectOption } from '../../components/ui/PremiumSelect';
 
 // Helper: Generate Avatar Color from Name
 function getAvatarGradient(name: string): string {
@@ -88,6 +89,7 @@ export const PresensiPerkuliahanPage: React.FC = () => {
 
   // Classes & Meetings state
   const [classes, setClasses] = useState<AcademicClass[]>([]);
+  const [filterProdi, setFilterProdi] = useState<string>('');
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [meetings, setMeetings] = useState<CourseMeeting[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string>('');
@@ -151,6 +153,13 @@ export const PresensiPerkuliahanPage: React.FC = () => {
           const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
           return matchNidn || matchId || matchName;
         });
+        if (myClasses.length > 0) {
+          filtered = myClasses;
+        }
+      } else if (isStudent && user) {
+        const myClasses = clsList.filter((c) =>
+          academicService.isStudentEnrolledInClass(c.id, user.identityNumber || '', user.id)
+        );
         if (myClasses.length > 0) {
           filtered = myClasses;
         }
@@ -235,6 +244,124 @@ export const PresensiPerkuliahanPage: React.FC = () => {
   const handleNextMeeting = () => {
     if (currentMeetingIndex < meetings.length - 1) {
       setSelectedMeetingId(meetings[currentMeetingIndex + 1].id);
+    }
+  };
+
+  // =========================================================================
+  // PREMIUM SELECTOR MEMOS & HANDLERS (PRODI, KELAS, & SESI PERTEMUAN)
+  // =========================================================================
+
+  // 1. Program studi yang tersedia sesuai kelas aktif
+  const availableProdis = useMemo(() => {
+    const allProdis = academicService.getStudyPrograms();
+    const prodiCodesInClasses = Array.from(
+      new Set(classes.map((cls) => cls.studyProgramCode).filter(Boolean))
+    );
+
+    const fallbackNames: Record<string, string> = {
+      PAI: 'Pendidikan Agama Islam',
+      PIAUD: 'Pendidikan Islam Anak Usia Dini',
+      MPI: 'Manajemen Pendidikan Islam',
+      ES: 'Ekonomi Syariah',
+      MKU: 'Mata Kuliah Umum'
+    };
+
+    return prodiCodesInClasses.map((code) => {
+      const found = allProdis.find((p) => p.code === code);
+      if (found) return found;
+
+      return {
+        id: `prodi-${code.toLowerCase()}`,
+        externalId: `EXT-PRODI-${code}`,
+        code,
+        name: fallbackNames[code] || code,
+        degree: 'S1' as const,
+        faculty: 'Fakultas Tarbiyah',
+        isActive: true,
+        sourceSystem: 'SIAKAD_STAI'
+      };
+    });
+  }, [classes]);
+
+  // 2. Opsi Program Studi untuk PremiumSelect
+  const prodiOptions: PremiumSelectOption[] = useMemo(() => {
+    const list: PremiumSelectOption[] = [
+      {
+        value: '',
+        label: 'Semua Program Studi (Diampu)',
+        sublabel: `Menampilkan seluruh ${classes.length} kelas aktif`,
+        badge: `${classes.length} Kelas`,
+        icon: GraduationCap
+      }
+    ];
+
+    availableProdis.forEach((prodi) => {
+      const count = classes.filter((cls) => cls.studyProgramCode === prodi.code).length;
+      list.push({
+        value: prodi.code,
+        label: `[${prodi.code}] ${prodi.name}`,
+        sublabel: `${prodi.degree} • ${prodi.faculty || 'STAI Al-Ittihad'}`,
+        badge: `${count} Kelas`,
+        icon: GraduationCap
+      });
+    });
+
+    return list;
+  }, [availableProdis, classes]);
+
+  // 3. Kelas yang difilter berdasarkan Program Studi
+  const filteredClasses = useMemo(() => {
+    if (!filterProdi || filterProdi === 'SEMUA') return classes;
+    return classes.filter(cls => cls.studyProgramCode === filterProdi);
+  }, [classes, filterProdi]);
+
+  // 4. Opsi Kelas untuk PremiumSelect
+  const classOptions: PremiumSelectOption[] = useMemo(() => {
+    return filteredClasses.map((cls) => ({
+      value: cls.id,
+      label: `[${cls.code}] ${cls.name}`,
+      sublabel: `${cls.courseName || cls.name} • ${cls.credits} SKS • ${cls.studyProgramCode || 'Prodi'}`,
+      badge: `${cls.studentCount || 0} Mhs`,
+      icon: BookOpen
+    }));
+  }, [filteredClasses]);
+
+  // 5. Opsi Pertemuan untuk PremiumSelect
+  const meetingOptions: PremiumSelectOption[] = useMemo(() => {
+    return meetings.map((m) => {
+      const isUts = m.meetingNumber === 8;
+      const isUas = m.meetingNumber === 16;
+      const badgeText = isUts ? 'UTS' : isUas ? 'UAS' : `Sesi ${m.meetingNumber}`;
+
+      return {
+        value: m.id,
+        label: `Pertemuan #${m.meetingNumber}: ${m.title || m.topic || 'Sesi Perkuliahan'}`,
+        sublabel: `📅 ${m.scheduledDate || 'Jadwal Reguler'} • ⏰ ${m.startTime || '08:00'} - ${m.endTime || '09:40'}`,
+        badge: badgeText,
+        icon: Calendar
+      };
+    });
+  }, [meetings]);
+
+  // Handler perubahan Prodi
+  const handleProdiChange = (selectedCode: string) => {
+    setFilterProdi(selectedCode);
+    if (selectedCode && selectedCode !== 'SEMUA') {
+      const firstInProdi = classes.find(c => c.studyProgramCode === selectedCode);
+      if (firstInProdi && (!selectedClassId || !classes.some(c => c.id === selectedClassId && c.studyProgramCode === selectedCode))) {
+        setSelectedClassId(firstInProdi.id);
+      }
+    }
+  };
+
+  // Handler perubahan Kelas
+  const handleClassChange = (selectedId: string) => {
+    setSelectedClassId(selectedId);
+    const found = classes.find(c => c.id === selectedId || c.code === selectedId);
+    if (found && found.studyProgramCode) {
+      if (filterProdi && filterProdi !== 'SEMUA' && found.studyProgramCode !== filterProdi) {
+        setFilterProdi(found.studyProgramCode);
+      }
     }
   };
 
@@ -373,8 +500,8 @@ export const PresensiPerkuliahanPage: React.FC = () => {
     }
   };
 
-  const selectedClass = classes.find(c => c.id === selectedClassId);
-  const selectedMeeting = meetings.find(m => m.id === selectedMeetingId);
+  const selectedClass = classes.find(c => c.id === selectedClassId || c.code === selectedClassId) || classes[0];
+  const selectedMeeting = meetings.find(m => m.id === selectedMeetingId) || meetings[0];
 
   // Filtered Students list (Tab 1)
   const filteredStudents = useMemo(() => {
@@ -433,275 +560,263 @@ export const PresensiPerkuliahanPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-6">
       {/* =====================================================================
-          HERO & CONTEXT HEADER
+          PAGE HEADER (COMPACT & MODERN)
           ===================================================================== */}
-      <div 
-        style={{
-          background: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)',
-          borderRadius: 'var(--radius-xl)',
-          padding: 'var(--space-6)',
-          color: 'white',
-          boxShadow: '0 10px 25px -5px rgba(6, 78, 59, 0.25)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-        {/* Decorative background watermark */}
-        <div 
-          style={{
-            position: 'absolute',
-            right: '-20px',
-            bottom: '-30px',
-            opacity: 0.08,
-            pointerEvents: 'none',
-            transform: 'rotate(-10deg)'
-          }}
-        >
-          <GraduationCap size={240} color="#ffffff" />
-        </div>
-
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative z-10">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span 
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  backdropFilter: 'blur(8px)',
-                  padding: '3px 10px',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  letterSpacing: '0.02em',
-                  border: '1px solid rgba(255, 255, 255, 0.2)'
-                }}
-              >
-                <ShieldCheck size={13} />
-                STAI Al-Ittihad Cianjur
-              </span>
-              <span 
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  padding: '3px 10px',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 500
-                }}
-              >
-                T.A. 2026/2027 Ganjil
-              </span>
-            </div>
-
-            <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
               Presensi & Kehadiran Perkuliahan
             </h1>
-            <p style={{ fontSize: 'var(--text-sm)', color: '#d1fae5', marginTop: '4px', maxWidth: '650px', lineHeight: 1.5 }}>
-              {isStudent 
-                ? 'Pindai QR code dinamis proyektor, masukkan 6-digit passcode sesi, atau ajukan surat izin/sakit resmi.' 
-                : 'Pencatatan kehadiran presisi dengan dynamic rotating QR code, passcode proyektor, validasi kelayakan UAS 75%, dan Berita Acara Perkuliahan (BAP).'}
-            </p>
+            <Badge variant="primary" style={{ padding: '3px 9px', fontSize: '11px' }}>
+              Real-time SIAKAD
+            </Badge>
+            <Badge variant="default" style={{ padding: '3px 9px', fontSize: '11px' }}>
+              T.A. 2026/2027 Ganjil
+            </Badge>
           </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)', margin: 0 }}>
+            {isStudent 
+              ? 'Pindai QR code dinamis proyektor atau masukkan 6-digit passcode untuk mencatat kehadiran Anda.' 
+              : 'Pencatatan presensi real-time terintegrasi SIAKAD, QR Code dinamis proyektor, dan Berita Acara Perkuliahan (BAP).'}
+          </p>
+        </div>
 
-          {/* Action Hub in Hero */}
-          <div className="flex flex-wrap items-center gap-3">
-            {isStudent && selectedMeeting && (
-              <Button
-                variant="primary"
-                size="lg"
-                icon={QrCode}
-                onClick={() => setIsStudentScanModalOpen(true)}
-                style={{
-                  backgroundColor: '#ffffff',
-                  color: '#065f46',
-                  fontWeight: 700,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                }}
-              >
-                Presensi Sekarang
-              </Button>
-            )}
+        {/* Action Hub in Header */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {isStudent && selectedMeeting && (
+            <Button
+              variant="primary"
+              size="md"
+              icon={QrCode}
+              onClick={() => setIsStudentScanModalOpen(true)}
+              style={{
+                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.25)',
+                fontWeight: 600
+              }}
+            >
+              Presensi Sekarang
+            </Button>
+          )}
 
-            {isLecturer && sessionData && (
-              <>
-                {sessionData.session.sessionStatus === 'DIBUKA' ? (
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    icon={QrCode}
-                    onClick={() => setIsQrModalOpen(true)}
-                    style={{
-                      backgroundColor: '#10b981',
-                      color: '#ffffff',
-                      fontWeight: 700,
-                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
-                    }}
-                  >
-                    Buka Layar QR Proyektor
-                  </Button>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    icon={QrCode}
-                    onClick={handleOpenQrSession}
-                    style={{
-                      backgroundColor: '#ffffff',
-                      color: '#065f46',
-                      fontWeight: 700,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                    }}
-                  >
-                    Buka Sesi Presensi
-                  </Button>
-                )}
-
+          {isLecturer && sessionData && (
+            <>
+              {sessionData.session.sessionStatus === 'DIBUKA' ? (
                 <Button
-                  variant="outline"
+                  variant="primary"
                   size="md"
-                  icon={Printer}
-                  onClick={() => setIsPrintBapModalOpen(true)}
+                  icon={QrCode}
+                  onClick={() => setIsQrModalOpen(true)}
                   style={{
-                    borderColor: 'rgba(255, 255, 255, 0.4)',
-                    color: '#ffffff',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    backdropFilter: 'blur(4px)'
+                    backgroundColor: 'var(--color-primary-600)',
+                    fontWeight: 600,
+                    boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
                   }}
                 >
-                  Cetak BAP
+                  Buka Layar QR Proyektor
                 </Button>
-              </>
-            )}
-          </div>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="md"
+                  icon={QrCode}
+                  onClick={handleOpenQrSession}
+                  style={{ fontWeight: 600 }}
+                >
+                  Buka Sesi Presensi
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                size="md"
+                icon={Printer}
+                onClick={() => setIsPrintBapModalOpen(true)}
+              >
+                Cetak BAP
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       {/* =====================================================================
-          COURSE & MEETING SELECTOR BAR
+          UNIFIED MODERN TOOLBAR (PRODI, KELAS, SESI PERTEMUAN & STATUS PIN)
           ===================================================================== */}
-      <Card style={{ border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-sm)' }}>
-        <CardBody style={{ padding: 'var(--space-4)' }}>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-            {/* 1. Pilih Kelas (5 Cols) */}
-            <div className="lg:col-span-5">
-              <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <BookOpen size={14} color="var(--color-primary-600)" />
-                Mata Kuliah & Rombel Kelas:
-              </label>
-              <select
-                className="form-select"
-                value={selectedClassId}
-                onChange={(e) => setSelectedClassId(e.target.value)}
-                style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}
-              >
-                {classes.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.courseName || c.name} — Kelas {c.name} ({c.code})
-                  </option>
-                ))}
-              </select>
-            </div>
+      <Card 
+        style={{ 
+          border: '1px solid var(--border-default)', 
+          boxShadow: 'var(--shadow-sm)',
+          overflow: 'visible',
+          position: 'relative',
+          zIndex: 30,
+          backgroundColor: '#ffffff'
+        }}
+      >
+        <CardBody style={{ padding: '14px 18px', overflow: 'visible' }}>
+          <div className="flex flex-col gap-3">
+            {/* Top Row: Responsive 12-Column Grid Selectors */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end">
+              {/* 1. Opsi Program Studi (3 Cols) */}
+              <div className="md:col-span-3">
+                <PremiumSelect
+                  label="Program Studi"
+                  value={filterProdi}
+                  onChange={handleProdiChange}
+                  options={prodiOptions}
+                  icon={GraduationCap}
+                  placeholder="— Semua Prodi —"
+                />
+              </div>
 
-            {/* 2. Pilih Pertemuan dengan Navigasi Cepat (4 Cols) */}
-            <div className="lg:col-span-4">
-              <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Calendar size={14} color="var(--color-primary-600)" />
-                Sesi Pertemuan Perkuliahan:
-              </label>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon={ChevronLeft}
-                  onClick={handlePrevMeeting}
-                  disabled={currentMeetingIndex <= 0}
-                  title="Pertemuan Sebelumnya"
-                  style={{ padding: '8px' }}
+              {/* 2. Opsi Kelas Perkuliahan (Smart Class Picker) (5 Cols) */}
+              <div className="md:col-span-5">
+                <PremiumSelect
+                  label="Kelas Perkuliahan (SIAKAD)"
+                  value={selectedClassId}
+                  onChange={handleClassChange}
+                  options={classOptions}
+                  icon={BookOpen}
+                  placeholder="— Pilih Kelas —"
                 />
-                <select
-                  className="form-select"
-                  value={selectedMeetingId}
-                  onChange={(e) => setSelectedMeetingId(e.target.value)}
-                  disabled={meetings.length === 0}
-                  style={{ fontWeight: 500, fontSize: 'var(--text-sm)', flex: 1 }}
-                >
-                  {meetings.length === 0 ? (
-                    <option value="">Belum ada pertemuan perkuliahan</option>
-                  ) : (
-                    meetings.map(m => (
-                      <option key={m.id} value={m.id}>
-                        Pertemuan #{m.meetingNumber} — {m.title} ({m.scheduledDate})
-                      </option>
-                    ))
-                  )}
-                </select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon={ChevronRight}
-                  onClick={handleNextMeeting}
-                  disabled={currentMeetingIndex >= meetings.length - 1}
-                  title="Pertemuan Berikutnya"
-                  style={{ padding: '8px' }}
-                />
+              </div>
+
+              {/* 3. Sesi Pertemuan dengan Navigasi Cepat (4 Cols) */}
+              <div className="md:col-span-4">
+                <div className="flex items-end gap-1.5">
+                  <div className="flex-1 min-w-0">
+                    <PremiumSelect
+                      label="Sesi Pertemuan (1 - 16)"
+                      value={selectedMeetingId}
+                      onChange={(val) => setSelectedMeetingId(val)}
+                      options={meetingOptions}
+                      icon={Calendar}
+                      placeholder="— Pilih Pertemuan —"
+                      disabled={meetings.length === 0}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={ChevronLeft}
+                      onClick={handlePrevMeeting}
+                      disabled={currentMeetingIndex <= 0}
+                      title="Pertemuan Sebelumnya"
+                      style={{
+                        height: '42px',
+                        width: '36px',
+                        padding: 0,
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: '#ffffff',
+                        borderColor: 'var(--border-default)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={ChevronRight}
+                      onClick={handleNextMeeting}
+                      disabled={currentMeetingIndex >= meetings.length - 1}
+                      title="Pertemuan Berikutnya"
+                      style={{
+                        height: '42px',
+                        width: '36px',
+                        padding: 0,
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: '#ffffff',
+                        borderColor: 'var(--border-default)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* 3. Status Sesi Presensi Live Indicator (3 Cols) */}
-            <div className="lg:col-span-3 flex lg:justify-end items-center">
+            {/* Bottom Row: Metadata Context + Live Session & PIN Status */}
+            <div 
+              className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pt-2.5"
+              style={{ 
+                borderTop: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)'
+              }}
+            >
+              {selectedClass ? (
+                <div className="flex items-center gap-2.5 flex-wrap text-xs">
+                  <span className="font-semibold" style={{ color: 'var(--color-primary-800)' }}>
+                    {selectedClass.courseName || selectedClass.name} ({selectedClass.credits} SKS)
+                  </span>
+                  <span style={{ color: 'var(--border-strong)' }}>•</span>
+                  <span className="flex items-center gap-1 text-muted">
+                    <Clock size={12} />
+                    {selectedClass.schedules && selectedClass.schedules[0] 
+                      ? `${selectedClass.schedules[0].dayOfWeek}, ${selectedClass.schedules[0].startTime} - ${selectedClass.schedules[0].endTime} (${selectedClass.schedules[0].room})`
+                      : 'Jadwal Kuliah SIAKAD'}
+                  </span>
+                  <span style={{ color: 'var(--border-strong)' }}>•</span>
+                  <span className="text-muted">
+                    Dosen: <strong>{selectedClass.lecturerName || 'Dr. H. M. Ridwan, M.Ag'}</strong>
+                  </span>
+                </div>
+              ) : <div />}
+
+              {/* Live Session Status & PIN Badge */}
               {sessionData && (
                 <div 
+                  className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-start"
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '8px 14px',
-                    borderRadius: 'var(--radius-lg)',
+                    padding: '4px 12px',
+                    borderRadius: 'var(--radius-full)',
                     backgroundColor: 
-                      sessionData.session.sessionStatus === 'DIBUKA' ? 'var(--color-success-bg)' :
+                      sessionData.session.sessionStatus === 'DIBUKA' ? 'var(--color-primary-50)' :
                       sessionData.session.sessionStatus === 'DITUTUP' ? 'var(--color-slate-100)' : 'var(--color-warning-bg)',
                     border: `1px solid ${
-                      sessionData.session.sessionStatus === 'DIBUKA' ? 'var(--color-success-border)' :
+                      sessionData.session.sessionStatus === 'DIBUKA' ? 'var(--color-primary-200)' :
                       sessionData.session.sessionStatus === 'DITUTUP' ? 'var(--border-default)' : 'var(--color-warning-border)'
                     }`,
-                    width: '100%'
+                    height: '32px',
+                    whiteSpace: 'nowrap'
                   }}
                 >
-                  <div 
-                    style={{
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      backgroundColor: 
-                        sessionData.session.sessionStatus === 'DIBUKA' ? 'var(--color-success-main)' :
-                        sessionData.session.sessionStatus === 'DITUTUP' ? 'var(--color-slate-500)' : 'var(--color-warning-main)',
-                      boxShadow: sessionData.session.sessionStatus === 'DIBUKA' ? '0 0 0 3px rgba(22, 163, 74, 0.25)' : 'none'
-                    }}
-                  />
-                  <div className="flex flex-col">
-                    <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
-                      Status Sesi
-                    </span>
+                  <div className="flex items-center gap-1.5">
+                    <div 
+                      style={{
+                        width: '7px',
+                        height: '7px',
+                        borderRadius: '50%',
+                        backgroundColor: 
+                          sessionData.session.sessionStatus === 'DIBUKA' ? 'var(--color-primary-600)' :
+                          sessionData.session.sessionStatus === 'DITUTUP' ? 'var(--color-slate-500)' : 'var(--color-warning-main)',
+                        boxShadow: sessionData.session.sessionStatus === 'DIBUKA' ? '0 0 0 3px rgba(5, 150, 105, 0.25)' : 'none'
+                      }}
+                    />
                     <span 
                       style={{
-                        fontSize: 'var(--text-xs)',
+                        fontSize: '11px',
                         fontWeight: 700,
                         color: 
-                          sessionData.session.sessionStatus === 'DIBUKA' ? 'var(--color-success-dark)' :
+                          sessionData.session.sessionStatus === 'DIBUKA' ? 'var(--color-primary-900)' :
                           sessionData.session.sessionStatus === 'DITUTUP' ? 'var(--color-slate-700)' : 'var(--color-warning-dark)'
                       }}
                     >
-                      {sessionData.session.sessionStatus === 'DIBUKA' ? '🟢 Sesi Aktif / Dibuka' :
-                       sessionData.session.sessionStatus === 'DITUTUP' ? '🔒 Sesi Ditutup' : '⏳ Belum Dibuka'}
+                      {sessionData.session.sessionStatus === 'DIBUKA' ? 'Sesi Dibuka' :
+                       sessionData.session.sessionStatus === 'DITUTUP' ? 'Sesi Ditutup' : 'Belum Dibuka'}
                     </span>
                   </div>
                   {sessionData.session.passcode && (
-                    <div className="ml-auto text-right">
-                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Passcode</span>
-                      <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 'var(--text-xs)', color: 'var(--color-primary-800)' }}>
+                    <div className="flex items-center gap-1 pl-2 border-l border-emerald-300">
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>PIN:</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '12.5px', color: 'var(--color-primary-800)' }}>
                         {sessionData.session.passcode}
-                      </div>
+                      </span>
                     </div>
                   )}
                 </div>

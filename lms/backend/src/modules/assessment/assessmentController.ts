@@ -334,8 +334,10 @@ export async function getAssignments(req: AuthenticatedRequest, res: Response, n
         a.created_at as "createdAt",
         a.updated_at as "updatedAt",
         c.name as "courseName",
-        cc.class_name as "className",
-        cm.meeting_number as "meetingNumber"
+        cc.name as "className",
+        COALESCE(cm.meeting_number, 1) as "meetingNumber",
+        sp.name as "studyProgramName",
+        sp.code as "studyProgramCode"
     `;
 
     // Jika mahasiswa, sertakan status pengumpulan miliknya
@@ -352,20 +354,21 @@ export async function getAssignments(req: AuthenticatedRequest, res: Response, n
       query += `
         , (SELECT COUNT(*)::int FROM assignment_submissions s WHERE s.assignment_id = a.id) as "totalSubmissionsCount",
         (SELECT COUNT(*)::int FROM assignment_submissions s WHERE s.assignment_id = a.id AND s.status = 'SUDAH_DINILAI') as "gradedSubmissionsCount",
-        (SELECT COUNT(*)::int FROM class_enrollments ce WHERE ce.class_id = a.class_id AND ce.status = 'AKTIF') as "totalStudentsCount"
+        (SELECT COUNT(*)::int FROM class_enrollments ce WHERE (ce.course_class_id::text = a.class_id OR ce.course_class_id::text = cc.id::text)) as "totalStudentsCount"
       `;
     }
 
     query += `
       FROM assignments a
-      JOIN course_classes cc ON cc.id = a.class_id
+      JOIN course_classes cc ON (cc.id::text = a.class_id::text OR cc.code = a.class_id)
       JOIN courses c ON c.id = cc.course_id
-      JOIN course_meetings cm ON cm.id = a.meeting_id
+      LEFT JOIN study_programs sp ON sp.id = c.study_program_id
+      LEFT JOIN class_meetings cm ON (cm.id::text = a.meeting_id::text)
     `;
 
     if (isStudent) {
       query += `
-        LEFT JOIN assignment_submissions sub ON sub.assignment_id = a.id AND sub.student_id = $1
+        LEFT JOIN assignment_submissions sub ON sub.assignment_id = a.id AND sub.student_id::text = $1::text
       `;
     }
 
@@ -379,12 +382,12 @@ export async function getAssignments(req: AuthenticatedRequest, res: Response, n
 
     if (classId) {
       params.push(classId);
-      query += ` AND a.class_id = $${params.length}`;
+      query += ` AND (a.class_id = $${params.length} OR cc.id::text = $${params.length} OR cc.code = $${params.length})`;
     }
 
     if (meetingId) {
       params.push(meetingId);
-      query += ` AND a.meeting_id = $${params.length}`;
+      query += ` AND (a.meeting_id = $${params.length} OR cm.id::text = $${params.length})`;
     }
 
     query += ` ORDER BY a.due_date ASC`;
@@ -430,16 +433,19 @@ export async function getAssignmentById(req: AuthenticatedRequest, res: Response
         a.created_at as "createdAt",
         a.updated_at as "updatedAt",
         c.name as "courseName",
-        cc.class_name as "className",
-        cm.meeting_number as "meetingNumber",
-        (SELECT COUNT(*)::int FROM class_enrollments ce WHERE ce.class_id = a.class_id AND ce.status = 'AKTIF') as "totalStudentsCount",
+        cc.name as "className",
+        COALESCE(cm.meeting_number, 1) as "meetingNumber",
+        sp.name as "studyProgramName",
+        sp.code as "studyProgramCode",
+        (SELECT COUNT(*)::int FROM class_enrollments ce WHERE (ce.course_class_id::text = a.class_id OR ce.course_class_id::text = cc.id::text)) as "totalStudentsCount",
         (SELECT COUNT(*)::int FROM assignment_submissions s WHERE s.assignment_id = a.id) as "totalSubmissionsCount",
         (SELECT COUNT(*)::int FROM assignment_submissions s WHERE s.assignment_id = a.id AND s.status = 'SUDAH_DINILAI') as "gradedSubmissionsCount",
         (SELECT AVG(final_score)::numeric(5,2) FROM assignment_submissions s WHERE s.assignment_id = a.id AND s.status = 'SUDAH_DINILAI') as "averageScore"
       FROM assignments a
-      JOIN course_classes cc ON cc.id = a.class_id
+      JOIN course_classes cc ON (cc.id::text = a.class_id::text OR cc.code = a.class_id)
       JOIN courses c ON c.id = cc.course_id
-      JOIN course_meetings cm ON cm.id = a.meeting_id
+      LEFT JOIN study_programs sp ON sp.id = c.study_program_id
+      LEFT JOIN class_meetings cm ON (cm.id::text = a.meeting_id::text)
       WHERE a.id = $1
     `;
 
@@ -709,10 +715,11 @@ export async function getClassAssignmentSubmissions(req: AuthenticatedRequest, r
         sub.version_history as "history",
         grader.name as "gradedByLecturerName"
       FROM class_enrollments ce
-      JOIN users u ON u.id = ce.student_id
-      LEFT JOIN assignment_submissions sub ON sub.assignment_id = $1 AND sub.student_id = u.id
-      LEFT JOIN users grader ON grader.id = sub.grader_id
-      WHERE ce.class_id = $2 AND ce.status = 'AKTIF'
+      JOIN course_classes cc ON (cc.id = ce.course_class_id)
+      JOIN users u ON u.id::text = ce.student_id::text
+      LEFT JOIN assignment_submissions sub ON sub.assignment_id = $1 AND sub.student_id::text = u.id::text
+      LEFT JOIN users grader ON grader.id::text = sub.grader_id::text
+      WHERE (ce.course_class_id::text = $2 OR cc.code = $2)
       ORDER BY u.name ASC
     `;
 
@@ -765,9 +772,9 @@ export async function getStudentSubmission(req: AuthenticatedRequest, res: Respo
         u.name as "studentName",
         u.identity_number as "studentNim"
       FROM assignment_submissions sub
-      JOIN users u ON u.id = sub.student_id
-      LEFT JOIN users grader ON grader.id = sub.grader_id
-      WHERE sub.assignment_id = $1 AND sub.student_id = $2
+      JOIN users u ON u.id::text = sub.student_id::text
+      LEFT JOIN users grader ON grader.id::text = sub.grader_id::text
+      WHERE sub.assignment_id = $1 AND sub.student_id::text = $2::text
     `, [assignmentId, studentId]);
 
     if (result.rows.length === 0) {

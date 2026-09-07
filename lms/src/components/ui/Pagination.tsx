@@ -83,24 +83,22 @@ export const Pagination: React.FC<PaginationProps> = ({
 
   return (
     <div 
-      className={`flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 pb-1 text-xs border-t border-slate-200 mt-2 ${className}`}
+      className={`flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${className}`}
       style={{
-        borderTop: '1px solid var(--border-default)',
-        paddingTop: 'var(--space-3)',
-        marginTop: 'var(--space-2)'
+        paddingTop: 'var(--space-1)',
+        paddingBottom: 'var(--space-1)'
       }}
     >
-      {/* Left: Info & Page Size */}
-      <div className="flex flex-wrap items-center gap-3 text-slate-600" style={{ color: 'var(--text-muted)' }}>
+      {/* Left: Info & Optional Page Size */}
+      <div className="flex flex-wrap items-center gap-2 text-slate-600" style={{ color: 'var(--text-muted)' }}>
         {showTotalInfo && (
-          <span>
-            Menampilkan <strong>{startItem}</strong> - <strong>{endItem}</strong> dari <strong>{totalItems}</strong> {itemLabel}
+          <span style={{ fontSize: '12px' }}>
+            Menampilkan <strong style={{ color: 'var(--color-primary-700)' }}>{startItem}</strong>–<strong style={{ color: 'var(--color-primary-700)' }}>{endItem}</strong> dari <strong style={{ color: 'var(--color-primary-700)' }}>{totalItems}</strong> {itemLabel}
           </span>
         )}
 
         {showPageSizeSelector && onPageSizeChange && (
           <div className="flex items-center gap-1.5 ml-0 sm:ml-2">
-            <span>Baris per halaman:</span>
             <select
               value={pageSize}
               onChange={(e) => {
@@ -108,20 +106,21 @@ export const Pagination: React.FC<PaginationProps> = ({
                 onPageSizeChange(newSize);
                 onPageChange(1);
               }}
-              className="form-select text-xs py-1 px-2 border rounded"
+              className="form-select text-xs"
               style={{
                 padding: '2px 8px',
-                fontSize: 'var(--text-xs)',
-                borderRadius: 'var(--radius-sm)',
+                fontSize: '11px',
+                borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border-default)',
-                backgroundColor: 'var(--color-white)',
+                backgroundColor: 'var(--bg-surface)',
                 color: 'var(--text-primary)',
                 cursor: 'pointer'
               }}
+              title="Jumlah baris per halaman"
             >
               {pageSizeOptions.map((opt) => (
                 <option key={opt} value={opt}>
-                  {opt}
+                  {opt} per halaman
                 </option>
               ))}
             </select>

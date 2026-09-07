@@ -568,13 +568,30 @@ class AssignmentService {
   public async fetchClassSubmissions(assignmentId: string): Promise<AssignmentSubmission[]> {
     try {
       const res = await apiClient.get<AssignmentSubmission[]>(`/assignments/${assignmentId}/submissions`);
-      if (Array.isArray(res) && res.length > 0) {
+      if (Array.isArray(res)) {
         return res;
       }
       return this.getSubmissions(assignmentId);
     } catch (err) {
       console.warn('Fallback to local submissions list:', err);
       return this.getSubmissions(assignmentId);
+    }
+  }
+
+  /**
+   * Mengambil pengumpulan tugas milik mahasiswa tertentu dari REST API
+   */
+  public async fetchStudentSubmission(
+    assignmentId: string,
+    studentId?: string
+  ): Promise<AssignmentSubmission | null> {
+    try {
+      const qs = studentId ? `?studentId=${studentId}` : '';
+      const res = await apiClient.get<AssignmentSubmission | null>(`/assignments/${assignmentId}/submission${qs}`);
+      if (res) return res;
+      return this.getStudentSubmission(assignmentId, studentId || '');
+    } catch {
+      return this.getStudentSubmission(assignmentId, studentId || '');
     }
   }
 

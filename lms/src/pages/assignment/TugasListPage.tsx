@@ -4,29 +4,31 @@ import {
   Calendar, 
   ArrowRight, 
   Award,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  Search,
-  X,
-  Plus,
-  Edit3,
-  Trash2,
-  FileText,
-  Upload,
-  Sparkles,
-  BookOpen,
-  Eye,
-  EyeOff,
-  Users,
-  Check
+  CheckCircle2, 
+  Clock, 
+  AlertCircle, 
+  Search, 
+  X, 
+  Plus, 
+  Edit3, 
+  Trash2, 
+  FileText, 
+  Upload, 
+  Sparkles, 
+  BookOpen, 
+  Eye, 
+  EyeOff, 
+  Users, 
+  Check,
+  GraduationCap
 } from 'lucide-react';
-import { Card, CardHeader, CardBody, CardFooter } from '../../components/ui/Card';
+import { Card, CardBody, CardHeader, CardFooter } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Pagination';
+import { PremiumSelect, PremiumSelectOption } from '../../components/ui/PremiumSelect';
 import { 
   Assignment, 
   CreateAssignmentInput, 
@@ -46,7 +48,25 @@ export interface TugasListPageProps {
   onOpenGradingStudio?: (assignmentId: string) => void;
 }
 
-type TabFilter = 'semua' | 'perlu_dikerjakan' | 'sudah_dikumpulkan' | 'sudah_dinilai' | 'perlu_dinilai_dosen';
+type TabFilter = 'semua' | 'perlu_dikerjakan' | 'sudah_dikumpulkan' | 'sudah_dinilai' | 'perlu_dinilai_dosen' | 'draf';
+
+function getDeadlineUrgency(dueDate: string) {
+  const now = new Date().getTime();
+  const due = new Date(dueDate).getTime();
+  const diffMs = due - now;
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMs < 0) {
+    return { text: 'Terlewat', variant: 'danger' as const, isPastDue: true };
+  } else if (diffHours < 24) {
+    return { text: `Sisa ${diffHours} Jam`, variant: 'warning' as const, isPastDue: false };
+  } else if (diffDays <= 2) {
+    return { text: `Sisa ${diffDays} Hari`, variant: 'warning' as const, isPastDue: false };
+  } else {
+    return { text: `Sisa ${diffDays} Hari`, variant: 'success' as const, isPastDue: false };
+  }
+}
 
 export const TugasListPage: React.FC<TugasListPageProps> = ({ 
   onSelectAssignment, 
@@ -55,10 +75,18 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
   const { user } = useAuth();
   const toast = useToast();
 
+  const isStudent = user?.role === 'mahasiswa';
+  const isLecturer = user?.role === 'dosen' || user?.role === 'dosen_pa' || user?.role === 'kaprodi' || user?.role === 'administrator_sistem';
+  const isLecturerRole = user?.role === 'dosen' || user?.role === 'dosen_pa';
+
+  // Assignment & filter states
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [filterProdi, setFilterProdi] = useState<string>('');
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterMeeting, setFilterMeeting] = useState<string>('');
   const [activeFilterTab, setActiveFilterTab] = useState<TabFilter>('semua');
-  const [selectedCourse, setSelectedCourse] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -74,7 +102,6 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
   const [assignmentToDelete, setAssignmentToDelete] = useState<Assignment | null>(null);
 
   // Available Classes from SIAKAD
-  const isLecturerRole = user?.role === 'dosen' || user?.role === 'dosen_pa';
   const [availableClasses, setAvailableClasses] = useState<AcademicClass[]>(() => {
     const all = academicService.getClasses();
     if (!isLecturerRole || !user) return all;
@@ -165,35 +192,135 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
     }
   ]);
 
-  const isStudent = user?.role === 'mahasiswa';
-  const isLecturer = user?.role === 'dosen' || user?.role === 'dosen_pa' || user?.role === 'kaprodi' || user?.role === 'administrator_sistem';
-
-  // Load Assignments Data
+  // Load Assignments Data directly from Backend API (real data from siakad_stai_db)
   const loadAssignmentsData = async () => {
+    setIsLoading(true);
     try {
-      const list = await assignmentService.fetchAssignments(undefined);
+      const list = await assignmentService.fetchAssignments(selectedClassId || undefined);
       setAssignments(list);
     } catch {
-      setAssignments(assignmentService.getAssignments(undefined, isStudent));
+      setAssignments(assignmentService.getAssignments(selectedClassId || undefined, isStudent));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     loadAssignmentsData();
-  }, [isStudent]);
+  }, [selectedClassId, isStudent]);
 
-  // Extract unique courses for filter dropdown
-  const uniqueCourses = Array.from(new Set(assignments.map(a => a.courseName)));
+  // =========================================================================
+  // SELECTOR OPTIONS: PROGRAM STUDI & KELAS PERKULIAHAN
+  // =========================================================================
 
-  // Calculate statistics
+  const availableProdis = useMemo(() => {
+    const allProdis = academicService.getStudyPrograms();
+    const prodiCodesInClasses = Array.from(
+      new Set(availableClasses.map((cls) => cls.studyProgramCode).filter(Boolean))
+    );
+
+    const fallbackNames: Record<string, string> = {
+      PAI: 'Pendidikan Agama Islam',
+      PIAUD: 'Pendidikan Islam Anak Usia Dini',
+      MPI: 'Manajemen Pendidikan Islam',
+      ES: 'Ekonomi Syariah',
+      BKI: 'Bimbingan Konseling Islam',
+      MKU: 'Mata Kuliah Umum'
+    };
+
+    return prodiCodesInClasses.map((code) => {
+      const found = allProdis.find((p) => p.code === code);
+      if (found) return found;
+
+      return {
+        id: `prodi-${code.toLowerCase()}`,
+        externalId: `EXT-PRODI-${code}`,
+        code,
+        name: fallbackNames[code] || code,
+        degree: 'S1' as const,
+        faculty: 'Fakultas Tarbiyah',
+        isActive: true,
+        sourceSystem: 'SIAKAD_STAI'
+      };
+    });
+  }, [availableClasses]);
+
+  const prodiOptions: PremiumSelectOption[] = useMemo(() => {
+    const list: PremiumSelectOption[] = [
+      {
+        value: '',
+        label: 'Semua Program Studi',
+        sublabel: `Menampilkan seluruh ${availableClasses.length} rombel kelas`,
+        badge: `${availableClasses.length} Kelas`,
+        icon: GraduationCap
+      }
+    ];
+
+    availableProdis.forEach((prodi) => {
+      const count = availableClasses.filter((cls) => cls.studyProgramCode === prodi.code).length;
+      list.push({
+        value: prodi.code,
+        label: `[${prodi.code}] ${prodi.name}`,
+        sublabel: `${prodi.degree} • ${prodi.faculty || 'STAI Al-Ittihad'}`,
+        badge: `${count} Kelas`,
+        icon: GraduationCap
+      });
+    });
+
+    return list;
+  }, [availableProdis, availableClasses]);
+
+  const filteredClasses = useMemo(() => {
+    if (!filterProdi || filterProdi === 'SEMUA') return availableClasses;
+    return availableClasses.filter(cls => cls.studyProgramCode === filterProdi);
+  }, [availableClasses, filterProdi]);
+
+  const classOptions: PremiumSelectOption[] = useMemo(() => {
+    const list: PremiumSelectOption[] = [
+      {
+        value: '',
+        label: 'Semua Kelas Perkuliahan',
+        sublabel: 'Menampilkan penugasan dari seluruh kelas',
+        badge: `${filteredClasses.length} Kelas`,
+        icon: BookOpen
+      }
+    ];
+
+    filteredClasses.forEach((cls) => {
+      list.push({
+        value: cls.id,
+        label: `[${cls.code}] ${cls.name}`,
+        sublabel: `${cls.courseName || cls.name} • ${cls.credits} SKS • ${cls.studyProgramCode || 'Prodi'}`,
+        badge: `${cls.studentCount || 0} Mhs`,
+        icon: BookOpen
+      });
+    });
+
+    return list;
+  }, [filteredClasses]);
+
+  const handleProdiChange = (selectedCode: string) => {
+    setFilterProdi(selectedCode);
+    setSelectedClassId('');
+  };
+
+  const handleClassChange = (selectedId: string) => {
+    setSelectedClassId(selectedId);
+  };
+
+  // =========================================================================
+  // METRICS & STATISTICS (REAL SIAKAD AGGREGATES)
+  // =========================================================================
+
   const stats = useMemo(() => {
     if (isStudent) {
       return assignments.reduce(
         (acc, asg) => {
           const sub = user ? assignmentService.getStudentSubmission(asg.id, user.id) : null;
-          if (!sub) {
+          const status = (asg as any).submissionStatus || sub?.status;
+          if (!status || status === 'BELUM_DIKUMPULKAN') {
             acc.pending += 1;
-          } else if (sub.status === 'SUDAH_DINILAI') {
+          } else if (status === 'SUDAH_DINILAI') {
             acc.graded += 1;
           } else {
             acc.submitted += 1;
@@ -206,56 +333,99 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
       let needGrading = 0;
       let totalSubs = 0;
       let totalGraded = 0;
+      let draftCount = 0;
+
       assignments.forEach(asg => {
-        const subs = assignmentService.getSubmissions(asg.id);
-        totalSubs += subs.length;
-        subs.forEach(s => {
-          if (s.status === 'SUDAH_DIKUMPULKAN' || s.status === 'TERLAMBAT') needGrading += 1;
-          if (s.status === 'SUDAH_DINILAI') totalGraded += 1;
-        });
+        if (asg.status === 'DRAF') draftCount++;
+        const total = (asg as any).totalSubmissionsCount ?? assignmentService.getSubmissions(asg.id).length;
+        const graded = (asg as any).gradedSubmissionsCount ?? 0;
+        totalSubs += total;
+        totalGraded += graded;
+        needGrading += Math.max(0, total - graded);
       });
-      return { totalAssignments: assignments.length, needGrading, totalSubs, totalGraded };
+
+      return { 
+        totalAssignments: assignments.length, 
+        needGrading, 
+        totalSubs, 
+        totalGraded,
+        draftCount 
+      };
     }
   }, [assignments, user, isStudent]);
 
+  // Filtered Assignments List
   const filteredAssignments = useMemo(() => {
     return assignments.filter((a) => {
-      const matchesSearch = 
-        a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        a.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        a.description.toLowerCase().includes(searchQuery.toLowerCase());
+      // 1. Prodi Filter
+      if (filterProdi) {
+        const cls = availableClasses.find(c => c.id === a.classId || c.code === a.classId);
+        const matchProdi = (a as any).studyProgramCode === filterProdi || cls?.studyProgramCode === filterProdi;
+        if (!matchProdi) return false;
+      }
 
-      const matchesCourse = selectedCourse === 'all' || a.courseName === selectedCourse;
+      // 2. Class Filter
+      if (selectedClassId) {
+        const matchClass = a.classId === selectedClassId || 
+          availableClasses.some(c => c.id === selectedClassId && (c.code === a.classId || c.id === a.classId));
+        if (!matchClass) return false;
+      }
 
-      if (!matchesSearch || !matchesCourse) return false;
+      // 3. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesSearch = 
+          a.title.toLowerCase().includes(q) ||
+          a.courseName.toLowerCase().includes(q) ||
+          (a.className && a.className.toLowerCase().includes(q)) ||
+          (a.description && a.description.toLowerCase().includes(q));
+        if (!matchesSearch) return false;
+      }
 
+      // 4. Meeting Filter
+      if (filterMeeting) {
+        if (String(a.meetingNumber) !== filterMeeting) return false;
+      }
+
+      // 5. Tab Filter
       if (isStudent) {
         const sub = user ? assignmentService.getStudentSubmission(a.id, user.id) : null;
-        if (activeFilterTab === 'perlu_dikerjakan') return !sub;
-        if (activeFilterTab === 'sudah_dikumpulkan') return !!sub && sub.status !== 'SUDAH_DINILAI';
-        if (activeFilterTab === 'sudah_dinilai') return sub?.status === 'SUDAH_DINILAI';
+        const subStatus = (a as any).submissionStatus || sub?.status;
+        if (activeFilterTab === 'perlu_dikerjakan') return !subStatus || subStatus === 'BELUM_DIKUMPULKAN';
+        if (activeFilterTab === 'sudah_dikumpulkan') return subStatus === 'SUDAH_DIKUMPULKAN' || subStatus === 'TERLAMBAT' || subStatus === 'PERLU_REVISI';
+        if (activeFilterTab === 'sudah_dinilai') return subStatus === 'SUDAH_DINILAI';
       } else {
         if (activeFilterTab === 'perlu_dinilai_dosen') {
-          const subs = assignmentService.getSubmissions(a.id);
-          return subs.some(s => s.status === 'SUDAH_DIKUMPULKAN' || s.status === 'TERLAMBAT');
+          const totalSubs = (a as any).totalSubmissionsCount ?? assignmentService.getSubmissions(a.id).length;
+          const gradedSubs = (a as any).gradedSubmissionsCount ?? 0;
+          return (totalSubs - gradedSubs) > 0;
+        }
+        if (activeFilterTab === 'sudah_dinilai') {
+          const gradedSubs = (a as any).gradedSubmissionsCount ?? 0;
+          return gradedSubs > 0;
+        }
+        if (activeFilterTab === 'draf') {
+          return a.status === 'DRAF';
         }
       }
 
       return true;
     });
-  }, [assignments, searchQuery, selectedCourse, activeFilterTab, isStudent, user]);
+  }, [assignments, filterProdi, selectedClassId, filterMeeting, searchQuery, activeFilterTab, isStudent, user, availableClasses]);
 
   // Auto reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, activeFilterTab, selectedCourse]);
+  }, [searchQuery, activeFilterTab, filterProdi, selectedClassId, filterMeeting]);
 
-  const hasActiveFilters = searchQuery !== '' || activeFilterTab !== 'semua' || selectedCourse !== 'all';
+  const hasActiveFilters = searchQuery !== '' || activeFilterTab !== 'semua' || filterProdi !== '' || selectedClassId !== '' || filterMeeting !== '';
 
   const handleResetFilters = () => {
     setSearchQuery('');
     setActiveFilterTab('semua');
-    setSelectedCourse('all');
+    setFilterProdi('');
+    setSelectedClassId('');
+    setFilterMeeting('');
     setCurrentPage(1);
   };
 
@@ -263,7 +433,7 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
   const handleOpenCreateModal = () => {
     setIsEditing(false);
     setSelectedAssignmentId(null);
-    setFormClassId('cls-pai301-a');
+    setFormClassId(availableClasses[0]?.id || '1');
     setFormMeetingNumber(3);
     setFormTitle('');
     setFormDescription('');
@@ -353,7 +523,7 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
 
     const payload: CreateAssignmentInput = {
       classId: formClassId,
-      meetingId: `mtg-${formClassId.replace('cls-', '')}-0${formMeetingNumber}`,
+      meetingId: String(formMeetingNumber),
       title: formTitle,
       description: formDescription,
       instructions: formInstructions,
@@ -396,7 +566,7 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
       await assignmentService.updateAssignment(asg.id, { status: nextStatus });
       toast.success(
         nextStatus === 'DITERBITKAN' ? 'Tugas Diterbitkan' : 'Tugas Disimpan sebagai Draf',
-        `Status tugas ${asg.title} kini ${nextStatus}.`
+        `Status tugas "${asg.title}" kini ${nextStatus}.`
       );
       loadAssignmentsData();
     } catch {
@@ -416,7 +586,7 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
     if (!assignmentToDelete) return;
     try {
       await assignmentService.deleteAssignment(assignmentToDelete.id);
-      toast.success('Tugas Dihapus', `Tugas "${assignmentToDelete.title}" beserta berkas pengumpulan berhasil dibersihkan.`);
+      toast.success('Tugas Dihapus', `Tugas "${assignmentToDelete.title}" beserta pengumpulan mahasiswa berhasil dibersihkan.`);
       setIsDeleteModalOpen(false);
       setAssignmentToDelete(null);
       loadAssignmentsData();
@@ -470,367 +640,844 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
 
   return (
     <div className="flex flex-col gap-6" style={{ width: '100%' }}>
-      {/* 1. Header Banner & Action */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* =====================================================================
+          1. HEADER BANNER & QUICK STATS
+          ===================================================================== */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-            <ClipboardList className="text-primary-600" size={28} />
-            {KAMUS_UI.TUGAS} Perkuliahan & Rubrik OBE
-          </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+          <div className="flex items-center gap-2.5 mb-1">
+            <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ClipboardList className="text-primary-600" size={26} />
+              {KAMUS_UI.TUGAS} Perkuliahan & Rubrik Asesmen
+            </h1>
+            <Badge variant="primary" style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 600 }}>
+              Real-time SIAKAD
+            </Badge>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)', margin: 0 }}>
             {isStudent 
-              ? 'Pantau penugasan mata kuliah, batas waktu pengerjaan, unggah berkas, dan periksa rubrik evaluasi dosen.'
-              : 'Kelola penugasan perkuliahan, integrasi rubrik penilaian analitik/holistik, dan Studio Grading Dosen.'}
+              ? 'Pantau penugasan mata kuliah semester aktif, batas waktu pengerjaan, dan rubrik evaluasi dosen.'
+              : 'Kelola penugasan perkuliahan terintegrasi SIAKAD STAI Al-Ittihad, rubrik penilaian, dan Studio Grading.'}
           </p>
         </div>
 
-        {isLecturer && (
-          <Button 
-            variant="primary" 
-            icon={Plus} 
-            onClick={handleOpenCreateModal}
-            style={{ fontWeight: 600 }}
+        {/* Quick Stats Banner (mirrors MataKuliahListPage) + Create Button */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '8px 14px', 
+              backgroundColor: 'var(--bg-surface)', 
+              borderRadius: 'var(--radius-lg)', 
+              border: '1px solid var(--border-default)',
+              boxShadow: 'var(--shadow-xs)'
+            }}
           >
-            Buat Tugas Baru
-          </Button>
-        )}
-      </div>
-
-      {/* 2. Statistics Card Overview */}
-      {isStudent ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardBody className="flex items-center gap-4 py-4">
-              <div style={{ padding: 'var(--space-3)', background: 'var(--color-warning-50)', borderRadius: 'var(--radius-lg)' }}>
-                <Clock className="text-warning-600" size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-muted">Perlu Dikerjakan</p>
-                <h3 className="text-2xl font-bold text-warning-600">{(stats as any).pending} Tugas</h3>
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="flex items-center gap-4 py-4">
-              <div style={{ padding: 'var(--space-3)', background: 'var(--color-primary-50)', borderRadius: 'var(--radius-lg)' }}>
-                <CheckCircle2 className="text-primary-600" size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-muted">Sudah Dikumpulkan</p>
-                <h3 className="text-2xl font-bold text-primary-600">{(stats as any).submitted} Tugas</h3>
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="flex items-center gap-4 py-4">
-              <div style={{ padding: 'var(--space-3)', background: 'var(--color-success-50)', borderRadius: 'var(--radius-lg)' }}>
-                <Award className="text-success-600" size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-muted">Sudah Dinilai Dosen</p>
-                <h3 className="text-2xl font-bold text-success-600">{(stats as any).graded} Tugas</h3>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardBody className="flex items-center gap-4 py-4">
-              <div style={{ padding: 'var(--space-3)', background: 'var(--color-primary-50)', borderRadius: 'var(--radius-lg)' }}>
-                <BookOpen className="text-primary-600" size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-muted">Total Tugas Aktif</p>
-                <h3 className="text-2xl font-bold text-primary-600">{(stats as any).totalAssignments} Tugas</h3>
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="flex items-center gap-4 py-4">
-              <div style={{ padding: 'var(--space-3)', background: 'var(--color-warning-50)', borderRadius: 'var(--radius-lg)' }}>
-                <Clock className="text-warning-600" size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-muted">Perlu Dikoreksi / Dinilai</p>
-                <h3 className="text-2xl font-bold text-warning-600">{(stats as any).needGrading} Berkas</h3>
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="flex items-center gap-4 py-4">
-              <div style={{ padding: 'var(--space-3)', background: 'var(--color-info-50)', borderRadius: 'var(--radius-lg)' }}>
-                <Upload className="text-info-600" size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-muted">Total Pengumpulan Masuk</p>
-                <h3 className="text-2xl font-bold text-info-600">{(stats as any).totalSubs} Submisi</h3>
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="flex items-center gap-4 py-4">
-              <div style={{ padding: 'var(--space-3)', background: 'var(--color-success-50)', borderRadius: 'var(--radius-lg)' }}>
-                <Award className="text-success-600" size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-muted">Selesai Dinilai</p>
-                <h3 className="text-2xl font-bold text-success-600">{(stats as any).totalGraded} Berkas</h3>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-      )}
-
-      {/* 3. Filter Tabs & Search Bar */}
-      <Card>
-        <CardBody className="flex flex-col gap-4">
-          {/* Filter Tabs */}
-          <div className="flex flex-wrap gap-2 border-b pb-3" style={{ borderColor: 'var(--border-light)' }}>
-            <button
-              onClick={() => setActiveFilterTab('semua')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                activeFilterTab === 'semua'
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'bg-transparent text-muted hover:bg-neutral-100 dark:hover:bg-neutral-800'
-              }`}
-            >
-              Semua Tugas ({assignments.length})
-            </button>
-
-            {isStudent ? (
-              <>
-                <button
-                  onClick={() => setActiveFilterTab('perlu_dikerjakan')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                    activeFilterTab === 'perlu_dikerjakan'
-                      ? 'bg-warning-600 text-white shadow-sm'
-                      : 'bg-transparent text-muted hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                  }`}
-                >
-                  ⏳ Perlu Dikerjakan ({(stats as any).pending})
-                </button>
-                <button
-                  onClick={() => setActiveFilterTab('sudah_dikumpulkan')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                    activeFilterTab === 'sudah_dikumpulkan'
-                      ? 'bg-primary-600 text-white shadow-sm'
-                      : 'bg-transparent text-muted hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                  }`}
-                >
-                  📤 Sudah Dikumpulkan ({(stats as any).submitted})
-                </button>
-                <button
-                  onClick={() => setActiveFilterTab('sudah_dinilai')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                    activeFilterTab === 'sudah_dinilai'
-                      ? 'bg-success-600 text-white shadow-sm'
-                      : 'bg-transparent text-muted hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                  }`}
-                >
-                  🎯 Sudah Dinilai ({(stats as any).graded})
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setActiveFilterTab('perlu_dinilai_dosen')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                  activeFilterTab === 'perlu_dinilai_dosen'
-                    ? 'bg-warning-600 text-white shadow-sm'
-                    : 'bg-transparent text-muted hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                }`}
-              >
-                ⚠️ Perlu Dikoreksi Segera ({(stats as any).needGrading})
-              </button>
-            )}
-          </div>
-
-          {/* Search and Course Dropdown */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
-                <Search size={16} />
-              </div>
-              <input
-                type="text"
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-md border"
-                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-light)' }}
-                placeholder="Cari judul tugas, mata kuliah, atau topik bahasan..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div style={{ backgroundColor: 'var(--color-primary-50)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
+              <BookOpen size={16} color="var(--color-primary-700)" />
             </div>
             <div>
-              <select
-                className="form-select w-full text-xs"
-                value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
-              >
-                <option value="all">Semua Mata Kuliah</option>
-                {uniqueCourses.map((crs) => (
-                  <option key={crs} value={crs}>{crs}</option>
-                ))}
-              </select>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Total Tugas</div>
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {isStudent ? assignments.length : (stats as any).totalAssignments} Tugas
+              </div>
             </div>
           </div>
 
-          {hasActiveFilters && (
-            <div className="flex items-center justify-between text-xs pt-1" style={{ color: 'var(--text-muted)' }}>
-              <span>Menampilkan {filteredAssignments.length} dari {assignments.length} penugasan</span>
-              <button 
-                onClick={handleResetFilters}
-                className="flex items-center gap-1 text-primary-600 hover:underline font-medium"
-              >
-                <X size={13} /> Reset Filter
-              </button>
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '8px 14px', 
+              backgroundColor: 'var(--bg-surface)', 
+              borderRadius: 'var(--radius-lg)', 
+              border: '1px solid var(--border-default)',
+              boxShadow: 'var(--shadow-xs)'
+            }}
+          >
+            <div style={{ backgroundColor: 'var(--color-warning-50)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
+              <Clock size={16} color="var(--color-warning-700)" />
             </div>
+            <div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+                {isStudent ? 'Perlu Dikerjakan' : 'Perlu Dinilai'}
+              </div>
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-warning-700)' }}>
+                {isStudent ? (stats as any).pending : (stats as any).needGrading} {isStudent ? 'Tugas' : 'Berkas'}
+              </div>
+            </div>
+          </div>
+
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '8px 14px', 
+              backgroundColor: 'var(--bg-surface)', 
+              borderRadius: 'var(--radius-lg)', 
+              border: '1px solid var(--border-default)',
+              boxShadow: 'var(--shadow-xs)'
+            }}
+          >
+            <div style={{ backgroundColor: 'var(--color-success-50)', padding: '6px', borderRadius: 'var(--radius-md)' }}>
+              <Award size={16} color="var(--color-success-700)" />
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+                {isStudent ? 'Selesai Dinilai' : 'Submisi Masuk'}
+              </div>
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-success-700)' }}>
+                {isStudent ? (stats as any).graded : (stats as any).totalSubs} {isStudent ? 'Tugas' : 'Submisi'}
+              </div>
+            </div>
+          </div>
+
+          {isLecturer && (
+            <Button 
+              variant="primary" 
+              icon={Plus} 
+              onClick={handleOpenCreateModal}
+              style={{ fontWeight: 600, height: '42px', boxShadow: 'var(--shadow-xs)' }}
+            >
+              Buat Tugas Baru
+            </Button>
           )}
+        </div>
+      </div>
+
+      {/* =====================================================================
+          2. FILTER & PENCARIAN INTERAKTIF PREMIUM
+          ===================================================================== */}
+      <Card 
+        style={{ 
+          border: '1px solid var(--border-default)', 
+          boxShadow: 'var(--shadow-sm)',
+          overflow: 'visible',
+          position: 'relative',
+          zIndex: 20
+        }}
+      >
+        <CardBody style={{ padding: 'var(--space-4) var(--space-5)', overflow: 'visible' }}>
+          <div className="flex flex-col gap-4">
+            {/* Dua Select Option Premium (Prodi & Kelas) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div 
+                style={{
+                  backgroundColor: 'var(--color-slate-50)',
+                  border: filterProdi ? '1.5px solid var(--color-primary-500)' : '1.5px solid var(--border-default)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: '12px 14px',
+                  boxShadow: 'var(--shadow-xs)',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <PremiumSelect
+                  label="1. Pilih Program Studi (SIAKAD)"
+                  value={filterProdi}
+                  onChange={handleProdiChange}
+                  options={prodiOptions}
+                  icon={GraduationCap}
+                  badgeCount={`${availableProdis.length} Prodi`}
+                  placeholder="— Semua Program Studi —"
+                />
+              </div>
+
+              <div 
+                style={{
+                  backgroundColor: 'var(--color-primary-50)',
+                  border: selectedClassId ? '1.5px solid var(--color-primary-600)' : '1.5px solid var(--color-primary-200)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: '12px 14px',
+                  boxShadow: '0 2px 6px rgba(4, 120, 87, 0.05)',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <PremiumSelect
+                  label="2. Pilih Kelas Perkuliahan (SIAKAD)"
+                  value={selectedClassId}
+                  onChange={handleClassChange}
+                  options={classOptions}
+                  icon={BookOpen}
+                  badgeCount={filterProdi && filterProdi !== 'SEMUA' ? `${classOptions.length - 1} Kelas` : `${availableClasses.length} Kelas`}
+                  placeholder="— Semua Kelas Perkuliahan —"
+                />
+              </div>
+            </div>
+
+            {/* Input Pencarian Multifungsi + Filter Sesi Pertemuan */}
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              {/* Search Box dengan Clear Icon */}
+              <div style={{ position: 'relative', flex: 1 }}>
+                <Search 
+                  size={16} 
+                  style={{ 
+                    position: 'absolute', 
+                    left: '14px', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)', 
+                    color: 'var(--text-muted)',
+                    pointerEvents: 'none'
+                  }} 
+                />
+                <input
+                  type="text"
+                  placeholder="Cari judul tugas, mata kuliah, topik bahasan, atau rubrik..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="form-input"
+                  style={{
+                    paddingLeft: '40px',
+                    paddingRight: searchQuery ? '36px' : '14px',
+                    height: '42px',
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: 'var(--text-sm)',
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1.5px solid var(--border-default)'
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'var(--color-slate-200)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-full)',
+                      width: '22px',
+                      height: '22px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: 'var(--text-secondary)',
+                      padding: 0,
+                      transition: 'all var(--transition-fast)'
+                    }}
+                    title="Hapus kata kunci pencarian"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Sesi Pertemuan Dropdown Filter */}
+              <div style={{ position: 'relative', width: '230px', flexShrink: 0 }}>
+                <Calendar 
+                  size={15} 
+                  style={{ 
+                    position: 'absolute', 
+                    left: '14px', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)', 
+                    color: 'var(--text-muted)',
+                    pointerEvents: 'none',
+                    zIndex: 2
+                  }} 
+                />
+                <select
+                  value={filterMeeting}
+                  onChange={(e) => {
+                    setFilterMeeting(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="form-select"
+                  style={{
+                    paddingLeft: '38px',
+                    height: '42px',
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 500,
+                    backgroundColor: filterMeeting ? 'var(--color-primary-50)' : 'var(--bg-surface)',
+                    borderColor: filterMeeting ? 'var(--color-primary-400)' : 'var(--border-default)',
+                    color: filterMeeting ? 'var(--color-primary-900)' : 'var(--text-primary)',
+                    cursor: 'pointer',
+                    width: '100%'
+                  }}
+                >
+                  <option value="">Semua Sesi Pertemuan</option>
+                  {Array.from({ length: 16 }, (_, i) => i + 1).map((m) => (
+                    <option key={m} value={String(m)}>
+                      Pertemuan #{m} {m === 8 ? '(UTS)' : m === 16 ? '(UAS)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Menu Tabs Status Tugas & Active Filters Summary */}
+            <div 
+              className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3"
+              style={{ borderTop: '1px solid var(--border-subtle)' }}
+            >
+              {/* Segmented Filter Pills */}
+              <div 
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '4px', 
+                  padding: '4px', 
+                  backgroundColor: 'var(--color-slate-100)', 
+                  borderRadius: 'var(--radius-lg)',
+                  flexWrap: 'wrap'
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => { setActiveFilterTab('semua'); setCurrentPage(1); }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '12px',
+                    fontWeight: activeFilterTab === 'semua' ? 700 : 500,
+                    backgroundColor: activeFilterTab === 'semua' ? '#ffffff' : 'transparent',
+                    color: activeFilterTab === 'semua' ? 'var(--color-primary-800)' : 'var(--text-secondary)',
+                    boxShadow: activeFilterTab === 'semua' ? 'var(--shadow-xs)' : 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)'
+                  }}
+                >
+                  Semua Tugas
+                  <span 
+                    style={{ 
+                      padding: '1px 6px', 
+                      borderRadius: 'var(--radius-full)', 
+                      fontSize: '10px', 
+                      fontWeight: 700,
+                      backgroundColor: activeFilterTab === 'semua' ? 'var(--color-primary-100)' : 'var(--color-slate-200)',
+                      color: activeFilterTab === 'semua' ? 'var(--color-primary-800)' : 'var(--text-secondary)'
+                    }}
+                  >
+                    {assignments.length}
+                  </span>
+                </button>
+
+                {isStudent ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveFilterTab('perlu_dikerjakan'); setCurrentPage(1); }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '12px',
+                        fontWeight: activeFilterTab === 'perlu_dikerjakan' ? 700 : 500,
+                        backgroundColor: activeFilterTab === 'perlu_dikerjakan' ? '#ffffff' : 'transparent',
+                        color: activeFilterTab === 'perlu_dikerjakan' ? 'var(--color-warning-700)' : 'var(--text-secondary)',
+                        boxShadow: activeFilterTab === 'perlu_dikerjakan' ? 'var(--shadow-xs)' : 'none',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Clock size={12} />
+                      Perlu Dikerjakan
+                      <span 
+                        style={{ 
+                          padding: '1px 6px', 
+                          borderRadius: 'var(--radius-full)', 
+                          fontSize: '10px', 
+                          fontWeight: 700,
+                          backgroundColor: activeFilterTab === 'perlu_dikerjakan' ? 'var(--color-warning-100)' : 'var(--color-slate-200)',
+                          color: activeFilterTab === 'perlu_dikerjakan' ? 'var(--color-warning-800)' : 'var(--text-secondary)'
+                        }}
+                      >
+                        {(stats as any).pending}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setActiveFilterTab('sudah_dikumpulkan'); setCurrentPage(1); }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '12px',
+                        fontWeight: activeFilterTab === 'sudah_dikumpulkan' ? 700 : 500,
+                        backgroundColor: activeFilterTab === 'sudah_dikumpulkan' ? '#ffffff' : 'transparent',
+                        color: activeFilterTab === 'sudah_dikumpulkan' ? 'var(--color-primary-700)' : 'var(--text-secondary)',
+                        boxShadow: activeFilterTab === 'sudah_dikumpulkan' ? 'var(--shadow-xs)' : 'none',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Upload size={12} />
+                      Sudah Dikumpulkan
+                      <span 
+                        style={{ 
+                          padding: '1px 6px', 
+                          borderRadius: 'var(--radius-full)', 
+                          fontSize: '10px', 
+                          fontWeight: 700,
+                          backgroundColor: activeFilterTab === 'sudah_dikumpulkan' ? 'var(--color-primary-100)' : 'var(--color-slate-200)',
+                          color: activeFilterTab === 'sudah_dikumpulkan' ? 'var(--color-primary-800)' : 'var(--text-secondary)'
+                        }}
+                      >
+                        {(stats as any).submitted}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setActiveFilterTab('sudah_dinilai'); setCurrentPage(1); }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '12px',
+                        fontWeight: activeFilterTab === 'sudah_dinilai' ? 700 : 500,
+                        backgroundColor: activeFilterTab === 'sudah_dinilai' ? '#ffffff' : 'transparent',
+                        color: activeFilterTab === 'sudah_dinilai' ? 'var(--color-success-700)' : 'var(--text-secondary)',
+                        boxShadow: activeFilterTab === 'sudah_dinilai' ? 'var(--shadow-xs)' : 'none',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Award size={12} />
+                      Sudah Dinilai
+                      <span 
+                        style={{ 
+                          padding: '1px 6px', 
+                          borderRadius: 'var(--radius-full)', 
+                          fontSize: '10px', 
+                          fontWeight: 700,
+                          backgroundColor: activeFilterTab === 'sudah_dinilai' ? 'var(--color-success-100)' : 'var(--color-slate-200)',
+                          color: activeFilterTab === 'sudah_dinilai' ? 'var(--color-success-800)' : 'var(--text-secondary)'
+                        }}
+                      >
+                        {(stats as any).graded}
+                      </span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveFilterTab('perlu_dinilai_dosen'); setCurrentPage(1); }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '12px',
+                        fontWeight: activeFilterTab === 'perlu_dinilai_dosen' ? 700 : 500,
+                        backgroundColor: activeFilterTab === 'perlu_dinilai_dosen' ? '#ffffff' : 'transparent',
+                        color: activeFilterTab === 'perlu_dinilai_dosen' ? 'var(--color-warning-700)' : 'var(--text-secondary)',
+                        boxShadow: activeFilterTab === 'perlu_dinilai_dosen' ? 'var(--shadow-xs)' : 'none',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Clock size={12} />
+                      Perlu Dinilai
+                      <span 
+                        style={{ 
+                          padding: '1px 6px', 
+                          borderRadius: 'var(--radius-full)', 
+                          fontSize: '10px', 
+                          fontWeight: 700,
+                          backgroundColor: activeFilterTab === 'perlu_dinilai_dosen' ? 'var(--color-warning-100)' : 'var(--color-slate-200)',
+                          color: activeFilterTab === 'perlu_dinilai_dosen' ? 'var(--color-warning-800)' : 'var(--text-secondary)'
+                        }}
+                      >
+                        {(stats as any).needGrading}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setActiveFilterTab('sudah_dinilai'); setCurrentPage(1); }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '12px',
+                        fontWeight: activeFilterTab === 'sudah_dinilai' ? 700 : 500,
+                        backgroundColor: activeFilterTab === 'sudah_dinilai' ? '#ffffff' : 'transparent',
+                        color: activeFilterTab === 'sudah_dinilai' ? 'var(--color-success-700)' : 'var(--text-secondary)',
+                        boxShadow: activeFilterTab === 'sudah_dinilai' ? 'var(--shadow-xs)' : 'none',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Award size={12} />
+                      Selesai Dinilai
+                      <span 
+                        style={{ 
+                          padding: '1px 6px', 
+                          borderRadius: 'var(--radius-full)', 
+                          fontSize: '10px', 
+                          fontWeight: 700,
+                          backgroundColor: activeFilterTab === 'sudah_dinilai' ? 'var(--color-success-100)' : 'var(--color-slate-200)',
+                          color: activeFilterTab === 'sudah_dinilai' ? 'var(--color-success-800)' : 'var(--text-secondary)'
+                        }}
+                      >
+                        {(stats as any).totalGraded}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setActiveFilterTab('draf'); setCurrentPage(1); }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '12px',
+                        fontWeight: activeFilterTab === 'draf' ? 700 : 500,
+                        backgroundColor: activeFilterTab === 'draf' ? '#ffffff' : 'transparent',
+                        color: activeFilterTab === 'draf' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        boxShadow: activeFilterTab === 'draf' ? 'var(--shadow-xs)' : 'none',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Draf
+                      <span 
+                        style={{ 
+                          padding: '1px 6px', 
+                          borderRadius: 'var(--radius-full)', 
+                          fontSize: '10px', 
+                          fontWeight: 700,
+                          backgroundColor: activeFilterTab === 'draf' ? 'var(--color-slate-300)' : 'var(--color-slate-200)',
+                          color: 'var(--text-secondary)'
+                        }}
+                      >
+                        {(stats as any).draftCount}
+                      </span>
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Active Filter Badges & Reset Button */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                  Menampilkan <strong style={{ color: 'var(--color-primary-700)' }}>{filteredAssignments.length}</strong> dari {assignments.length} tugas
+                </span>
+
+                {hasActiveFilters && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    icon={X} 
+                    onClick={handleResetFilters}
+                    style={{ color: 'var(--color-danger-main)', fontSize: '11px', padding: '2px 8px' }}
+                  >
+                    Reset Filter
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
         </CardBody>
       </Card>
 
-      {/* 4. Assignment Cards Grid */}
-      {filteredAssignments.length === 0 ? (
+      {/* =====================================================================
+          3. ASSIGNMENT CARDS GRID
+          ===================================================================== */}
+      {isLoading ? (
         <Card>
           <CardBody style={{ textAlign: 'center', padding: 'var(--space-12)' }}>
-            <ClipboardList size={48} className="text-muted" style={{ margin: '0 auto var(--space-4)' }} />
-            <h3 className="text-base font-semibold">Tidak Ada Tugas yang Sesuai</h3>
-            <p className="text-sm text-muted mt-1">
-              Tidak ditemukan penugasan pada kriteria filter yang Anda pilih.
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-emerald-600 border-t-transparent mb-3" />
+            <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)', margin: 0 }}>
+              Memuat data penugasan perkuliahan terintegrasi SIAKAD...
+            </p>
+          </CardBody>
+        </Card>
+      ) : filteredAssignments.length === 0 ? (
+        <Card style={{ border: '1px dashed var(--border-default)' }}>
+          <CardBody style={{ textAlign: 'center', padding: 'var(--space-12) var(--space-6)' }}>
+            <div 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                width: '56px', 
+                height: '56px', 
+                borderRadius: '50%', 
+                backgroundColor: 'var(--color-slate-100)', 
+                color: 'var(--text-muted)', 
+                marginBottom: 'var(--space-4)' 
+              }}
+            >
+              <ClipboardList size={26} />
+            </div>
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
+              Tidak Ada Tugas yang Sesuai
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', maxWidth: '460px', margin: '0 auto var(--space-5)', lineHeight: 1.6 }}>
+              Tidak ditemukan penugasan perkuliahan pada kriteria filter Program Studi, Kelas, atau Pertemuan yang Anda pilih.
             </p>
             {hasActiveFilters && (
-              <Button variant="secondary" size="sm" onClick={handleResetFilters} className="mt-4">
-                Bersihkan Filter
+              <Button variant="secondary" size="sm" onClick={handleResetFilters}>
+                Bersihkan Semua Filter
               </Button>
             )}
           </CardBody>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-5)' }}>
           {filteredAssignments
             .slice((currentPage - 1) * pageSize, currentPage * pageSize)
             .map((asg) => {
               const studentSub = user ? assignmentService.getStudentSubmission(asg.id, user.id) : null;
-              const isPastDue = new Date() > new Date(asg.dueDate);
-              const submissionsCount = assignmentService.getSubmissions(asg.id).length;
-              const unreadGradingCount = assignmentService.getSubmissions(asg.id).filter(
-                s => s.status === 'SUDAH_DIKUMPULKAN' || s.status === 'TERLAMBAT'
-              ).length;
+              const subStatus = (asg as any).submissionStatus || studentSub?.status;
+              const urgency = getDeadlineUrgency(asg.dueDate);
+              
+              // Aggregates from real database
+              const totalSubs = (asg as any).totalSubmissionsCount ?? assignmentService.getSubmissions(asg.id).length;
+              const gradedSubs = (asg as any).gradedSubmissionsCount ?? 0;
+              const totalStudents = (asg as any).totalStudentsCount || 1;
+              const needGradingCount = Math.max(0, totalSubs - gradedSubs);
+              const submissionRate = Math.min(100, Math.round((totalSubs / totalStudents) * 100));
 
               return (
                 <Card 
                   key={asg.id} 
-                  className="flex flex-col justify-between hover:shadow-md transition-all cursor-pointer"
+                  interactive 
                   onClick={() => onSelectAssignment(asg.id)}
-                  style={{ borderTop: `4px solid ${asg.status === 'DITERBITKAN' ? 'var(--color-primary-600)' : 'var(--color-neutral-400)'}` }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--border-default)',
+                    transition: 'all var(--transition-normal)',
+                    overflow: 'hidden'
+                  }}
                 >
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <Badge variant="primary">
-                        Pertemuan #{asg.meetingNumber}
-                      </Badge>
-                      <div className="flex items-center gap-1.5">
-                        {asg.status === 'DRAF' && (
-                          <Badge variant="default">Draf Dosen</Badge>
-                        )}
+                  <div>
+                    {/* Card Header: Pertemuan & Status Pill */}
+                    <CardHeader style={{ padding: '12px 16px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span 
+                          style={{ 
+                            fontSize: '11px', 
+                            fontWeight: 700, 
+                            padding: '2px 8px', 
+                            borderRadius: 'var(--radius-sm)', 
+                            backgroundColor: 'var(--color-primary-50)', 
+                            color: 'var(--color-primary-800)', 
+                            border: '1px solid var(--color-primary-200)' 
+                          }}
+                        >
+                          Pertemuan #{asg.meetingNumber}
+                        </span>
                         {asg.rubric && (
-                          <Badge variant="info" icon={Sparkles}>
-                            Rubrik OBE
+                          <span 
+                            style={{ 
+                              fontSize: '10.5px', 
+                              fontWeight: 600, 
+                              padding: '2px 7px', 
+                              borderRadius: 'var(--radius-sm)', 
+                              backgroundColor: 'var(--color-accent-50)', 
+                              color: 'var(--color-accent-700)', 
+                              border: '1px solid var(--color-accent-200)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                          >
+                            <Sparkles size={11} /> Rubrik OBE
+                          </span>
+                        )}
+                        {asg.status === 'DRAF' && (
+                          <Badge variant="default" style={{ fontSize: '10px' }}>
+                            Draf
                           </Badge>
                         )}
                       </div>
-                    </div>
 
-                    <h3 className="text-base font-bold mt-2 line-clamp-2" style={{ color: 'var(--text-primary)' }}>
-                      {asg.title}
-                    </h3>
-                    <p className="text-xs font-medium text-primary-700 dark:text-primary-400">
-                      {asg.courseName}
-                    </p>
-                  </CardHeader>
+                      <Badge 
+                        variant={urgency.variant === 'danger' ? 'danger' : urgency.variant === 'warning' ? 'warning' : 'success'}
+                        style={{ fontSize: '11px', fontWeight: 600 }}
+                      >
+                        {urgency.text}
+                      </Badge>
+                    </CardHeader>
 
-                  <CardBody className="py-2 flex flex-col gap-3">
-                    <p className="text-xs text-muted line-clamp-2">
-                      {asg.description || asg.instructions}
-                    </p>
-
-                    {/* Due Date & Submission Type Info */}
-                    <div className="p-2.5 rounded-md text-xs flex flex-col gap-1.5" style={{ background: 'var(--bg-subtle)' }}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted flex items-center gap-1">
-                          <Calendar size={13} /> Tenggat Waktu:
-                        </span>
-                        <span className={`font-semibold ${isPastDue ? 'text-danger-600' : 'text-primary-700'}`}>
-                          {new Date(asg.dueDate).toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
+                    {/* Card Body: Info Penugasan */}
+                    <CardBody style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div>
+                        <h3 
+                          style={{ 
+                            fontSize: 'var(--text-base)', 
+                            fontWeight: 700, 
+                            color: 'var(--text-primary)', 
+                            margin: '0 0 4px 0', 
+                            lineHeight: 1.35 
+                          }} 
+                          className="line-clamp-2"
+                        >
+                          {asg.title}
+                        </h3>
+                        <div 
+                          style={{ 
+                            fontSize: 'var(--text-xs)', 
+                            color: 'var(--color-primary-700)', 
+                            fontWeight: 600, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '6px' 
+                          }} 
+                          className="truncate"
+                        >
+                          <BookOpen size={13} style={{ flexShrink: 0 }} /> 
+                          <span className="truncate">{asg.courseName}</span> 
+                          {asg.className && <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>• {asg.className}</span>}
+                        </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-muted">
-                        <span>Format Berkas:</span>
-                        <span className="font-mono text-[11px] font-medium text-primary-700">
-                          {asg.allowedFileExtensions?.join(', ') || 'PDF, DOCX'}
-                        </span>
-                      </div>
-                    </div>
+                      {/* Excerpt */}
+                      <p 
+                        style={{ 
+                          fontSize: 'var(--text-xs)', 
+                          color: 'var(--text-muted)', 
+                          margin: 0, 
+                          lineHeight: 1.5 
+                        }} 
+                        className="line-clamp-2"
+                      >
+                        {asg.description || asg.instructions}
+                      </p>
 
-                    {/* Status Badge Footer (Mahasiswa vs Dosen) */}
-                    {isStudent ? (
-                      <div className="pt-1">
-                        {studentSub ? (
-                          studentSub.status === 'SUDAH_DINILAI' ? (
-                            <div className="flex items-center justify-between p-2 rounded bg-success-50 dark:bg-success-950/30 text-success-700 dark:text-success-300">
-                              <span className="text-xs font-semibold flex items-center gap-1">
-                                <Award size={14} /> Nilai Akhir:
-                              </span>
-                              <span className="text-sm font-extrabold">{studentSub.finalScore} / 100</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between p-2 rounded bg-primary-50 dark:bg-primary-950/30 text-primary-700 dark:text-primary-300">
-                              <span className="text-xs font-semibold flex items-center gap-1">
-                                <CheckCircle2 size={14} /> Terkumpul (v{studentSub.version})
-                              </span>
-                              <span className="text-[11px] text-muted">Menunggu Nilai</span>
-                            </div>
-                          )
+                      {/* Deadline & Format Box */}
+                      <div 
+                        style={{ 
+                          backgroundColor: 'var(--bg-subtle)', 
+                          borderRadius: 'var(--radius-md)', 
+                          padding: '8px 12px', 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '4px', 
+                          fontSize: '11px' 
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <Calendar size={12} color="var(--color-primary-600)" /> Tenggat Waktu:
+                          </span>
+                          <span style={{ fontWeight: 600, color: urgency.variant === 'danger' ? 'var(--color-danger-main)' : 'var(--text-primary)' }}>
+                            {new Date(asg.dueDate).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })} WIB
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Format Berkas:</span>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--color-primary-700)', fontSize: '10.5px' }}>
+                            {asg.allowedFileExtensions?.join(', ') || '.pdf, .docx'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Submission / Grading Status Indicator */}
+                      <div style={{ marginTop: 'auto', paddingTop: '4px' }}>
+                        {isStudent ? (
+                          <div>
+                            {subStatus === 'SUDAH_DINILAI' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', backgroundColor: 'var(--color-success-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-success-200)', fontSize: '11.5px' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--color-success-800)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <Award size={13} /> Nilai Akhir:
+                                </span>
+                                <span style={{ fontWeight: 800, fontSize: '13px', color: 'var(--color-success-800)' }}>
+                                  {(asg as any).studentFinalScore ?? studentSub?.finalScore ?? 100} / 100
+                                </span>
+                              </div>
+                            ) : subStatus === 'SUDAH_DIKUMPULKAN' || subStatus === 'TERLAMBAT' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', backgroundColor: 'var(--color-primary-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-primary-200)', fontSize: '11.5px' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--color-primary-800)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <CheckCircle2 size={13} /> Terkumpul
+                                </span>
+                                <span style={{ color: 'var(--color-primary-700)', fontWeight: 500, fontSize: '10.5px' }}>
+                                  Menunggu Penilaian
+                                </span>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', backgroundColor: urgency.variant === 'danger' ? 'var(--color-danger-50)' : 'var(--color-warning-50)', borderRadius: 'var(--radius-md)', border: urgency.variant === 'danger' ? '1px solid var(--color-danger-200)' : '1px solid var(--color-warning-200)', fontSize: '11.5px' }}>
+                                <span style={{ fontWeight: 600, color: urgency.variant === 'danger' ? 'var(--color-danger-800)' : 'var(--color-warning-800)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <AlertCircle size={13} /> Status:
+                                </span>
+                                <span style={{ fontWeight: 700, color: urgency.variant === 'danger' ? 'var(--color-danger-700)' : 'var(--color-warning-700)' }}>
+                                  {urgency.variant === 'danger' ? 'Terlewat Waktu' : 'Belum Mengumpulkan'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         ) : (
-                          <div className={`flex items-center justify-between p-2 rounded ${
-                            isPastDue ? 'bg-danger-50 text-danger-700' : 'bg-warning-50 text-warning-800'
-                          }`}>
-                            <span className="text-xs font-semibold flex items-center gap-1">
-                              <AlertCircle size={14} /> {isPastDue ? 'Terlewat Tenggat' : 'Belum Dikumpulkan'}
-                            </span>
-                            <span className="text-[11px] font-medium">{isPastDue ? 'Terlambat' : 'Segera Kerjakan'}</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+                              <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Users size={12} /> Pengumpulan:
+                              </span>
+                              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                                {totalSubs}/{totalStudents} Mhs ({submissionRate}%)
+                              </span>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div style={{ height: '6px', backgroundColor: 'var(--color-slate-100)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                              <div 
+                                style={{ 
+                                  height: '100%', 
+                                  width: `${submissionRate}%`, 
+                                  backgroundColor: submissionRate === 100 ? 'var(--color-success-600)' : 'var(--color-primary-600)',
+                                  borderRadius: 'var(--radius-full)',
+                                  transition: 'width 0.3s ease'
+                                }} 
+                              />
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px' }}>
+                              {needGradingCount > 0 ? (
+                                <span style={{ fontWeight: 600, color: 'var(--color-warning-700)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                  <Clock size={11} /> {needGradingCount} Perlu Dinilai
+                                </span>
+                              ) : totalSubs > 0 ? (
+                                <span style={{ fontWeight: 600, color: 'var(--color-success-700)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                  <CheckCircle2 size={11} /> Lengkap Dinilai
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)' }}>Belum ada submisi</span>
+                              )}
+                              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{gradedSubs} Selesai</span>
+                            </div>
                           </div>
                         )}
                       </div>
-                    ) : (
-                      <div className="pt-1 flex items-center justify-between text-xs">
-                        <span className="text-muted flex items-center gap-1">
-                          <Users size={13} /> Terkumpul:
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold">{submissionsCount} Mahasiswa</span>
-                          {unreadGradingCount > 0 && (
-                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-warning-500 text-white animate-pulse">
-                              {unreadGradingCount} Perlu Dinilai
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </CardBody>
+                    </CardBody>
+                  </div>
 
-                  <CardFooter className="pt-2 border-t flex items-center justify-between gap-2" style={{ borderColor: 'var(--border-light)' }}>
+                  {/* Card Action Footer */}
+                  <CardFooter style={{ padding: '10px 16px', backgroundColor: 'var(--bg-subtle)', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                     {isLecturer ? (
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-1">
@@ -839,7 +1486,8 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
                             size="sm" 
                             icon={Edit3}
                             onClick={(e) => handleOpenEditModal(asg, e)}
-                            title="Edit Tugas & Rubrik"
+                            title="Ubah Tugas & Rubrik"
+                            style={{ height: '32px', width: '34px', padding: 0 }}
                           />
                           <Button 
                             variant="secondary" 
@@ -847,14 +1495,15 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
                             icon={asg.status === 'DITERBITKAN' ? Eye : EyeOff}
                             onClick={(e) => handleTogglePublish(asg, e)}
                             title={asg.status === 'DITERBITKAN' ? 'Tarik ke Draf' : 'Terbitkan Sekarang'}
+                            style={{ height: '32px', width: '34px', padding: 0 }}
                           />
                           <Button 
-                            variant="secondary" 
+                            variant="danger" 
                             size="sm" 
                             icon={Trash2}
                             onClick={(e) => handleOpenDeleteModal(asg, e)}
                             title="Hapus Tugas"
-                            className="text-danger-600 hover:text-danger-700"
+                            style={{ height: '32px', width: '34px', padding: 0 }}
                           />
                         </div>
 
@@ -867,18 +1516,32 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
                               e.stopPropagation();
                               onOpenGradingStudio(asg.id);
                             }}
+                            style={{ fontSize: '11.5px', fontWeight: 600, height: '32px' }}
                           >
-                            Studio Penilaian
+                            Studio Nilai
                           </Button>
                         ) : (
-                          <Button variant="secondary" size="sm" icon={ArrowRight}>
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            icon={ArrowRight}
+                            style={{ fontSize: '11.5px', height: '32px' }}
+                          >
                             Detail
                           </Button>
                         )}
                       </div>
                     ) : (
-                      <Button variant="primary" size="sm" icon={ArrowRight} className="w-full">
-                        {studentSub ? 'Lihat Pengumpulan & Nilai' : 'Kerjakan Tugas Sekarang'}
+                      <Button 
+                        variant="primary" 
+                        size="sm" 
+                        icon={ArrowRight} 
+                        className="w-full"
+                        style={{ height: '34px', fontWeight: 600 }}
+                      >
+                        {subStatus === 'SUDAH_DINILAI' || subStatus === 'SUDAH_DIKUMPULKAN' 
+                          ? 'Lihat Pengumpulan & Nilai' 
+                          : 'Kerjakan Tugas Sekarang'}
                       </Button>
                     )}
                   </CardFooter>
@@ -888,7 +1551,9 @@ export const TugasListPage: React.FC<TugasListPageProps> = ({
         </div>
       )}
 
-      {/* Pagination */}
+      {/* =====================================================================
+          4. PAGINATION
+          ===================================================================== */}
       {filteredAssignments.length > pageSize && (
         <div className="flex justify-center mt-2">
           <Pagination

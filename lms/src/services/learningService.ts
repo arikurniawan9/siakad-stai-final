@@ -5,143 +5,549 @@ import {
   MaterialAccessLog,
   ModuleNote
 } from '../types/learning';
+import { AcademicClass } from '../types/academic';
 
 const MEETINGS_KEY = 'salam_course_meetings';
 const RPS_KEY = 'salam_course_rps';
 const ACCESS_LOGS_KEY = 'salam_material_access_logs';
 const MODULE_NOTES_KEY = 'salam_module_student_notes';
+const SCHEMA_VERSION_KEY = 'salam_learning_service_v5_real_data';
 
+// =========================================================================
+// REAL RPS MAP FOR STAI AL-ITTIHAD SIAKAD COURSES
+// =========================================================================
 export const INITIAL_RPS_MAP: Record<string, RPSSection> = {
-  'cls-pai301-a': {
-    description: 'Mata kuliah Ushul Fiqih membekali mahasiswa dengan pemahaman mendalam tentang kaidah-kaidah pengambilan hukum Islam dari dalil-dalil syar\'i (Al-Qur\'an, As-Sunnah, Ijma\', dan Qiyas) serta aplikasinya dalam problematika kontemporer.',
+  // 1. PAI-301: Fiqih Mawaris (3 SKS)
+  'cls-20261-pai301-a': {
+    description: 'Mata kuliah Fiqih Mawaris (Hukum Kewarisan Islam) membekali mahasiswa dengan penguasaan komprehensif tentang kaidah syar\'i pembagian harta peninggalan (tirkah), hakikat ashabul furudh, ashabah, hijab-mahjub, metode hisab waris matematis (Aul, Radd, Tashih), serta komparasi ketentuan Kompilasi Hukum Islam (KHI) di Pengadilan Agama Indonesia.',
     learningOutcomes: [
-      'Mampu menganalisis sumber-sumber hukum Islam primer dan sekunder.',
-      'Mampu menerapkan kaidah kebahasaan (Amar, Nahyi, \'Am, Khas, Mujmal, Mubayyan) dalam istinbath hukum.',
-      'Mampu mendudukkan metodologi ijtihad ulama madzhab dalam memecahkan isu fiqih kontemporer.',
-      'Memiliki integritas dan sikap moderat dalam menyikapi perbedaan pendapat furu\'iyyah.'
+      'Menguasai landasan normatif Al-Qur\'an (Surah An-Nisa: 11, 12, 176) dan Sunnah terkait hukum faraidh.',
+      'Mampu mengidentifikasi rukun, syarat, mawani\'ul irtsi (penghalang waris), dan penyelesaian kewajiban tirkah.',
+      'Mampu menganalisis porsi bagian ashabul furudh, ashabah, dan relasi hijab hirman maupun nuqshan.',
+      'Mampu memecahkan hisab pembagian waris riil secara akurat dengan kaidah ashlul mas\'alah, aul, dan radd.',
+      'Mampu mengevaluasi implementasi hukum kewarisan dalam Kompilasi Hukum Islam (KHI) di Indonesia.'
     ],
     teachingMethods: [
       'Kuliah Interaktif & Diskusi Kelas',
-      'Pembelajaran Berbasis Video Interaktif',
-      'Studi Kasus Fiqih Kontemporer (Case-Based Learning)',
-      'Tugas Analisis Literatur Kitab Turats'
+      'Praktik Simulasi Hisab Mawaris (Kalkulator Faraidh)',
+      'Studi Kasus Pembagian Waris Keluarga Muslim (Case-Based Learning)',
+      'Bedah Putusan Pengadilan Agama & Kompilasi Hukum Islam (KHI)'
     ],
     assessmentWeights: [
       { component: 'Kehadiran & Partisipasi Diskusi', weightPercentage: 15 },
-      { component: 'Tugas & Analisis Kasus', weightPercentage: 25 },
+      { component: 'Tugas & Praktik Hisab Mawaris', weightPercentage: 25 },
+      { component: 'Kuis & Evaluasi Sesi', weightPercentage: 15 },
+      { component: 'Ujian Tengah Semester (UTS)', weightPercentage: 20 },
+      { component: 'Ujian Akhir Semester (UAS)', weightPercentage: 25 },
+    ],
+    references: [
+      { title: 'Matan Ar-Rahabiyyah fi \'Ilmil Faraidh & Syarahnya', author: 'Imam Muhammad bin Ali Ar-Rahabi', year: 2019, isPrimary: true },
+      { title: 'Al-Faraidh al-Hisabiyyah wa at-Tashfiyatut Tarikah', author: 'Prof. Dr. Wahbah Az-Zuhaili', year: 2021, isPrimary: true },
+      { title: 'Hukum Kewarisan Islam di Indonesia', author: 'Prof. Dr. Amir Syarifuddin', year: 2022, isPrimary: true },
+      { title: 'Panduan Praktis Ilmu Faraidh & Pembagian Waris Modern', author: 'Dr. H. M. Ridwan, M.Ag', year: 2025, isPrimary: false }
+    ],
+    documentAttachmentUrl: '#',
+    documentAttachmentName: 'RPS_Resmi_PAI301_Fiqih_Mawaris_2026.pdf',
+    updatedAt: new Date().toISOString()
+  },
+
+  // 2. PAI-202: Fiqih Ibadah & Muamalah (3 SKS)
+  'cls-20261-pai202-a': {
+    description: 'Mata kuliah Fiqih Ibadah & Muamalah mengkaji tata cara peribadatan mahdhah (thaharah, shalat, zakat, puasa, haji) serta prinsip-prinsip transaksi muamalah maliyyah kontemporer (akad tijariyyah, perbankan syariah, e-commerce, fintech, etika bisnis Islam).',
+    learningOutcomes: [
+      'Mampu menguasai tata cara ibadah mahdhah secara benar sesuai dalil shahih dan kaidah madzhab.',
+      'Mampu membedakan transaksi yang halal dan yang dilarang (riba, gharar, maysir, tadlis).',
+      'Mampu menganalisis akad-akad muamalah klasik dan terapan modern (murabahah, mudharabah, ijarah).',
+      'Mampu mengevaluasi keabsahan transaksi digital modern seperti e-wallet, paylater, dan investasi syariah.'
+    ],
+    teachingMethods: [
+      'Kuliah Interaktif & Demonstrasi Fiqih Ibadah',
+      'Studi Kasus Transaksi Keuangan Syariah Kontemporer',
+      'Diskusi Fiqih Kontemporer (Case-Based Learning)',
+      'Analisis Fatwa Dewan Syariah Nasional (DSN-MUI)'
+    ],
+    assessmentWeights: [
+      { component: 'Kehadiran & Keaktifan Diskusi', weightPercentage: 15 },
+      { component: 'Tugas Analisis Akad & Praktik Ibadah', weightPercentage: 25 },
       { component: 'Kuis & Video Interaktif', weightPercentage: 15 },
       { component: 'Ujian Tengah Semester (UTS)', weightPercentage: 20 },
       { component: 'Ujian Akhir Semester (UAS)', weightPercentage: 25 },
     ],
     references: [
-      { title: 'Al-Mustashfa min \'Ilm al-Ushul', author: 'Imam Al-Ghazali', year: 2018, isPrimary: true },
-      { title: 'Ushul al-Fiqh al-Islami', author: 'Prof. Dr. Wahbah Az-Zuhaili', year: 2020, isPrimary: true },
-      { title: 'Kaidah-Kaidah Fiqih dan Ushul Fiqih Kontemporer', author: 'Dr. H. M. Ridwan, M.Ag', year: 2024, isPrimary: false }
+      { title: 'Bidayatul Mujtahid wa Nihayatul Muqtashid', author: 'Ibnu Rusyd Al-Qurthubi', year: 2020, isPrimary: true },
+      { title: 'Fiqh al-Muamalat al-Maliyyah al-Mu\'ashirah', author: 'Dr. Wahbah Az-Zuhaili', year: 2022, isPrimary: true },
+      { title: 'Fiqih Ibadah Praktis dan Muamalah Modern', author: 'Dr. H. M. Ridwan, M.Ag', year: 2025, isPrimary: false }
     ],
     documentAttachmentUrl: '#',
-    documentAttachmentName: 'RPS_Ushul_Fiqih_PAI301_2026.pdf',
+    documentAttachmentName: 'RPS_Resmi_PAI202_Fiqih_Ibadah_Muamalah_2026.pdf',
+    updatedAt: new Date().toISOString()
+  },
+
+  // 3. PAI-101: Ulumul Qur'an (2 SKS)
+  'cls-20261-pai101-a': {
+    description: 'Mata kuliah Ulumul Qur\'an membekali mahasiswa dengan pemahaman ilmiah mengenai sejarah pewahyuan, kodifikasi Al-Qur\'an, asbabun nuzul, makkiyyah-madaniyyah, muhkam-mutasyabih, nasikh-mansukh, i\'jazul qur\'an, serta metodologi penafsiran tafsir Al-Qur\'an.',
+    learningOutcomes: [
+      'Mampu menjelaskan hakikat wahyu dan sejarah kodifikasi Al-Qur\'an pada era Nabi dan Sahabat.',
+      'Mampu menerapkan kaidah asbabun nuzul dan makkiyyah-madaniyyah dalam penafsiran ayat.',
+      'Mampu menganalisis ayat muhkam-mutasyabih dan nasikh-mansukh secara kritis.',
+      'Memahami aspek kemukjizatan Al-Qur\'an (I\'jaz) dari segi sastra, hukum, dan sains.'
+    ],
+    teachingMethods: [
+      'Kuliah Interaktif & Diskusi Kelas',
+      'Kajian Literatur Kitab Tafsir Klasik dan Modern',
+      'Presentasi Analisis Ayat Tematik'
+    ],
+    assessmentWeights: [
+      { component: 'Kehadiran & Partisipasi', weightPercentage: 15 },
+      { component: 'Makalah & Analisis Ayat', weightPercentage: 25 },
+      { component: 'Kuis Ulumul Qur\'an', weightPercentage: 15 },
+      { component: 'Ujian Tengah Semester (UTS)', weightPercentage: 20 },
+      { component: 'Ujian Akhir Semester (UAS)', weightPercentage: 25 },
+    ],
+    references: [
+      { title: 'Mabahits fi \'Ulum al-Qur\'an', author: 'Manna\' Al-Qaththan', year: 2020, isPrimary: true },
+      { title: 'Al-Itqan fi \'Ulum al-Qur\'an', author: 'Imam Jalaluddin As-Suyuthi', year: 2018, isPrimary: true },
+      { title: 'Pengantar Ilmu Al-Qur\'an & Tafsir', author: 'Dr. Ahmad Syafi\'i, M.Ag', year: 2024, isPrimary: false }
+    ],
+    documentAttachmentUrl: '#',
+    documentAttachmentName: 'RPS_Resmi_PAI101_Ulumul_Quran_2026.pdf',
+    updatedAt: new Date().toISOString()
+  },
+
+  // 4. MKU-101: Bahasa Arab Dasar (2 SKS)
+  'cls-20261-mku101-a': {
+    description: 'Mata kuliah Bahasa Arab Dasar membekali mahasiswa dengan kaidah tata bahasa Arab pemula (nahwu dan sharaf), penguasaan kosakata (mufrodat), struktur kalimat (jumlah ismiyyah dan fi\'liyyah), serta kecakapan membaca teks Arab.',
+    learningOutcomes: [
+      'Mampu membedakan jenis kata (isim, fi\'il, huruf) beserta ciri-cirinya.',
+      'Mampu menyusun kalimat sempurna (jumlah mufidah) dengan struktur yang benar.',
+      'Mampu mengenali tanda-tanda i\'rab dasar dalam membaca teks Arab gundul sederhana.',
+      'Mampu melakukan percakapan dasar (muhadatsah) dalam situasi akademik kampus.'
+    ],
+    teachingMethods: [
+      'Metode Qawa\'id wa Tarjamah (Grammar-Translation)',
+      'Drill & Praktik Percakapan (Muhadatsah)',
+      'Latihan Membaca & Menulis Teks Arab (Qira\'ah & Kitabah)'
+    ],
+    assessmentWeights: [
+      { component: 'Kehadiran & Keaktifan Praktik', weightPercentage: 15 },
+      { component: 'Tugas Latihan Nahwu-Sharaf', weightPercentage: 25 },
+      { component: 'Kuis Mufrodat & Kaidah', weightPercentage: 15 },
+      { component: 'Ujian Tengah Semester (UTS)', weightPercentage: 20 },
+      { component: 'Ujian Akhir Semester (UAS)', weightPercentage: 25 },
+    ],
+    references: [
+      { title: 'Al-Muyassar fi \'Ilmin Nahwi', author: 'KH. Aceng Zakaria', year: 2021, isPrimary: true },
+      { title: 'Durus al-Lughah al-\'Arabiyyah', author: 'Dr. V. Abdur Rahim', year: 2020, isPrimary: true },
+      { title: 'Modul Bahasa Arab Dasar Perguruan Tinggi', author: 'Dra. Hj. Siti Maryam, M.Pd.I', year: 2025, isPrimary: false }
+    ],
+    documentAttachmentUrl: '#',
+    documentAttachmentName: 'RPS_Resmi_MKU101_Bahasa_Arab_Dasar_2026.pdf',
+    updatedAt: new Date().toISOString()
+  },
+
+  // 5. STAIPD213: Bahasa Arab II (2 SKS)
+  'cls-staipd213-pd2': {
+    description: 'Pengembangan kemampuan bahasa Arab terapan untuk calon pendidik anak usia dini, pengayaan kosakata edukatif (mufrodat at-tarbiyah), keterampilan mendengar (istima\'), dan membaca teks keislaman anak.',
+    learningOutcomes: [
+      'Menguasai kosakata tematik PAUD dalam bahasa Arab (keluarga, alam, doa harian).',
+      'Mampu menggunakan ungkapan instruksional di ruang kelas anak usia dini.',
+      'Mampu menyusun media flashcard dan lagu edukatif berbahasa Arab untuk AUD.'
+    ],
+    teachingMethods: [
+      'Pembelajaran Berbasis Lagu & Gerak (Action Songs)',
+      'Simulasi Pengajaran Microteaching Bahasa Arab PAUD',
+      'Pembuatan Alat Peraga Edukatif (APE) Bahasa Arab'
+    ],
+    assessmentWeights: [
+      { component: 'Kehadiran & Partisipasi', weightPercentage: 15 },
+      { component: 'Portofolio Media APE Bahasa Arab', weightPercentage: 25 },
+      { component: 'Kuis & Praktik Bernyanyi Edukatif', weightPercentage: 15 },
+      { component: 'UTS Microteaching', weightPercentage: 20 },
+      { component: 'UAS Karya Tulis & Praktik Mengajar', weightPercentage: 25 },
+    ],
+    references: [
+      { title: 'Ta\'lim al-Lughah al-\'Arabiyyah li Athfal', author: 'Dr. Mahmud Kamil An-Naqah', year: 2020, isPrimary: true },
+      { title: 'Media Pembelajaran Bahasa Arab Anak Usia Dini', author: 'MUHAMMAD RIZAL ZAENULLOH, M.Pd.', year: 2025, isPrimary: false }
+    ],
+    documentAttachmentUrl: '#',
+    documentAttachmentName: 'RPS_Resmi_STAIPD213_Bahasa_Arab_II_2026.pdf',
     updatedAt: new Date().toISOString()
   }
 };
 
-export const INITIAL_MEETINGS: CourseMeeting[] = [
-  {
-    id: 'mtg-pai301a-01',
-    classId: 'cls-pai301-a',
-    meetingNumber: 1,
-    title: 'Kontrak Belajar & Pengantar Ilmu Ushul Fiqih',
-    topic: 'Definisi, Objek Kajian, dan Urgensi Ushul Fiqih bagi Akademisi Muslim',
-    description: 'Orientasi perkuliahan satu semester, pengenalan RPS, pemahaman perbedaan antara Fiqih dan Ushul Fiqih, serta peta konsep metode penetapan hukum.',
-    scheduledDate: '2026-09-07',
+// Aliases for historical / backend compatibility
+INITIAL_RPS_MAP['cls-pai301-a'] = INITIAL_RPS_MAP['cls-20261-pai301-a'];
+INITIAL_RPS_MAP['1'] = INITIAL_RPS_MAP['cls-20261-pai301-a'];
+INITIAL_RPS_MAP['4'] = INITIAL_RPS_MAP['cls-20261-pai202-a'];
+INITIAL_RPS_MAP['2'] = INITIAL_RPS_MAP['cls-20261-pai101-a'];
+INITIAL_RPS_MAP['3'] = INITIAL_RPS_MAP['cls-20261-mku101-a'];
+INITIAL_RPS_MAP['5'] = INITIAL_RPS_MAP['cls-staipd213-pd2'];
+
+// =========================================================================
+// REAL SYLLABUS DEFINITIONS FOR 16 WEEKS (SEMESTER GANJIL 2026/2027)
+// =========================================================================
+interface SyllabusOutlineItem {
+  week: number;
+  title: string;
+  topic: string;
+  description: string;
+}
+
+const SYLLABUS_CATALOG: Record<string, SyllabusOutlineItem[]> = {
+  // PAI-301: Fiqih Mawaris (3 SKS)
+  'PAI-301': [
+    {
+      week: 1,
+      title: 'Pengantar Ilmu Mawaris & Hak-hak Terkait Tirkah',
+      topic: 'Definisi, Dasar Hukum Al-Qur\'an & Sunnah, Serta Urgensi Menjaga Keutuhan Harta Warisan',
+      description: 'Orientasi perkuliahan semester, pengenalan RPS, urgensi ilmu faraidh, perbedaan harta tirkah dengan warisan, serta 4 tahapan hak yang harus diselesaikan atas tirkah (tajhiz, hutang, wasiat, pembagian waris).'
+    },
+    {
+      week: 2,
+      title: 'Rukun, Syarat, dan Mawani\'ul Irtsi (Halangan Waris)',
+      topic: 'Rukun Pewarisan dan Faktor Penghalang Hak Waris',
+      description: 'Membedah syarat pewarisan, kematian muwarrits, kehidupan warits, serta sebab gugurnya hak waris (pembunuhan, berlainan agama, dan perbudakan).'
+    },
+    {
+      week: 3,
+      title: 'Sebab-sebab Kewarisan (Asbabul Irtsi)',
+      topic: 'Nasab (Kekerabatan), Pernikahan Sah, dan Wala\'',
+      description: 'Analisis sebab timbulnya hak kewarisan karena hubungan nasab hakiki, ikatan pernikahan syar\'i yang sah, dan wala\' pembebasan budak.'
+    },
+    {
+      week: 4,
+      title: 'Klasifikasi Ahli Waris Laki-laki & Perempuan',
+      topic: '15 Golongan Ahli Waris Laki-laki dan 10 Golongan Ahli Waris Perempuan',
+      description: 'Identifikasi menyeluruh seluruh ahli waris laki-laki dan perempuan beserta hierarki kedekatan nasab dengan al-marhum.'
+    },
+    {
+      week: 5,
+      title: 'Ashabul Furudh I: Hak Pasti 1/2, 1/4, dan 1/8',
+      topic: 'Kriteria Penerima Bagian Separuh, Seperempat, dan Seperdelapan',
+      description: 'Ketentuan dan syarat penerima furudh 1/2 (suami, anak perempuan tunggal, cucu perempuan, saudari kandung/seayah), 1/4 (suami/istri), dan 1/8 (istri bila ada anak).'
+    },
+    {
+      week: 6,
+      title: 'Ashabul Furudh II: Hak Pasti 2/3, 1/3, dan 1/6',
+      topic: 'Kriteria Penerima Bagian Dua Pertiga, Sepertiga, dan Seperenam',
+      description: 'Kriteria dua anak perempuan atau lebih, ibu, saudara seibu, ayah, kakek shahih, nenek shahihah, dan saudara seayah.'
+    },
+    {
+      week: 7,
+      title: 'Ashabah: Konsep dan Pembagian Ahli Waris Penerima Sisa',
+      topic: 'Ashabah bin-Nafs, Ashabah bil-Ghair, dan Ashabah ma\'al-Ghair',
+      description: 'Kaidah hak sisa harta waris: ahli waris penerima sisa dengan sendirinya, penerima sisa karena bersama ahli waris lain, dan penerima sisa bersama anak perempuan.'
+    },
+    {
+      week: 8,
+      title: 'Ujian Tengah Semester (UTS): Evaluasi Teori & Kasus Ashabul Furudh',
+      topic: 'Evaluasi Komprehensif Pemahaman Konsep Mawaris dan Penentuan Bagian Pasti',
+      description: 'Ujian evaluasi tengah semester berupa analisis kasus kematian dan penetapan status ahli waris yang berhak menerima serta porsi bagiannya.'
+    },
+    {
+      week: 9,
+      title: 'Kaidah Hijab dan Mahjub (Penghalangan Hak Waris)',
+      topic: 'Hijab Hirman (Penghalangan Penuh) dan Hijab Nuqshan (Pengurangan Porsi)',
+      description: 'Peta hubungan penghalangan antar ahli waris: 6 ahli waris yang tidak pernah gugur haknya dan ahli waris yang gugur karena adanya nasab yang lebih dekat.'
+    },
+    {
+      week: 10,
+      title: 'Asal Masalah (Ashlul Mas\'alah) dan Teknik Hisab Mawaris',
+      topic: 'Menemukan Kelipatan Persekutuan Terkecil (KPK) dalam Angka Masalah Waris',
+      description: 'Teknik hisab matematis menentukan 7 angka asal masalah (2, 3, 4, 6, 8, 12, 24) untuk menghitung porsi rupiah harta waris secara adil dan presisi.'
+    },
+    {
+      week: 11,
+      title: 'Konsep Aul (Pertambahan Angka Masalah karena Defisit)',
+      topic: 'Penyelesaian Kasus Total Porsi Ashabul Furudh Melebihi Nilai 1 (Harta Penuh)',
+      description: 'Kajian sejarah penetapan Aul era Khalifah Umar bin Khattab dan simulasi hisab aul pada asal masalah 6, 12, dan 24.'
+    },
+    {
+      week: 12,
+      title: 'Konsep Radd (Pengembalian Sisa Harta Waris)',
+      topic: 'Penyelesaian Kasus Sisa Harta Waris Ketika Tidak Ada Ashabah',
+      description: 'Kaidah pengembalian surplus sisa tirkah kepada ashabul furudh nasabiyyah secara proporsional sesuai kaidah jumhur sahabat.'
+    },
+    {
+      week: 13,
+      title: 'Masalah-masalah Khusus dalam Mawaris (Gharrawain & Musyarakah)',
+      topic: 'Kasus Al-Gharrawain (Al-Umariyyatan), Al-Musyarakah (Al-Himariyyah), dan Al-Akdariyyah',
+      description: 'Bedah kasus klasik istimewa: suami/istri bersama ayah dan ibu (Gharrawain), saudara kandung dan saudara seibu bersama suami dan ibu (Musyarakah).'
+    },
+    {
+      week: 14,
+      title: 'Kewarisan Janin dalam Kandungan (Al-Hamlu) & Orang Hilang (Al-Mafqud)',
+      topic: 'Kaidah Penahanan Harta Waris untuk Kepentingan Janin dan Status Hukum Al-Mafqud',
+      description: 'Tata cara mengalokasikan bagian warisan bagi janin yang masih dalam kandungan ibu serta penyelesaian hak waris orang hilang menurut fatwa ulama.'
+    },
+    {
+      week: 15,
+      title: 'Hukum Kewarisan Islam di Indonesia (Kompilasi Hukum Islam & Wasiat Wajibah)',
+      topic: 'Analisis Pasal 171-214 KHI, Bagian Anak Angkat, dan Yurisprudensi Mahkamah Agung',
+      description: 'Implementasi hukum kewarisan di Pengadilan Agama Indonesia: wasiat wajibah untuk anak angkat/orang tua angkat, ahli waris pengganti, dan pembagian harta bersama (gono-gini).'
+    },
+    {
+      week: 16,
+      title: 'Ujian Akhir Semester (UAS): Praktik Komprehensif Penyelesaian Kasus Tirkah',
+      topic: 'Ujian Akhir Semester dan Portofolio Simulasi Pembagian Harta Waris Keluarga Muslim',
+      description: 'Evaluasi akhir komprehensif berupa penyelesaian berkas perkara pembagian waris keluarga muslim dari penetapan tirkah hingga hisab rupiah final.'
+    }
+  ],
+
+  // PAI-202: Fiqih Ibadah & Muamalah (3 SKS)
+  'PAI-202': [
+    {
+      week: 1,
+      title: 'Pengantar Fiqih Ibadah & Kaidah Pokok Ibadah Mahdhah',
+      topic: 'Hakikat Ibadah, Ikhlas, Ittiba\', dan Kaidah \'Al-Ashlu fil \'Ibadati Al-Hazhr\'',
+      description: 'Tujuan penciptaan manusia, syarat diterimanya ibadah, serta landasan kaidah fiqhiyyah bahwa asal hukum ibadah mahdhah adalah haram hingga ada dalil yang memerintahkannya.'
+    },
+    {
+      week: 2,
+      title: 'Fiqih Thaharah (Bersuci): Air, Najis, dan Wudhu Kontemporer',
+      topic: 'Pembagian Jenis Air, Tingkatan Najis, dan Tata Cara Bersuci Sesuai Sunnah',
+      description: 'Klasifikasi air muthlaq, musta\'mal, mutanajjis, wudhu, tayammum, mandi wajib, serta hukum thaharah praktis bagi pasien rumah sakit dan musafir.'
+    },
+    {
+      week: 3,
+      title: 'Fiqih Shalat I: Rukun, Syarat Sah, dan Khusyu\'',
+      topic: 'Panduan Shalat Fardhu Sesuai Sifat Shalat Nabi SAW',
+      description: 'Rukun 13 shalat, syarat sah, perkara yang membatalkan shalat, serta tips meraih kekhusyukan dalam shalat fardhu.'
+    },
+    {
+      week: 4,
+      title: 'Fiqih Shalat II: Shalat Berjamaah & Shalat Musafir',
+      topic: 'Ketentuan Imam dan Makmum, Masbuq, Shalat Jamak dan Qashar',
+      description: 'Tata cara shalat berjamaah, posisi shaf, sujud sahwi, sujud tilawah, rukhsah shalat bagi musafir dan orang sakit.'
+    },
+    {
+      week: 5,
+      title: 'Fiqih Zakat: Zakat Maal, Zakat Fitrah, dan Zakat Profesi',
+      topic: 'Nishab, Haul, Klasifikasi Harta Zakat, dan 8 Golongan Mustahiq',
+      description: 'Perhitungan zakat emas, tabungan, perdagangan, pertanian, peternakan, zakat profesi kontemporer, dan distribusi produktif BAZNAS.'
+    },
+    {
+      week: 6,
+      title: 'Fiqih Puasa (Shiyam): Rukun, Pembatal, dan Rukhsah Puasa',
+      topic: 'Syarat Sah Puasa, Fidyah, Kaffarah, dan Ibadah di Bulan Ramadhan',
+      description: 'Rukun puasa, pembatal kontemporer (injeksi, obat tetes mata, inhaler), ketentuan fidyah bagi lansia/wanita hamil, serta puasa sunnah.'
+    },
+    {
+      week: 7,
+      title: 'Fiqih Haji dan Umrah: Manasik, Rukun, dan Dam',
+      topic: 'Miqat, Ihram, Thawaf, Sa\'i, Wukuf di Arafah, dan Pelaksanaan Haji Tamattu\'',
+      description: 'Rukun dan wajib haji, larangan ihram, ragam manasik (ifrad, qiran, tamattu\'), serta pembayaran dam kontemporer.'
+    },
+    {
+      week: 8,
+      title: 'Ujian Tengah Semester (UTS): Evaluasi Fiqih Ibadah Mahdhah',
+      topic: 'Evaluasi Praktik dan Pemahaman Teori Fiqih Ibadah',
+      description: 'Ujian tengah semester menguji penguasaan kaidah thaharah, shalat, zakat, puasa, dan manasik haji.'
+    },
+    {
+      week: 9,
+      title: 'Pengantar Fiqih Muamalah: Kaidah Asas Transaksi Ekonomi Islam',
+      topic: 'Kaidah \'Al-Ashlu fil Mu\'amalati Al-Ibahah\' dan Rukun Akad',
+      description: 'Konsep dasar transaksi ekonomi Islam, prinsip kerelaan (an-taradhin), rukun akad, aqidain, mahallul aqad, dan sighat.'
+    },
+    {
+      week: 10,
+      title: 'Larangan Pokok Muamalah: Riba, Gharar, Maisir, dan Tadlis',
+      topic: 'Membedah Jenis Riba (Nasi\'ah & Fadhl), Ketidakpastian (Gharar), dan Spekulasi Judi',
+      description: 'Bahaya riba dalam sistem moneter, perbedaan bunga bank dengan bagi hasil syariah, gharar dalam transaksi jual beli, dan penipuan mutu barang.'
+    },
+    {
+      week: 11,
+      title: 'Akad Jual Beli (Al-Bai\'): Murabahah, Salam, dan Istishna\'',
+      topic: 'Jual Beli Tunai, Tangguh, Pemesanan Barang, dan Khiyar (Hak Batal)',
+      description: 'Mekanisme akad murabahah pada perbankan syariah, skema jual beli salam pada komoditas pangan, dan istishna\' pada proyek konstruksi.'
+    },
+    {
+      week: 12,
+      title: 'Akad Kemitraan Bagi Hasil: Mudharabah & Musyarakah',
+      topic: 'Kemitraan Modal dan Tenaga serta Pembagian Nisbah Keuntungan',
+      description: 'Prinsip akad mudharabah (shahibul maal dan mudharib), musyarakah mutanaqisah pada KPR syariah, serta mitigasi risiko bisnis.'
+    },
+    {
+      week: 13,
+      title: 'Akad Jasa dan Sewa: Ijarah, IMBT, Ju\'alah, dan Rahn',
+      topic: 'Sewa Barang, Upah Tenaga Kerja, Gadai Emas Syariah, dan Sayembara',
+      description: 'Penyewaan aset, Ijarah Muntahiya Bittamlik (IMBT), gadai syariah (rahn), dan akad kafalah penjaminan kredit syariah.'
+    },
+    {
+      week: 14,
+      title: 'Akad Sosial & Filantropi: Wakaf Uang, Hibah, dan Qardh Hasan',
+      topic: 'Optimalisasi Filantropi Islam untuk Kesejahteraan Umat',
+      description: 'Kaidah pinjaman kebajikan (qardh hasan), regulasi wakaf uang produktif di Indonesia, hibah orang tua kepada anak, dan shadaqah jariyah.'
+    },
+    {
+      week: 15,
+      title: 'Transaksi Ekonomi Digital: E-Wallet, Paylater, & Fintech Syariah',
+      topic: 'Tinjauan Fiqih Muamalah terhadap Uang Elektronik, Cashback, dan Buy Now Pay Later',
+      description: 'Analisis Fatwa DSN-MUI tentang uang elektronik (e-money), hukum saldo bonus cashback, peer-to-peer lending syariah, dan cryptocurrency.'
+    },
+    {
+      week: 16,
+      title: 'Ujian Akhir Semester (UAS): Analisis Kasus Transaksi Muamalah Kontemporer',
+      topic: 'Evaluasi Komprehensif Fiqih Muamalah dan Etika Bisnis Syariah',
+      description: 'Ujian akhir semester berupa pemecahan masalah (case solving) studi kelayakan syariah pada produk perbankan atau platform digital.'
+    }
+  ],
+
+  // PAI-101: Ulumul Qur'an (2 SKS)
+  'PAI-101': [
+    { week: 1, title: 'Pengantar Ulumul Qur\'an', topic: 'Definisi, Objek Kajian, dan Urgensi bagi Mufassir', description: 'Pengenalan cabang-cabang ilmu Al-Qur\'an dan sejarah perkembangannya.' },
+    { week: 2, title: 'Hakikat Wahyu & Cara Penurunan Al-Qur\'an', topic: 'Tahapan Pewahyuan: Lauh Mahfuzh, Baitul \'Izzah, dan Berangsur-angsur', description: 'Hikmah Al-Qur\'an diturunkan secara bertahap selama 23 tahun.' },
+    { week: 3, title: 'Sejarah Kodifikasi Mushaf Al-Qur\'an', topic: 'Pengumpulan Era Rasulullah, Abu Bakar Ash-Shiddiq, dan Utsman bin Affan', description: 'Metodologi pencatatan wahyu, hafalan sahabat, dan penyatuan mushaf imam.' },
+    { week: 4, title: 'Ayat Makkiyyah dan Madaniyyah', topic: 'Karakteristik Teks, Aspek Tematik, dan Kriteria Klasifikasi', description: 'Ciri khas fase dakwah Mekkah dan Madinah dalam uslub Al-Qur\'an.' },
+    { week: 5, title: 'Asbabun Nuzul: Urgensi dan Kaidah Penafsiran', topic: 'Kaidah \'Al-Ibratu bi \'Umumil Lafzhi la bi Khusushis Sabab\'', description: 'Peran konteks historis peristiwa turunnya ayat dalam memahami pesan Al-Qur\'an.' },
+    { week: 6, title: 'Rasm Utsmani dan Dhabth Mushaf', topic: 'Kaidah Penulisan Khath Utsmani dan Tanda Baca Al-Qur\'an', description: 'Kaidah hadzf, ziyadah, hamz, badal, washl/fashl dalam rasm usmani.' },
+    { week: 7, title: 'Qira\'at Al-Qur\'an: Sejarah Qira\'ah Sab\'ah', topic: 'Syarat Keshahihan Qira\'at dan Ragam Dialek Arab (Ahruf Sab\'ah)', description: 'Pengaruh perbedaan qira\'at terhadap penafsiran dan istinbath hukum syar\'i.' },
+    { week: 8, title: 'Ujian Tengah Semester (UTS): Evaluasi Sejarah & Kodifikasi Teks', topic: 'Evaluasi Teori Ulumul Qur\'an', description: 'Ujian pemahaman sejarah mushaf dan kaidah dasar penafsiran.' },
+    { week: 9, title: 'Al-Wujuh wan Nazhair dalam Al-Qur\'an', topic: 'Satu Kata Beragam Makna dalam Ragam Konteks Ayat', description: 'Kajian semantik kosakata Al-Qur\'an seperti kata Al-Huda, Ash-Shalah, dll.' },
+    { week: 10, title: 'Muhkam dan Mutasyabih', topic: 'Definisi, Ragam Ayat Sifat, dan Sikap Ulama Salaf-Khalaf', description: 'Menelaah ayat-ayat yang jelas maknanya dan ayat yang membutuhkan takwil syar\'i.' },
+    { week: 11, title: 'Nasikh dan Mansukh dalam Al-Qur\'an', topic: 'Konsep Pembatalan Hukum, Hikmah Ilahiyyah, dan Ragam Bentuk Naskh', description: 'Naskh tilawah wa hukman, naskh hukm duna tilawah, dan naskh tilawah duna hukm.' },
+    { week: 12, title: 'Amtsal dan Aqsam dalam Al-Qur\'an', topic: 'Perumpamaan Edukatif dan Sumpah Allah dalam Firman-Nya', description: 'Hikmah Allah bersumpah dengan makhluk-Nya dan keindahan analogi Al-Qur\'an.' },
+    { week: 13, title: 'Kisah-kisah Al-Qur\'an (Qashashul Qur\'an)', topic: 'Fakta Historis, Ibrah Tarbawiyyah, dan Penolakan Terhadap Israiliyyat', description: 'Tujuan pendidikan keimanan melalui kisah nabi-nabi dan umat terdahulu.' },
+    { week: 14, title: 'I\'jaz Al-Qur\'an (Kemukjizatan Al-Qur\'an)', topic: 'I\'jaz Lughawi, I\'jaz Ilmi, I\'jaz Tasyri\'i, dan Berita Ghaib', description: 'Bukti keautentikan firman Allah yang tidak dapat ditandingi oleh siapapun.' },
+    { week: 15, title: 'Kaidah & Metodologi Penafsiran Al-Qur\'an', topic: 'Tafsir bil-Ma\'tsur, Tafsir bir-Ra\'yi, dan Metode Tahlili, Ijmali, Muqaran, Maudhu\'i', description: 'Langkah-langkah menyusun tafsir maudhu\'i (tematik) atas isu-isu kontemporer.' },
+    { week: 16, title: 'Ujian Akhir Semester (UAS): Portofolio Analisis Tafsir Tematik', topic: 'Ujian Akhir Semester Ulumul Qur\'an', description: 'Presentasi dan pengumpulan karya analisis tafsir ayat tematik.' }
+  ],
+
+  // MKU-101: Bahasa Arab Dasar (2 SKS)
+  'MKU-101': [
+    { week: 1, title: 'Ta\'aruf & Pengenalan Huruf Hijaiyyah', topic: 'Makharijul Huruf, Harakat, dan Kosakata Sapaan Kampus', description: 'Pengantar bahasa Arab dasar dan ungkapan salam perkenalan.' },
+    { week: 2, title: 'Aqsamul Kalimah: Isim, Fi\'il, dan Huruf', topic: 'Ciri-ciri Kata Benda, Kata Kerja, dan Kata Sambung', description: 'Membedakan tanwin, alif lam, huruf jar, dan tanda-tanda fi\'il.' },
+    { week: 3, title: 'Mudzakkar dan Muannats, Mufrad, Mutsanna, Jamak', topic: 'Klasifikasi Gender dan Jumlah Bilangan Kata Benda', description: 'Pembedaan ta marbuthah, jamak mudzakkar salim, muannats salim, dan taksir.' },
+    { week: 4, title: 'Isim Isyarah dan Isim Dlamir', topic: 'Kata Tunjuk (Hadza/Hadzihi) dan Kata Ganti Pribadi', description: 'Penggunaan kata ganti orang (Huwa, Hiya, Anta, Anti, Ana, Nahnu) dalam kalimat.' },
+    { week: 5, title: 'Jumlah Ismiyyah: Mubtada\' dan Khabar', topic: 'Struktur Kalimat Nomina dan Kesesuaian Gender serta Bilangan', description: 'Menyusun kalimat sederhana berpola subjek-predikat.' },
+    { week: 6, title: 'Tarkib Idlafi: Mudhaf dan Mudhaf Ilaih', topic: 'Frasa Kepemilikan (Genitive Construction)', description: 'Aturan penghilangan tanwin dan alif lam pada kata kepemilikan.' },
+    { week: 7, title: 'Tarkib Na\'ti: Na\'at dan Man\'ut', topic: 'Kata Sifat dan Penyelarasannya dengan Kata Benda', description: 'Kesesuaian 4 aspek: i\'rab, ma\'rifah/nakirah, gender, dan bilangan.' },
+    { week: 8, title: 'Ujian Tengah Semester (UTS): Latihan Qawa\'id Dasar', topic: 'Evaluasi Tata Bahasa & Percakapan Arab Sederhana', description: 'Ujian tengah semester mencakup identifikasi struktur kalimat dan tarkib.' },
+    { week: 9, title: 'Pengantar I\'rab: Rofa\', Nashab, Jar, dan Jazm', topic: 'Tanda-tanda Pokok Harakat Akhir Kata (Dhammah, Fathah, Kasrah, Sukun)', description: 'Memahami perubahan baris akhir kata sesuai posisi gramatikalnya.' },
+    { week: 10, title: 'Huruf Jar dan Zharaf Makan & Zaman', topic: 'Kata Depan dan Keterangan Tempat serta Waktu', description: 'Penggunaan fi, \'ala, min, ila, tahta, fauqa, amama, wara\'a.' },
+    { week: 11, title: 'Fi\'il Madhi: Kata Kerja Lampau', topic: 'Tashrif Lughawi Kata Kerja Bentuk Lampau', description: 'Konjugasi 14 dlamir pada kata kerja madhi (Fa\'ala, Fa\'alat, dst).' },
+    { week: 12, title: 'Fi\'il Mudhari\': Kata Kerja Sekarang/Akan Datang', topic: 'Huruf Mudhara\'ah (A-N-Y-T) dan Konjugasi Waktu', description: 'Pola kata kerja berlangsung dan perubahan dlamir pelaku.' },
+    { week: 13, title: 'Jumlah Fi\'liyyah: Fi\'il, Fa\'il, dan Maf\'ul Bih', topic: 'Struktur Kalimat Verbal (Kata Kerja, Pelaku, Objek Penderita)', description: 'Kaidah fa\'il marfu\' dan maf\'ul bih manshub dalam kalimat sempurna.' },
+    { week: 14, title: 'Fi\'il Amr: Kata Kerja Perintah', topic: 'Pembentukan Fi\'il Amr dan Penggunaannya dalam Instruksi Harian', description: 'Rumus membuat fi\'il amr dari fi\'il mudhari\' yang dijazmkan.' },
+    { week: 15, title: 'Muhadatsah Yaumiyyah & Qira\'ah Nash Mashadir', topic: 'Percakapan Tematik Seputar Kehidupan Kampus & Perpustakaan', description: 'Latihan membaca teks pendek tanpa harakat dan dialog berpasangan.' },
+    { week: 16, title: 'Ujian Akhir Semester (UAS): Evaluasi Praktik Membaca & Menulis', topic: 'Evaluasi Akhir Bahasa Arab Dasar', description: 'Ujian lisan membaca teks berharakat dan tes tulis kaidah nahwu.' }
+  ]
+};
+
+// =========================================================================
+// REAL INITIAL MEETINGS (FOR PAI-301 FIQIH MAWARIS)
+// =========================================================================
+export const INITIAL_MEETINGS: CourseMeeting[] = SYLLABUS_CATALOG['PAI-301'].map((item) => {
+  const num = item.week;
+  const pad = num < 10 ? `0${num}` : `${num}`;
+  const startDate = new Date(2026, 8, 7); // 7 September 2026 (Senin)
+  const meetingDate = new Date(startDate.getTime() + (num - 1) * 7 * 24 * 60 * 60 * 1000);
+  const dateStr = meetingDate.toISOString().split('T')[0];
+
+  const meeting: CourseMeeting = {
+    id: `mtg-pai301a-${pad}`,
+    classId: 'cls-20261-pai301-a',
+    meetingNumber: num,
+    title: `Pertemuan #${num}: ${item.title}`,
+    topic: item.topic,
+    description: item.description,
+    scheduledDate: dateStr,
     startTime: '08:00',
-    endTime: '10:30',
-    orderIndex: 1,
+    endTime: '09:40',
+    orderIndex: num,
     status: 'DITERBITKAN',
     publishedAt: '2026-09-01T08:00:00Z',
-    materials: [
+    materials: []
+  };
+
+  // Add rich learning materials to Meeting 1
+  if (num === 1) {
+    meeting.materials = [
       {
-        id: 'mat-01-01',
-        classId: 'cls-pai301-a',
-        meetingId: 'mtg-pai301a-01',
-        title: 'Modul Pembelajaran Daring: Konsep Dasar & Metodologi Ushul Fiqih',
-        description: 'E-Modul interaktif lengkap 4 bab dengan kutipan turats, perbandingan mazhab, dan studi kasus kontemporer.',
+        id: 'mat-mawaris-01',
+        classId: 'cls-20261-pai301-a',
+        meetingId: `mtg-pai301a-${pad}`,
+        title: 'E-Modul: Pengantar Ilmu Mawaris, Kaidah Tirkah & Rukun Faraidh',
+        description: 'E-Modul interaktif komprehensif mengupas tuntas ayat-ayat kewarisan Al-Qur\'an, hak atas harta tirkah, dan rukun pembagian waris.',
         type: 'MODUL_ONLINE',
-        fileName: 'Modul_01_Konsep_Ushul_Fiqih.pdf',
+        fileName: 'Modul_01_Pengantar_Fiqih_Mawaris.pdf',
         fileSizeBytes: 2450000,
         orderIndex: 1,
         status: 'DITERBITKAN',
         allowDownload: true,
         onlineModule: {
-          author: 'Tim Dosen Keislaman & Ushul Fiqih STAI AL-ITTIHAD',
+          author: 'Dr. H. M. Ridwan, M.Ag & Tim Keilmuan Syariah STAI AL-ITTIHAD',
           edition: 'Edisi Akademik 2026/2027',
           totalEstimatedMinutes: 25,
           learningOutcomes: [
-            'Memahami definisi etimologi dan terminologi Ushul Fiqih',
-            'Menjelaskan perbedaan mendasar Fiqih (produk) dan Ushul Fiqih (metodologi)',
-            'Mengidentifikasi dalil primer (Al-Qur\'an, Sunnah, Ijma\', Qiyas) dan sekunder'
+            'Memahami urgensi ilmu faraidh/mawaris sebagai separuh ilmu agama yang mudah dilupakan manusia.',
+            'Menjelaskan urutan prioritas 4 hak yang harus diselesaikan atas harta peninggalan (tirkah).',
+            'Mengidentifikasi 3 rukun pokok pewarisan dalam Islam (muwarrits, warits, mauruts).',
+            'Menelaah teks ayat-ayat kewarisan Al-Qur\'an dalam Surah An-Nisa.'
           ],
           chapters: [
             {
-              id: 'ch-01-01',
+              id: 'ch-mwr-01',
               chapterNumber: 1,
-              title: 'Hakikat, Definisi, dan Ruang Lingkup Ushul Fiqih',
+              title: 'Hakikat, Definisi, dan Urgensi Menjaga Hukum Kewarisan Islam',
               estimatedMinutes: 6,
-              content: `Ushul Fiqih secara kebahasaan merupakan susunan tarkib idlafi dari dua kata: Al-Ashl (الأصل) yang bermakna pondasi atau landasan pijak yang menjadi dasar bangunan lain, dan Al-Fiqh (الفقه) yang berarti pemahaman mendalam terhadap suatu perkara.\n\nSecara terminologi menurut jumhur ulama ushuliyyin, Ushul Fiqih didefinisikan sebagai ilmu mengenai kaidah-kaidah umum dan metode penggalian (istinbath) hukum-hukum syara' yang bersifat praktis ('amaliyyah) dari dalil-dalilnya yang terperinci (tafshiliyyah).\n\nPerbedaan fundamental antara Fiqih dan Ushul Fiqih:\n1. Fiqih adalah kumpulan hukum syar'i hasil ijtihad (misal: shalat fardhu hukumnya wajib, jual beli kredit hukumnya mubah).\n2. Ushul Fiqih adalah rumus, timbangan metodologis, dan kaidah-kaidah analisis yang digunakan mujtahid untuk menghasilkan ketetapan hukum fiqih tersebut.\n3. Dengan perumpamaan analogis: Jika Fiqih adalah buah atau hasil panen, maka Ushul Fiqih adalah akar pohon, pohon pengetahuan, dan alat panennya.`,
+              content: `Ilmu Mawaris atau dikenal sebagai 'Ilmul Faraidh adalah disiplin ilmu fiqih yang mempelajari kaidah-kaidah penentuan pihak yang berhak menerima harta peninggalan, pihak yang tidak berhak, serta besaran bagian pasti (furudhul muqaddarah) yang diterima oleh masing-masing ahli waris secara adil dan terukur.\n\nKata Faraidh merupakan bentuk jamak dari kata Faridhah yang bermakna ketentuan yang diwajibkan oleh Allah SWT. Kedudukan hukum kewarisan dalam Islam sangat agung, karena pembagian porsi waris tidak diserahkan kepada kehendak manusia, melainkan langsung dirinci secara qath'iy oleh Allah Ta'ala di dalam Al-Qur'an.\n\nRasulullah SAW berpesan dalam hadits yang diriwayatkan oleh Imam Ibnu Majah dan Ad-Daruquthni:\n"Pelajarilah ilmu faraidh dan ajarkanlah kepada orang lain, karena sesungguhnya ia adalah separuh dari ilmu, dan ia adalah ilmu yang pertama kali akan dicabut dari umatku."`,
               keyTakeaways: [
-                'Ushul Fiqih adalah metodologi perumusan hukum syar\'i (Ushul = pondasi kaidah, Fiqih = hukum terapan).',
-                'Fiqih membahas perbuatan mukallaf, sedangkan Ushul Fiqih membahas dalil dan cara istinbath hukum dari dalil.'
+                'Ilmu Mawaris menetapkan hak harta peninggalan berdasarkan nash qath\'i Al-Qur\'an demi mencegah persengketaan keluarga.',
+                'Porsi bagian waris bersumber langsung dari ketetapan Allah (Al-Faraidhul Muqaddarah), bukan rekayasa manusia.'
               ],
               arabicQuotes: [
                 {
-                  arabicText: 'العِلْمُ بِالأَحْكَامِ الشَّرْعِيَّةِ العَمَلِيَّةِ المُكْتَسَبَةِ مِنْ أَدِلَّتِهَا التَّفْصِيلِيَّةِ',
-                  translation: 'Ilmu tentang hukum-hukum syari\'at yang bersifat praktis yang diperoleh dari dalil-dalilnya yang terperinci.',
-                  source: 'Imam Al-Baidhawi, Minhaj al-Wushul fi \'Ilm al-Ushul'
+                  arabicText: 'تَعَلَّمُوا الْفَرَائِضَ وَعَلِّمُوهَا النَّاسَ ، فَإِنَّهَا نِصْفُ الْعِلْمِ ، وَهُوَ يُنْسَى ، وَهُوَ أَوَّلُ شَيْءٍ يُنْزَعُ مِنْ أُمَّتِي',
+                  translation: 'Pelajarilah faraidh dan ajarkanlah kepada manusia, karena sesungguhnya ia adalah separuh ilmu, dan ia mudah dilupakan, serta ia adalah perkara pertama yang dicabut dari umatku.',
+                  source: 'HR. Ibnu Majah (No. 2719) dan Ad-Daruquthni (No. 4/67)'
                 }
               ]
             },
             {
-              id: 'ch-01-02',
+              id: 'ch-mwr-02',
               chapterNumber: 2,
-              title: 'Landasan Dalil Syar\'i & Sejarah Kodifikasi Kitab Turats',
+              title: 'Empat Hak Terkait Harta Peninggalan (Huququt Tarikah)',
               estimatedMinutes: 7,
-              content: `Pada masa Rasulullah SAW, seluruh persoalan hukum diselesaikan langsung melalui wahyu Al-Qur'an dan bimbingan sabda Nabi. Pada era Sahabat dan Tabi'in, kaidah ushul fiqih telah digunakan secara intuitif (malakah fiqhiyyah) tanpa dibukukan ke dalam tulisan formal.\n\nMemasuki abad ke-2 Hijriyah, seiring meluasnya wilayah Islam dan timbulnya perbedaan antara Madrasah Ahli Hadits di Hijaz dan Madrasah Ahli Ra'yi di Irak, Imam Muhammad bin Idris Asy-Syafi'i (150-204 H) menyusun kitab rujukan ushul fiqih pertama di dunia Islam, yaitu Kitab Ar-Risalah.\n\nDalam perkembangannya, penulisan ushul fiqih terbagi menjadi dua metode utama (Thariqah):\n1. Thariqah Mutakallimin (Syafi'iyyah/Malikiyyah/Hanabilah): Menetapkan kaidah berdasarkan logika dalil tanpa terikat pada furu' mazhab tertentu.\n2. Thariqah Fuqaha (Hanafiyyah): Menyusun kaidah ushul berdasarkan keputusan fatwa furu' para imam madzhab terdahulu.`,
+              content: `Sebelum harta peninggalan (tirkah) seseorang yang telah wafat dibagikan kepada para ahli waris, wajib hukumnya menyelesaikan empat hak secara berurutan sesuai hierarki prioritas syar'i:\n\n1. Biaya Pengurusan Jenazah (Tajhizul Janazah):\nSeluruh biaya pembelian kain kafan, pemandian, transportasi, dan pemakaman jenazah secara wajar (tanpa berlebih-lebihan dan tanpa kikir).\n\n2. Pelunasan Hutang Piutang (Qadha'ud Duyuun):\nHutang kepada sesama manusia (kredit, pinjaman, sewa) maupun hutang kepada Allah (zakat yang belum ditunaikan, kaffarah, nazar, badal haji).\n\n3. Penunaian Wasiat (Tanfizhul Washiyyah):\nWasiat almarhum kepada selain ahli waris dengan batas maksimal sepertiga (1/3) dari sisa harta setelah dikurangi biaya tajhiz dan pelunasan hutang.\n\n4. Pembagian Warisan kepada Ahli Waris (Qismatut Tarikah):\nSisa harta bersih setelah ketiga kewajiban di atas diselesaikan secara tuntas barulah dibagikan kepada ahli waris yang sah.`,
               keyTakeaways: [
-                'Kitab Ar-Risalah karya Imam Asy-Syafi\'i adalah tonggak pertama kodifikasi metodologi ushul fiqih secara sistematis.',
-                'Dua thariqah utama penulisan ushul fiqih: Thariqah Mutakallimin (Teoretis-Murni) dan Thariqah Fuqaha (Deduktif Furu\').'
+                'Harta waris tidak boleh dibagi sebelum seluruh hutang piutang dan biaya pengurusan jenazah lunas tertunaikan.',
+                'Wasiat almarhum dibatasi maksimal 1/3 harta dan tidak boleh diberikan kepada ahli waris penerima bagian tetap.'
               ],
               arabicQuotes: [
                 {
-                  arabicText: 'يَا أَيُّهَا الَّذِينَ آمَنُوا أَطِيعُوا اللَّهَ وَأَطِيعُوا الرَّسُولَ وَأُولِي الْأَمْرِ مِنكُمْ ۖ فَإِن تَنَازَعْتُمْ فِي شَيْءٍ فَرُدُّوهُ إِلَى اللَّهِ وَالرَّسُولِ',
-                  translation: 'Wahai orang-orang yang beriman! Taatilah Allah dan taatilah Rasul, dan Ulil Amri di antara kamu. Kemudian jika kamu berbeda pendapat tentang sesuatu, maka kembalikanlah ia kepada Allah (Al-Qur\'an) dan Rasul (Sunnah).',
-                  source: 'QS. An-Nisa [4]: 59 (Landasan Hierarki Sumber Hukum Islam)'
+                  arabicText: 'مِن بَعْدِ وَصِيَّةٍ يُوصِي بِهَا أَوْ دَيْنٍ ۗ آبَاؤُكُمْ وَأَبْنَاؤُكُمْ لَا تَدْرُونَ أَيُّهُمْ أَقْرَبُ لَكُمْ نَفْعًا ۚ فَرِيضَةً مِّنَ اللَّهِ',
+                  translation: '...setelah dipenuhi wasiat yang dibuatnya atau (dan setelah dibayar) hutangnya. Tentang orang tuamu dan anak-anakmu, kamu tidak mengetahui siapa di antara mereka yang lebih dekat kepadamu manfaatnya. Ini adalah ketetapan dari Allah.',
+                  source: 'QS. An-Nisa [4]: 11'
                 }
               ]
             },
             {
-              id: 'ch-01-03',
+              id: 'ch-mwr-03',
               chapterNumber: 3,
-              title: 'Objek Kajian, Klasifikasi Adillah & Metodologi Istinbath',
+              title: 'Rukun, Syarat, dan Studi Kasus Pembagian Tirkah',
               estimatedMinutes: 7,
-              content: `Objek kajian ushul fiqih mencakup 4 rukun utama (Mabahits Ushuliyyah):\n\n1. Adillah Syar'iyyah (Sumber-Sumber Hukum):\n   - Adillah Muttafaq 'Alaiha (Disepakati): Al-Qur'an, As-Sunnah, Al-Ijma', Al-Qiyas.\n   - Adillah Mukhtalaf Fiha (Diperselisihkan): Istihsan, Maslahah Mursalah, 'Urf, Istish-hab, Saddudz Dzara'i, Syar'u Man Qablana, Qaul Sahabi.\n\n2. Al-Hukmu Asy-Syar'i (Hukum Syar'i):\n   - Taklifi (Wajib, Sunnah/Mandub, Haram, Makruh, Mubah)\n   - Wadh'i (Sebab, Syarat, Mani'/Penghalang, Shah, Bathil)\n\n3. Al-Qawa'id Al-Lughawiyyah (Kaidah Kebahasaan):\n   - 'Am dan Khas, Muthlaq dan Muqayyad, Amar dan Nahyi, Mantunq dan Mafhum.\n\n4. Al-Ijtihad wa At-Taqlid:\n   - Kriteria Mujtahid, Syarat Fatwa, Kaidah Ta'arudl al-Adillah (Pertentangan Dalil), dan Tarjih.`,
+              content: `Rukun kewarisan Islam mencakup 3 pilar utama:\n1. Al-Muwarrits: Orang yang meninggal dunia dan meninggalkan harta peninggalan.\n2. Al-Warits: Orang yang berhak menerima warisan karena adanya sebab kekerabatan, pernikahan, atau wala\'.\n3. Al-Mauruts: Harta peninggalan bersih (tirkah) yang ditinggalkan almarhum.\n\nSyarat Pewarisan:\n- Kepastian wafatnya muwarrits (hakiki atau hukmi lewat putusan pengadilan).\n- Kepastian hidupnya warits saat muwarrits meninggal dunia.\n- Mengetahui arah hubungan nasab dan tidak adanya mawani'ul irtsi (pembunuhan, beda agama, perbudakan).`,
               keyTakeaways: [
-                'Empat pilar utama kajian ushul fiqih: Sumber Dalil, Kaidah Bahasa/Istinbath, Klasifikasi Hukum, dan Teori Ijtihad/Tarjih.',
-                'Ijma\' dan Qiyas bertindak sebagai instrumen dinamis untuk menjawab tantangan zaman.'
+                'Tiga rukun kewarisan: Muwarrits (yang wafat), Warits (ahli waris hidup), dan Mauruts (harta warisan bersih).',
+                'Ketiadaan salah satu rukun atau adanya penghalang waris menggugurkan hak pembagian waris.'
               ],
               caseStudy: {
-                title: 'Transaksi Pembayaran Digital (E-Wallet) dan Cashback',
-                scenario: 'Di era digital, mahasiswa menggunakan dompet digital yang memberikan saldo bonus berupa cashback 20% setiap kali melakukan deposit uang. Apakah transaksi ini termasuk riba qardh ataukah akad ji\'alah / hibah muqayyadah?',
-                analysisGuide: 'Gunakan pendekatan kaidah ushul: "Al-Ashlu fil mu\'amalati al-ibahah hatta yadulla ad-dalilu \'ala tahrimiha" dan telusuri sifat akad pokok antara pengguna dengan penyedia jasa pembayaran digital.'
+                title: 'Studi Kasus: Alokasi Harta Peninggalan Bapak Ahmad',
+                scenario: 'Bapak Ahmad wafat meninggalkan total harta senilai Rp 300.000.000. Biaya pemakaman sebesar Rp 10.000.000. Almarhum memiliki sisa hutang perbankan Rp 50.000.000 dan berwasiat Rp 60.000.000 untuk panti asuhan.',
+                analysisGuide: '1. Hitung sisa setelah tajhiz dan hutang: Rp 300 jt - (10 jt + 50 jt) = Rp 240.000.000.\n2. Cek batas wasiat maksimal: 1/3 x Rp 240 jt = Rp 80.000.000. Karena wasiat Rp 60 jt <= Rp 80 jt, wasiat dapat ditunaikan penuh.\n3. Harta bersih yang siap dibagi kepada ahli waris: Rp 240 jt - 60 jt = Rp 180.000.000.'
               }
             },
             {
-              id: 'ch-01-04',
+              id: 'ch-mwr-04',
               chapterNumber: 4,
-              title: 'Rangkuman, Glosarium Fiqhiyyah & Evaluasi Pembelajaran',
+              title: 'Rangkuman Materi & Evaluasi Pembelajaran Pekan 1',
               estimatedMinutes: 5,
-              content: `RANGKUMAN SESI:\n1. Ushul Fiqih adalah kompas metodologis intelektual muslim untuk memastikan pemahaman teks wahyu tetap murni, terarah, dan adaptif.\n2. Kedudukan Ushul Fiqih mencegah sikap taklid buta dan menghadirkan keterbukaan fikih yang bijaksana di tengah keragaman masyarakat.\n\nGLOSARIUM PENTING:\n• Istinbath: Penarikan kesimpulan hukum dari dalil-dalil nash.\n• Mukallaf: Orang yang telah baligh, berakal, dan layak menerima beban hukum syariat.\n• Qath'iyud Dilalah: Teks nash yang maknanya pasti, tegas, dan tidak mengandung multitafsir.\n• Zhanniyud Dilalah: Teks nash yang memiliki ruang penafsiran atau interpretasi ganda.\n\nREFLEKSI MANDIRI:\nRenungkan bagaimana kaidah ushul fiqih mampu menjaga syari'at Islam tetap relevan sepanjang masa (shalihun li kulli zaman wa makan).`,
+              content: `RANGKUMAN SESI 1:\n1. Fiqih Mawaris adalah pilar keadilan keluarga dalam syariat Islam untuk menjamin hak-hak yatim dan kerabat tertunaikan secara transparan.\n2. Menjaga hukum kewarisan adalah bentuk ketaatan mutlak terhadap batasan-batasan hukum Allah (Hududullah).\n\nPERSIAPAN SESI 2:\nPelajari sebab-sebab kewarisan dan rincian halangan waris (Mawani'ul Irtsi) untuk pertemuan pekan depan.`,
               keyTakeaways: [
-                'Ushul Fiqih menghindarkan akademisi dari ketergelinciran dalam memahami dalil agama.',
-                'Siapkan diri untuk mempelajari Kaidah Kebahasaan (Lughawiyyah) pada pertemuan berikutnya.'
+                'Kuasai 4 hak atas harta tirkah sebelum melangkah ke perhitungan ashabul furudh.',
+                'Diskusikan studi kasus perhitungan di forum kelas untuk pendalaman materi.'
               ]
             }
           ]
@@ -150,14 +556,14 @@ export const INITIAL_MEETINGS: CourseMeeting[] = [
         updatedAt: '2026-09-01T08:00:00Z'
       },
       {
-        id: 'mat-01-02',
-        classId: 'cls-pai301-a',
-        meetingId: 'mtg-pai301a-01',
-        title: 'Slide Presentasi: Peta Konsep Ushul Fiqih vs Fiqih',
-        description: 'Materi tayang pengantar kuliah pertemuan pertama.',
+        id: 'mat-mawaris-02',
+        classId: 'cls-20261-pai301-a',
+        meetingId: `mtg-pai301a-${pad}`,
+        title: 'Slide Presentasi: Peta Konsep & Pengantar Fiqih Mawaris',
+        description: 'Bahan tayang kuliah tatap muka pertemuan pertama: definisi, dasar hukum, 4 hak tirkah, dan rukun faraidh.',
         type: 'PRESENTASI',
-        fileName: 'Slide_Pengantar_Ushul_Fiqih.pptx',
-        fileSizeBytes: 4100000,
+        fileName: 'Slide_01_Pengantar_Fiqih_Mawaris.pptx',
+        fileSizeBytes: 3850000,
         orderIndex: 2,
         status: 'DITERBITKAN',
         allowDownload: true,
@@ -165,79 +571,42 @@ export const INITIAL_MEETINGS: CourseMeeting[] = [
         updatedAt: '2026-09-01T08:00:00Z'
       },
       {
-        id: 'mat-01-03',
-        classId: 'cls-pai301-a',
-        meetingId: 'mtg-pai301a-01',
-        title: 'Buku Ajar & Kitab Turats: Matan Al-Waraqat fi Ushulil Fiqh',
-        description: 'Kitab rujukan klasik dasar ushul fiqih karya Imam Al-Haramain Al-Juwaini dilengkapi terjemahan dan syarah kaidah.',
+        id: 'mat-mawaris-03',
+        classId: 'cls-20261-pai301-a',
+        meetingId: `mtg-pai301a-${pad}`,
+        title: 'Buku Ajar & Kitab Turats: Matan Ar-Rahabiyyah fi \'Ilmil Faraidh',
+        description: 'Naskah klasik matan syair ilmu faraidh karya Imam Ar-Rahabi dilengkapi syarah kaidah hukum pembagian waris.',
         type: 'BUKU_ELEKTRONIK',
-        fileName: 'Matan_Al_Waraqat_Al_Juwaini.pdf',
-        fileSizeBytes: 3800000,
+        fileName: 'Matan_Ar_Rahabiyyah_fi_Ilmil_Faraidh.pdf',
+        fileSizeBytes: 4200000,
         orderIndex: 3,
         status: 'DITERBITKAN',
         allowDownload: true,
         onlineModule: {
-          author: 'Imam Al-Haramain Abul Ma\'ali Al-Juwaini (W. 478 H)',
+          author: 'Imam Muhammad bin Ali Ar-Rahabi (W. 577 H)',
           edition: 'Tahqiq & Syarah Kontemporer 2026',
-          totalEstimatedMinutes: 30,
+          totalEstimatedMinutes: 20,
           learningOutcomes: [
-            'Menghafal dan memahami matan kaidah pembagian ilmu Ushul Fiqih',
-            'Menelaah definisi hukum taklifi dan hukum wadh\'i dalam teks Arab klasik',
-            'Mengenal ragam metode pendalilan amar, nahyi, dan qiyas syar\'i'
+            'Menghafal bait-bait dasar matan Ar-Rahabiyyah tentang sebab pewarisan.',
+            'Mengenal istilah-istilah klasik ulama faraidh dalam teks turats Arab.'
           ],
           chapters: [
             {
-              id: 'ch-waraqat-01',
+              id: 'ch-rhb-01',
               chapterNumber: 1,
-              title: 'Muqaddimah & Definisi Mabadi\' Ushul Fiqih',
+              title: 'Mukaddimah Matan Ar-Rahabiyyah & Sebab-sebab Pewarisan',
               estimatedMinutes: 8,
-              content: `بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\n\nهَذِهِ وَرَقَاتٌ تَشْتَمِلُ عَلَى مَعْرِفَةِ فُصُولٍ مِنْ أُصُولِ الْفِقْهِ. وَذَلِكَ مُؤَلَّفٌ مِنْ جُزْأَيْنِ مُفْرَدَيْنِ: فَالْأَصْلُ مَا يُبْنَى عَلَيْهِ غَيْرُهُ، وَالْفِقْهُ مَعْرِفَةُ الْأَحْكَامِ الشَّرْعِيَّةِ الَّتِي طَرِيقُهَا الِاجْتِهَادُ.\n\nPenjelasan Syarah:\nImam Al-Juwaini memulai kitab Al-Waraqat dengan menguraikan dua rukun istilah pembentuk Ushul Fiqih: Al-Ashl (dasar pondasi) dan Al-Fiqh (pengetahuan hukum syar'i hasil ijtihad). Kitab ringkas ini menjadi pedoman utama penuntut ilmu di berbagai universitas Islam dunia.`,
+              content: `بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\n\nأَسْبَابُ مِيرَاثِ الْوَرَى ثَلَاثَةُ ۝ كُلٌّ يُفِيدُ رَبَّهُ الْوِرَاثَةَ\nوَهْيَ نِكَاحٌ وَوَلَاءٌ وَنَسَبْ ۝ مَا بَعْدَهُنَّ لِلْمَوَارِيثِ سَبَبْ\n\nPenjelasan Syair:\nSebab-sebab hak kewarisan bagi manusia itu ada tiga, masing-masing memberikan faedah hak waris bagi pemiliknya, yaitu:\n1. Nikah: Ikatan pernikahan yang sah secara syar'i.\n2. Wala': Loyalitas pembebasan budak.\n3. Nasab: Hubungan kekeluargaan darah/kekerabatan.\nTidak ada sebab kewarisan lain di luar ketiga pilar utama tersebut.`,
               arabicQuotes: [
                 {
-                  arabicText: 'فَالْأَصْلُ مَا يُبْنَى عَلَيْهِ غَيْرُهُ ، وَالْفَرْعُ مَا يُبْنَى عَلَى غَيْرِهِ',
-                  translation: 'Pondasi (Al-Ashl) adalah apa yang dibangun di atasnya selainnya, sedangkan cabang (Al-Far\'u) adalah apa yang dibangun di atas selainnya.',
-                  source: 'Matan Al-Waraqat, Fashl al-Mabadi'
+                  arabicText: 'أَسْبَابُ مِيرَاثِ الْوَرَى ثَلَاثَةُ ۝ كُلٌّ يُفِيدُ رَبَّهُ الْوِرَاثَةَ : نِكَاحٌ وَوَلَاءٌ وَنَسَبْ',
+                  translation: 'Sebab-sebab kewarisan manusia ada tiga, yaitu: Nikah, Wala\', dan Nasab.',
+                  source: 'Matan Ar-Rahabiyyah, Bait 11-12'
                 }
               ],
               keyTakeaways: [
-                'Al-Waraqat adalah matan turats paling muktamad dalam madzhab Syafi\'iyyah untuk pemula.',
-                'Fiqih dibatasi pada pengetahuan hukum yang dicapai melalui jalur ijtihad mujtahid.'
-              ]
-            },
-            {
-              id: 'ch-waraqat-02',
-              chapterNumber: 2,
-              title: 'Pembagian Tujuh Kategori Hukum Syara\'',
-              estimatedMinutes: 10,
-              content: `وَالْأَحْكَامُ سَبْعَةٌ: الْوَاجِبُ، وَالْمَنْدُوبُ، وَالْمُبَاحُ، وَالْمَحْظُورُ (الْحَرَامُ)، وَالْمَكْرُوهُ، وَالصَّحِيحُ، وَالْبَاطِلُ.\n\nفَالْوَاجِبُ: مَا يُثَابُ عَلَى فِعْلِهِ وَيُعَاقَبُ عَلَى تَرْكِهِ.\nوَالْمَنْدُوبُ: مَا يُثَابُ عَلَى فِعْلِهِ وَلَا يُعَاقَبُ عَلَى تَرْكِهِ.\nوَالْمُبَاحُ: مَا لَا يُثَابُ عَلَى فِعْلِهِ وَلَا يُعَاقَبُ عَلَى تَرْكِهِ.\nوَالْمَحْظُورُ: مَا يُثَابُ عَلَى تَرْكِهِ وَيُعَاقَبُ عَلَى فِعْلِهِ.\nوَالْمَكْرُوهُ: مَا يُثَابُ عَلَى تَرْكِهِ وَلَا يُعَاقَبُ عَلَى فِعْلِهِ.\nوَالصَّحِيحُ: مَا يَتَعَلَّقُ بِهِ النُّفُوذُ وَيُعْتَدُّ بِهِ.\nوَالْبَاطِلُ: مَا لَا يَتَعَلَّقُ بِهِ النُّفُوذُ وَلَا يُعْتَدُّ بِهِ.`,
-              arabicQuotes: [
-                {
-                  arabicText: 'فَالْوَاجِبُ مَا يُثَابُ عَلَى فِعْلِهِ وَيُعَاقَبُ عَلَى تَرْكِهِ امتِثَالاً',
-                  translation: 'Wajib adalah perbuatan yang pelakunya diberi pahala dan yang meninggalkannya berhak disiksa karena melanggar perintah.',
-                  source: 'Matan Al-Waraqat, Bab Ahkam'
-                }
-              ],
-              keyTakeaways: [
-                'Tujuh kategori hukum dalam Al-Waraqat menggabungkan lima hukum taklifi dan dua hukum wadh\'i utama (Shah & Bathil).',
-                'Kriteria sah (shahih) bergantung pada keterpenuhan rukun dan syarat serta ketiadaan mani\'.'
-              ]
-            },
-            {
-              id: 'ch-waraqat-03',
-              chapterNumber: 3,
-              title: 'Kaidah Amar, Nahyi, dan Metodologi Qiyas',
-              estimatedMinutes: 12,
-              content: `وَأَمَّا الْأَمْرُ فَهُوَ اسْتِدْعَاءُ الْفِعْلِ بِالْقَوْلِ مِمَّنْ هُوَ دُونَهُ عَلَى سَبِيلِ الْوُجُوبِ. وَصِيغَتُهُ: افْعَلْ.\n\nوَأَمَّا الْقِيَاسُ فَهُوَ رَدُّ الْفَرْعِ إِلَى الْأَصْلِ فِي حُكْمٍ لِعِلَّةٍ تَجْمَعُهُمَا فِي الْحُكْمِ.\n\nKajian Qiyas memuat 4 rukun pokok:\n1. Al-Ashl (Kasus rujukan primer yang ada nashnya, misal: Khamr).\n2. Al-Far'u (Kasus baru yang belum ada nash spesifik, misal: Narkotika sintetis).\n3. Hukmul Ashl (Ketetapan hukum pada ashl, misal: Haram).\n4. Al-'Illah (Sifat persamaan motif hukum, misal: Memabukkan dan merusak akal / Iskār).`,
-              arabicQuotes: [
-                {
-                  arabicText: 'وَالْقِيَاسُ رَدُّ الْفَرْعِ إِلَى الْأَصْلِ لِعِلَّةٍ تَجْمَعُهُمَا فِي الْحُكْمِ',
-                  translation: 'Qiyas adalah mengembalikan kasus cabang kepada kasus pokok karena adanya kesamaan motif hukum (\'illah) yang menghimpun keduanya.',
-                  source: 'Matan Al-Waraqat, Bab Al-Qiyas'
-                }
-              ],
-              keyTakeaways: [
-                'Qiyas adalah sarana ijtihad paling komprehensif dalam hukum Islam.',
-                'Menemukan \'Illat hukum yang shahih memerlukan pemahaman mendalam tentang maqashid syariah.'
+                'Matan Ar-Rahabiyyah adalah rujukan emas para penuntut ilmu faraidh di seluruh dunia Islam.',
+                'Tiga pilar hak kewarisan: Nikah, Nasab, dan Wala\'.'
               ]
             }
           ]
@@ -245,244 +614,123 @@ export const INITIAL_MEETINGS: CourseMeeting[] = [
         createdAt: '2026-09-01T08:00:00Z',
         updatedAt: '2026-09-01T08:00:00Z'
       }
-    ]
-  },
-  {
-    id: 'mtg-pai301a-02',
-    classId: 'cls-pai301-a',
-    meetingNumber: 2,
-    title: 'Hukum Syara\', Hakim, Mahkum Fih, dan Mahkum \'Alaih',
-    topic: 'Struktur Pembebanan Hukum Syar\'i (Taklifi & Wadh\'i)',
-    description: 'Kajian mendalam tentang pembagian hukum taklifi (wajib, mandub, haram, makruh, mubah) dan hukum wadh\'i (sebab, syarat, mani\', shah, bathil).',
-    scheduledDate: '2026-09-14',
-    startTime: '08:00',
-    endTime: '10:30',
-    orderIndex: 2,
-    status: 'DITERBITKAN',
-    publishedAt: '2026-09-08T08:00:00Z',
-    materials: [
-      {
-        id: 'mat-02-01',
-        classId: 'cls-pai301-a',
-        meetingId: 'mtg-pai301a-02',
-        title: 'Modul Pembelajaran Daring: Klasifikasi Hukum Taklifi & Hukum Wadh\'i',
-        description: 'E-Modul interaktif kajian pembebanan hukum syara\', hakikat khitab syar\'i, dan implementasi hukum wadh\'i.',
-        type: 'MODUL_ONLINE',
-        fileName: 'Modul_02_Hukum_Syar_i.pdf',
-        fileSizeBytes: 2100000,
-        orderIndex: 1,
-        status: 'DITERBITKAN',
-        allowDownload: true,
-        onlineModule: {
-          author: 'Tim Dosen Keislaman & Ushul Fiqih STAI AL-ITTIHAD',
-          edition: 'Edisi Akademik 2026/2027',
-          totalEstimatedMinutes: 20,
-          learningOutcomes: [
-            'Membedakan antara Hukum Taklifi dan Hukum Wadh\'i',
-            'Menjelaskan tingkatan hukum taklifi (Wajib, Mandub, Tahrim, Karahah, Ibahah)',
-            'Memahami fungsi Sebab, Syarat, dan Mani\' dalam keabsahan ibadah dan muamalah'
-          ],
-          chapters: [
-            {
-              id: 'ch-02-01',
-              chapterNumber: 1,
-              title: 'Hakikat Hukum Syara\' dan Pembagian Besarnya',
-              estimatedMinutes: 5,
-              content: `Hukum Syara' menurut ushuliyyin adalah firman/khithab Allah SWT yang berkaitan dengan perbuatan mukallaf, baik berupa tuntutan (iqtidla'), pilihan (takhyir), maupun ketetapan (wadh').\n\nBerdasarkan definisi tersebut, hukum syar'i terbagi menjadi dua klasifikasi besar:\n1. Hukum Taklifi: Khitab yang menuntut mukallaf untuk melakukan suatu tindakan, meninggalkan tindakan, atau memilih antara berbuat dan tidak berbuat.\n2. Hukum Wadh'i: Khitab yang menetapkan sesuatu sebagai sebab, syarat, atau penghalang (mani') bagi terwujudnya hukum lain.`,
-              keyTakeaways: [
-                'Hukum Taklifi membebani langsung perbuatan mukallaf.',
-                'Hukum Wadh\'i menjadi indikator, prakondisi, dan legalitas berlakunya hukum taklifi.'
-              ],
-              arabicQuotes: [
-                {
-                  arabicText: 'خِطَابُ اللَّهِ تَعَالَى المُتَعَلِّقُ بِأَفْعَالِ المُكَلَّفِينَ بِالاِقْتِضَاءِ أَوِ التَّخْيِيرِ أَوِ الوَضْعِ',
-                  translation: 'Khitab Allah Ta\'ala yang berkaitan dengan perbuatan para mukallaf dalam bentuk tuntutan, pemberian pilihan, atau penetapan.',
-                  source: 'Al-Allamah Al-Amidi, Al-Ihkam fi Ushul al-Ahkam'
-                }
-              ]
-            },
-            {
-              id: 'ch-02-02',
-              chapterNumber: 2,
-              title: 'Rincian Hukum Taklifi: Dari Ijab Hingga Ibahah',
-              estimatedMinutes: 8,
-              content: `Lima Kategori Hukum Taklifi:\n\n1. Ijab (Wajib): Tuntutan pasti untuk dikerjakan. Dikerjakan berpahala, ditinggalkan berdosa.\n   - Pembagian Wajib: Berdasarkan waktu (Mutlaq & Muwaqqat), subjek ('Aini & Kifa'i), kadar (Muhaddad & Ghairu Muhaddad).\n\n2. Nadb (Mandub/Sunnah): Tuntutan tidak pasti untuk dikerjakan. Dikerjakan berpahala, ditinggalkan tidak berdosa.\n\n3. Tahrim (Haram): Tuntutan pasti untuk ditinggalkan. Ditinggalkan berpahala, dikerjakan berdosa.\n   - Haram li-dzatihi (Zina, Membunuh) vs Haram li-ghairihi (Jual beli saat azan Jumat).\n\n4. Karahah (Makruh): Tuntutan tidak pasti untuk ditinggalkan.\n\n5. Ibahah (Mubah): Khitab yang memberikan kebebasan memilih kepada mukallaf.`,
-              keyTakeaways: [
-                'Membedakan Haram Li Dzatihi (esensial) dan Haram Li Ghairihi (faktor eksternal).',
-                'Fardhu Kifayah gugur kewajiban bila sebagian telah mengerjakannya dengan cukup.'
-              ]
-            },
-            {
-              id: 'ch-02-03',
-              chapterNumber: 3,
-              title: 'Struktur Hukum Wadh\'i: Sebab, Syarat, Mani\', Shah & Bathil',
-              estimatedMinutes: 7,
-              content: `Hukum Wadh'i memiliki peran krusial dalam legalitas fiqih:\n\n1. As-Sabab (Sebab): Keberadaannya melahirkan hukum, ketiadaannya meniadakan hukum (Contoh: Tergelincirnya matahari menjadi sebab wajibnya Shalat Dzuhur; Masuknya nishab menjadi sebab wajibnya Zakat).\n\n2. Asy-Syarth (Syarat): Ketiadaannya meniadakan hukum, tetapi keberadaannya tidak secara otomatis melahirkan hukum (Contoh: Berwudhu adalah syarat sah shalat).\n\n3. Al-Mani' (Penghalang): Keberadaannya meniadakan hukum atau membatalkan sebab (Contoh: Perbedaan agama atau pembunuhan menjadi mani' dalam hukum waris).\n\n4. Ash-Shihhah (Sah) & Al-Buthlan (Batal): Terpenuhinya seluruh rukun dan syarat tanpa adanya mani'.`,
-              keyTakeaways: [
-                'Sebab adalah pemicu lahirnya kewajiban hukum.',
-                'Syarat adalah prasyarat sah, dan Mani\' adalah faktor pembatal hukum.'
-              ],
-              caseStudy: {
-                title: 'Pembagian Warisan bagi Ahli Waris yang Lalai Menyebabkan Kematian',
-                scenario: 'Seorang anak yang sedang menyetir mobil mengalami kecelakaan tunggal karena mengantuk sehingga ayahnya yang berada di sampingnya wafat. Apakah sang anak terkena status mani\' pembunuhan dalam pembagian tirkah (warisan)?',
-                analysisGuide: 'Bandingkan pendapat madzhab Syafi\'i (pembunuhan khatha\' tetap menghalangi waris dari harta pokok/diyat) dengan pandangan madzhab Maliki.'
-              }
-            }
-          ]
-        },
-        createdAt: '2026-09-08T08:00:00Z',
-        updatedAt: '2026-09-08T08:00:00Z'
-      }
-    ]
-  },
-  {
-    id: 'mtg-pai301a-03',
-    classId: 'cls-pai301-a',
-    meetingNumber: 3,
-    title: 'Sumber Hukum Primer: Al-Qur\'an dan As-Sunnah',
-    topic: 'Kehujjahan Dalil Naqli dan Tingkatan Qath\'i serta Zhanni',
-    description: 'Membedah kriteria qath\'iyuts tsubut/dilalah dan zhanniyuts tsubut/dilalah dalam Al-Qur\'an dan Hadits Nabawi.',
-    scheduledDate: '2026-09-21',
-    startTime: '08:00',
-    endTime: '10:30',
-    orderIndex: 3,
-    status: 'DITERBITKAN',
-    publishedAt: '2026-09-15T08:00:00Z',
-    materials: [
-      {
-        id: 'mat-03-01',
-        classId: 'cls-pai301-a',
-        meetingId: 'mtg-pai301a-03',
-        title: 'Tautan Jurnal: Hermeneutika Nash Hukum dalam Ushul Fiqih',
-        description: 'Artikel ilmiah telaah kaidah tafsir hukum Islam.',
-        type: 'TAUTAN_EKSTERNAL',
-        externalUrl: 'https://journal.staialittihad.ac.id/index.php/tarbiyah/article/view/104',
-        orderIndex: 1,
-        status: 'DITERBITKAN',
-        allowDownload: false,
-        createdAt: '2026-09-15T08:00:00Z',
-        updatedAt: '2026-09-15T08:00:00Z'
-      }
-    ]
-  },
-  {
-    id: 'mtg-pai301a-04',
-    classId: 'cls-pai301-a',
-    meetingNumber: 4,
-    title: 'Kaidah Amar, Nahyi, dan Takhyir dalam Ushul Fiqih',
-    topic: 'Kaidah Kebahasaan (Lughawiyyah) dalam Menarik Kesimpulan Hukum',
-    description: 'Menganalisis sighat amar (perintah) yang menunjukkan wajib atau sunnah, serta sighat nahyi (larangan) yang menunjukkan tahrim atau karahah.',
-    scheduledDate: '2026-09-28',
-    startTime: '08:00',
-    endTime: '10:30',
-    orderIndex: 4,
-    status: 'DITERBITKAN',
-    publishedAt: '2026-09-22T08:00:00Z',
-    materials: [
-      {
-        id: 'mat-04-01',
-        classId: 'cls-pai301-a',
-        meetingId: 'mtg-pai301a-04',
-        title: 'Diktat Bab 4: Kaidah Kebahasaan Amar dan Nahyi',
-        description: 'Diktat lengkap kaidah istinbath lughawiyah.',
-        type: 'DOKUMEN_PDF',
-        fileName: 'Diktat_Bab_4_Amar_Nahyi.pdf',
-        fileSizeBytes: 3100000,
-        orderIndex: 1,
-        status: 'DITERBITKAN',
-        allowDownload: true,
-        createdAt: '2026-09-22T08:00:00Z',
-        updatedAt: '2026-09-22T08:00:00Z'
-      }
-    ]
-  },
-  {
-    id: 'mtg-pai301a-05',
-    classId: 'cls-pai301-a',
-    meetingNumber: 5,
-    title: 'Kaidah \'Am, Khas, Mutlaq, dan Muqayyad',
-    topic: 'Takhshish al-\'Am dan Taqyid al-Mutlaq',
-    description: 'Pembahasan teknis cara memahami teks umum yang dikhususkan dan teks mutlaq yang dibatasi ketentuannya.',
-    scheduledDate: '2026-10-05',
-    startTime: '08:00',
-    endTime: '10:30',
-    orderIndex: 5,
-    status: 'DRAF', // Contoh DRAF untuk verifikasi bahwa mahasiswa tidak melihatnya sebelum diterbitkan
-    materials: [
-      {
-        id: 'mat-05-01',
-        classId: 'cls-pai301-a',
-        meetingId: 'mtg-pai301a-05',
-        title: 'Draf Modul 5: Kajian Takhshish al-\'Am',
-        description: 'Materi masih dalam penyusunan oleh dosen pengampu.',
-        type: 'DOKUMEN_PDF',
-        fileName: 'Draf_Modul_05.pdf',
-        fileSizeBytes: 1800000,
-        orderIndex: 1,
-        status: 'DRAF',
-        allowDownload: true,
-        createdAt: '2026-09-29T08:00:00Z',
-        updatedAt: '2026-09-29T08:00:00Z'
-      }
-    ]
+    ];
   }
-];
 
+  return meeting;
+});
+
+// =========================================================================
+// SERVICE IMPLEMENTATION
+// =========================================================================
 class LearningService {
-  private getMeetingsData(): CourseMeeting[] {
+  constructor() {
+    this.ensureSchemaVersion();
+  }
+
+  /**
+   * Reset data dummy lama jika schema version diperbarui ke data riil SIAKAD
+   */
+  private ensureSchemaVersion(): void {
     try {
-      const data = localStorage.getItem(MEETINGS_KEY);
-      if (!data) {
+      const isLatest = localStorage.getItem(SCHEMA_VERSION_KEY);
+      const rawMeetings = localStorage.getItem(MEETINGS_KEY);
+      
+      // Jika versi berbeda atau masih tersisa teks dummy Ushul Fiqih pada PAI-301, reset cache
+      const hasOldDummy = rawMeetings && rawMeetings.includes('Ushul Fiqih') && rawMeetings.includes('cls-20261-pai301-a');
+
+      if (isLatest !== 'true' || hasOldDummy) {
+        localStorage.setItem(RPS_KEY, JSON.stringify(INITIAL_RPS_MAP));
         localStorage.setItem(MEETINGS_KEY, JSON.stringify(INITIAL_MEETINGS));
-        return INITIAL_MEETINGS;
+        localStorage.setItem(SCHEMA_VERSION_KEY, 'true');
       }
-      const parsed: CourseMeeting[] = JSON.parse(data);
-      let updated = false;
-
-      // Pastikan materi awal seperti BUKU_ELEKTRONIK selalu tersedia
-      INITIAL_MEETINGS.forEach((initMtg) => {
-        const existingMtg = parsed.find((m) => m.id === initMtg.id);
-        if (existingMtg) {
-          initMtg.materials.forEach((initMat) => {
-            if (!existingMtg.materials.some((m) => m.id === initMat.id)) {
-              existingMtg.materials.push(initMat);
-              updated = true;
-            }
-          });
-        } else {
-          parsed.push(initMtg);
-          updated = true;
-        }
-      });
-
-      if (updated) {
-        localStorage.setItem(MEETINGS_KEY, JSON.stringify(parsed));
-      }
-
-      return parsed;
     } catch {
-      return INITIAL_MEETINGS;
+      // Abaikan jika LocalStorage tidak tersedia
     }
   }
 
-  private saveMeetingsData(meetings: CourseMeeting[]): void {
-    localStorage.setItem(MEETINGS_KEY, JSON.stringify(meetings));
-  }
-
-  public getRPS(classId: string): RPSSection {
+  /**
+   * Mengambil Rencana Pembelajaran Semester (RPS) untuk kelas terkait
+   */
+  public getRPS(classId: string, classInfo?: AcademicClass | null): RPSSection {
     try {
       const data = localStorage.getItem(RPS_KEY);
       const map = data ? JSON.parse(data) : INITIAL_RPS_MAP;
-      return map[classId] || (classId === 'cls-20261-pai301-a' ? map['cls-pai301-a'] : undefined) || INITIAL_RPS_MAP['cls-pai301-a'];
+
+      if (map[classId]) return map[classId];
+
+      // Cek berdasarkan kode kelas atau kode mata kuliah
+      if (classInfo) {
+        const courseCode = classInfo.courseCode || '';
+        if (courseCode.includes('PAI-301') || classInfo.courseName.toLowerCase().includes('mawaris')) {
+          return map['cls-20261-pai301-a'] || INITIAL_RPS_MAP['cls-20261-pai301-a'];
+        }
+        if (courseCode.includes('PAI-202') || classInfo.courseName.toLowerCase().includes('muamalah')) {
+          return map['cls-20261-pai202-a'] || INITIAL_RPS_MAP['cls-20261-pai202-a'];
+        }
+        if (courseCode.includes('PAI-101') || classInfo.courseName.toLowerCase().includes('ulumul')) {
+          return map['cls-20261-pai101-a'] || INITIAL_RPS_MAP['cls-20261-pai101-a'];
+        }
+        if (courseCode.includes('MKU-101') || classInfo.courseName.toLowerCase().includes('bahasa arab dasar')) {
+          return map['cls-20261-mku101-a'] || INITIAL_RPS_MAP['cls-20261-mku101-a'];
+        }
+        if (courseCode.includes('STAIPD213') || classInfo.courseName.toLowerCase().includes('bahasa arab ii')) {
+          return map['cls-staipd213-pd2'] || INITIAL_RPS_MAP['cls-staipd213-pd2'];
+        }
+      }
+
+      // Alias lookup
+      if (classId === 'cls-pai301-a' || classId === '1') {
+        return map['cls-20261-pai301-a'] || INITIAL_RPS_MAP['cls-20261-pai301-a'];
+      }
+      if (classId === 'cls-20261-pai202-a' || classId === '4') {
+        return map['cls-20261-pai202-a'] || INITIAL_RPS_MAP['cls-20261-pai202-a'];
+      }
+
+      // Bangun template dinamis berdasarkan info mata kuliah riil jika ada
+      if (classInfo) {
+        const generatedRps: RPSSection = {
+          description: `Rencana Pembelajaran Semester (RPS) mata kuliah ${classInfo.courseName || classInfo.name} (${classInfo.courseCode || classInfo.code}, ${classInfo.credits} SKS) Program Studi ${classInfo.studyProgramCode}, STAI Al-Ittihad Cianjur.`,
+          learningOutcomes: [
+            `Mampu memahami konsep dasar dan ruang lingkup kajian ${classInfo.courseName || classInfo.name}.`,
+            `Mampu menganalisis metodologi, teori keilmuan, dan studi kasus terapan ${classInfo.courseName || classInfo.name}.`,
+            `Mampu mengintegrasikan nilai-nilai keislaman dan etika akademik dalam pemecahan masalah.`,
+            `Mampu menyusun laporan analisis terstruktur dan mempresentasikannya secara ilmiah.`
+          ],
+          teachingMethods: [
+            'Kuliah Interaktif & Diskusi Kelas',
+            'Studi Kasus Tematik (Case-Based Learning)',
+            'Pembelajaran Berbasis Video & Modul Daring',
+            'Tugas Analisis Literatur & Presentasi Kelompok'
+          ],
+          assessmentWeights: [
+            { component: 'Kehadiran & Partisipasi Diskusi', weightPercentage: 15 },
+            { component: 'Tugas Mandiri & Terstruktur', weightPercentage: 25 },
+            { component: 'Kuis & Evaluasi Pertemuan', weightPercentage: 15 },
+            { component: 'Ujian Tengah Semester (UTS)', weightPercentage: 20 },
+            { component: 'Ujian Akhir Semester (UAS)', weightPercentage: 25 },
+          ],
+          references: [
+            { title: `Buku Rujukan Utama ${classInfo.courseName || classInfo.name}`, author: classInfo.lecturerName || 'Dosen Pengampu', year: 2025, isPrimary: true },
+            { title: 'Kompilasi Studi & Panduan Akademik STAI Al-Ittihad', author: 'Tim Dosen STAI AL-ITTIHAD', year: 2026, isPrimary: false }
+          ],
+          documentAttachmentName: `RPS_Resmi_${(classInfo.courseCode || 'MK').replace(/[^a-zA-Z0-9]/g, '_')}_2026.pdf`,
+          documentAttachmentUrl: '#',
+          updatedAt: new Date().toISOString()
+        };
+        return generatedRps;
+      }
+
+      return INITIAL_RPS_MAP['cls-20261-pai301-a'];
     } catch {
-      return INITIAL_RPS_MAP['cls-pai301-a'];
+      return INITIAL_RPS_MAP['cls-20261-pai301-a'];
     }
   }
 
   public updateRPS(classId: string, rps: RPSSection): void {
     try {
       const data = localStorage.getItem(RPS_KEY);
-      const map = data ? JSON.parse(data) : INITIAL_RPS_MAP;
+      const map = data ? JSON.parse(data) : { ...INITIAL_RPS_MAP };
       map[classId] = { ...rps, updatedAt: new Date().toISOString() };
       localStorage.setItem(RPS_KEY, JSON.stringify(map));
     } catch (e) {
@@ -501,43 +749,108 @@ class LearningService {
     }
   }
 
-  public getMeetingsByClass(classId: string, isStudent = false): CourseMeeting[] {
-    let all = this.getMeetingsData().filter((m) => 
-      m.classId === classId || 
-      (classId === 'cls-20261-pai301-a' && m.classId === 'cls-pai301-a') ||
-      (classId === 'cls-pai301-a' && m.classId === 'cls-20261-pai301-a')
-    );
+  /**
+   * Mengambil pertemuan untuk kelas terkait dengan data riil kurikulum
+   */
+  public getMeetingsByClass(classId: string, isStudent = false, classInfo?: AcademicClass | null): CourseMeeting[] {
+    const allStored = this.getMeetingsData();
 
-    // Jika kelas belum memiliki data pertemuan, otomatis buatkan 14 sesi pertemuan perkuliahan semester
-    if (all.length === 0) {
-      const generated: CourseMeeting[] = Array.from({ length: 14 }, (_, idx) => {
-        const num = idx + 1;
-        const pad = num < 10 ? `0${num}` : `${num}`;
-        return {
-          id: `mtg-${classId}-${pad}`,
-          classId: classId,
-          meetingNumber: num,
-          title: `Pertemuan #${num}: Perkuliahan Sesi ${num}`,
-          topic: `Rencana Pembelajaran Semester (RPS) Pokok Bahasan Ke-${num}`,
-          description: `Kajian materi, pemaparan konsep, studi kasus terapan, dan evaluasi perkuliahan pertemuan ke-${num}.`,
-          scheduledDate: '2026-09-07',
-          startTime: '08:00',
-          endTime: '09:40',
-          orderIndex: num,
-          status: 'DITERBITKAN',
-          publishedAt: new Date().toISOString(),
-          materials: []
-        };
-      });
-      const current = this.getMeetingsData();
-      current.push(...generated);
-      this.saveMeetingsData(current);
-      all = generated;
+    // Normalisasi pencocokan classId
+    const validClassIds = new Set<string>([classId]);
+    if (classId === 'cls-20261-pai301-a' || classId === 'cls-pai301-a' || classId === '1') {
+      validClassIds.add('cls-20261-pai301-a');
+      validClassIds.add('cls-pai301-a');
+      validClassIds.add('1');
     }
-    
-    // Mahasiswa hanya dapat melihat pertemuan berstatus DITERBITKAN
+    if (classInfo) {
+      validClassIds.add(classInfo.id);
+      validClassIds.add(classInfo.code);
+      if (classInfo.externalId) validClassIds.add(classInfo.externalId);
+    }
+
+    let matches = allStored.filter((m) => validClassIds.has(m.classId));
+
+    // Jika kelas belum memiliki data pertemuan tersimpan, buat 16 sesi kurikulum riil
+    if (matches.length === 0) {
+      const courseCode = classInfo?.courseCode || (classId.includes('pai301') ? 'PAI-301' : classId.includes('pai202') ? 'PAI-202' : classId.includes('pai101') ? 'PAI-101' : classId.includes('mku101') ? 'MKU-101' : 'PAI-301');
+      const syllabusTemplate = SYLLABUS_CATALOG[courseCode];
+
+      let generated: CourseMeeting[] = [];
+
+      if (syllabusTemplate && syllabusTemplate.length > 0) {
+        generated = syllabusTemplate.map((item) => {
+          const num = item.week;
+          const pad = num < 10 ? `0${num}` : `${num}`;
+          const startDate = new Date(2026, 8, 7);
+          const meetingDate = new Date(startDate.getTime() + (num - 1) * 7 * 24 * 60 * 60 * 1000);
+          const dateStr = meetingDate.toISOString().split('T')[0];
+
+          return {
+            id: `mtg-${classId}-${pad}`,
+            classId: classId,
+            meetingNumber: num,
+            title: `Pertemuan #${num}: ${item.title}`,
+            topic: item.topic,
+            description: item.description,
+            scheduledDate: dateStr,
+            startTime: classInfo?.schedules[0]?.startTime || '08:00',
+            endTime: classInfo?.schedules[0]?.endTime || '09:40',
+            orderIndex: num,
+            status: 'DITERBITKAN',
+            publishedAt: '2026-09-01T08:00:00Z',
+            materials: []
+          };
+        });
+      } else {
+        // Fallback 16 sesi berstruktur akademis
+        generated = Array.from({ length: 16 }, (_, idx) => {
+          const num = idx + 1;
+          const pad = num < 10 ? `0${num}` : `${num}`;
+          const startDate = new Date(2026, 8, 7);
+          const meetingDate = new Date(startDate.getTime() + (num - 1) * 7 * 24 * 60 * 60 * 1000);
+          const dateStr = meetingDate.toISOString().split('T')[0];
+
+          const courseName = classInfo?.courseName || classInfo?.name || 'Mata Kuliah';
+          const isUts = num === 8;
+          const isUas = num === 16;
+
+          return {
+            id: `mtg-${classId}-${pad}`,
+            classId: classId,
+            meetingNumber: num,
+            title: isUts 
+              ? 'Ujian Tengah Semester (UTS)' 
+              : isUas 
+              ? 'Ujian Akhir Semester (UAS)' 
+              : `Pertemuan #${num}: Kajian Topik Pokok Bahasan Ke-${num}`,
+            topic: isUts 
+              ? `Evaluasi Capaian Pembelajaran Sesi 1–7 ${courseName}` 
+              : isUas 
+              ? `Evaluasi Komprehensif Semester Ganjil ${courseName}` 
+              : `Rencana Pembelajaran Semester (RPS) Sesi ${num} — ${courseName}`,
+            description: isUts 
+              ? `Ujian evaluasi tengah semester untuk mengukur pemahaman teori dan kompetensi mahasiswa pada materi sesi 1 sampai 7.`
+              : isUas 
+              ? `Evaluasi akhir semester untuk menguji penguasaan materi secara menyeluruh selama satu semester perkuliahan.`
+              : `Pemaparan teori, telaah literatur turats/kontemporer, diskusi studi kasus, dan evaluasi capaian materi pertemuan ke-${num}.`,
+            scheduledDate: dateStr,
+            startTime: classInfo?.schedules[0]?.startTime || '08:00',
+            endTime: classInfo?.schedules[0]?.endTime || '09:40',
+            orderIndex: num,
+            status: 'DITERBITKAN',
+            publishedAt: new Date().toISOString(),
+            materials: []
+          };
+        });
+      }
+
+      allStored.push(...generated);
+      this.saveMeetingsData(allStored);
+      matches = generated;
+    }
+
     if (isStudent) {
-      return all
+      return matches
         .filter((m) => m.status === 'DITERBITKAN')
         .map((m) => ({
           ...m,
@@ -546,7 +859,7 @@ class LearningService {
         .sort((a, b) => a.orderIndex - b.orderIndex);
     }
 
-    return all.sort((a, b) => a.orderIndex - b.orderIndex);
+    return matches.sort((a, b) => a.orderIndex - b.orderIndex);
   }
 
   public getMeetingById(meetingId: string): CourseMeeting | undefined {
@@ -724,7 +1037,23 @@ class LearningService {
     const filtered = notes.filter((n) => n.id !== noteId);
     localStorage.setItem(MODULE_NOTES_KEY, JSON.stringify(filtered));
   }
+
+  private getMeetingsData(): CourseMeeting[] {
+    try {
+      const data = localStorage.getItem(MEETINGS_KEY);
+      return data ? JSON.parse(data) : INITIAL_MEETINGS;
+    } catch {
+      return INITIAL_MEETINGS;
+    }
+  }
+
+  private saveMeetingsData(meetings: CourseMeeting[]): void {
+    try {
+      localStorage.setItem(MEETINGS_KEY, JSON.stringify(meetings));
+    } catch (e) {
+      console.warn('Gagal menyimpan pertemuan:', e);
+    }
+  }
 }
 
 export const learningService = new LearningService();
-

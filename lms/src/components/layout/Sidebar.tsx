@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LogOut, PanelLeftClose, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getNavigationByRole } from '../../constants/navigation';
+import { academicService } from '../../services/academicService';
 import { KAMUS_UI } from '../../constants/dictionary';
 
 export interface SidebarProps {
@@ -22,6 +23,52 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse
 }) => {
   const { user, logout } = useAuth();
+  const [classCount, setClassCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const isLecturer = user.role === 'dosen' || user.role === 'dosen_pa';
+    const isStudent = user.role === 'mahasiswa';
+
+    const updateCount = () => {
+      const classes = academicService.getClasses();
+      if (isLecturer) {
+        const userNidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
+        const filtered = classes.filter((cls) => {
+          const clsNidn = (cls.lecturerNidn || '').replace(/[^0-9]/g, '');
+          return (
+            (clsNidn && userNidn && clsNidn === userNidn) ||
+            cls.lecturerId === user.id ||
+            cls.lecturerNidn === user.identityNumber ||
+            cls.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
+            (cls.classLecturerName && cls.classLecturerName.toLowerCase().includes(user.name.toLowerCase()))
+          );
+        });
+        setClassCount(filtered.length);
+      } else if (isStudent) {
+        const userNim = (user.identityNumber || user.username || '').replace(/[^0-9]/g, '');
+        const filtered = classes.filter((cls) => academicService.isStudentEnrolledInClass(cls.id, userNim, user.id));
+        setClassCount(filtered.length);
+      } else {
+        setClassCount(classes.length);
+      }
+    };
+
+    updateCount();
+    academicService.fetchClassesFromBackend().then(() => {
+      updateCount();
+    });
+  }, [user]);
+
+  const getItemBadge = (item: { id: string; path: string; badge?: string | number }): string | number | undefined => {
+    if (item.id === 'mata-kuliah-saya' || item.path === '/mata-kuliah') {
+      if (classCount !== null && classCount > 0) {
+        return classCount;
+      }
+      return undefined;
+    }
+    return item.badge;
+  };
 
   if (!user) return null;
 
@@ -120,13 +167,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         {!isCollapsed && (
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
                         )}
-                        {item.badge && (
-                          isCollapsed ? (
+                        {(() => {
+                          const badgeContent = getItemBadge(item);
+                          if (!badgeContent) return null;
+                          return isCollapsed ? (
                             <span className="nav-badge-dot" />
                           ) : (
-                            <span className="nav-badge">{item.badge}</span>
-                          )
-                        )}
+                            <span className="nav-badge">{badgeContent}</span>
+                          );
+                        })()}
                       </button>
                     </li>
                   );

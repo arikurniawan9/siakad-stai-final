@@ -45,7 +45,7 @@ export const NAVIGATION_MAHASISWA: NavGroup[] = [
     id: 'pembelajaran-group',
     title: 'PEMBELAJARAN DARING',
     items: [
-      { id: 'mata-kuliah-saya', label: 'Mata Kuliah Daring', path: '/mata-kuliah', icon: BookOpen, badge: '5' },
+      { id: 'mata-kuliah-saya', label: 'Mata Kuliah & Materi', path: '/mata-kuliah', icon: BookOpen, badge: '5' },
       { id: 'presensi-kuliah', label: 'Presensi Pertemuan', path: '/presensi', icon: QrCode },
       { id: 'tugas-saya', label: 'Tugas & Asesmen Daring', path: '/tugas', icon: CheckSquare, badge: '2' },
       { id: 'kuis-ujian', label: 'Kuis & CBT Online', path: '/kuis', icon: HelpCircle },
@@ -103,9 +103,8 @@ export const NAVIGATION_DOSEN: NavGroup[] = [
     id: 'perkuliahan-group',
     title: 'KEGIATAN BELAJAR DARING',
     items: [
-      { id: 'mata-kuliah-saya', label: 'Mata Kuliah Diampu', path: '/mata-kuliah', icon: BookOpen, badge: '4' },
+      { id: 'mata-kuliah-saya', label: 'Mata Kuliah & Materi', path: '/mata-kuliah', icon: BookOpen },
       { id: 'presensi-kuliah', label: 'Presensi & BAP Kuliah', path: '/presensi', icon: QrCode },
-      { id: 'materi-pembelajaran', label: 'Materi & RPS Pertemuan', path: '/materi', icon: Layers },
       { id: 'tugas-kelola', label: 'Tugas & Penilaian Daring', path: '/tugas', icon: CheckSquare, badge: 'Perlu Nilai' },
       { id: 'kuis-kelola', label: 'Bank Soal & Kuis CBT', path: '/kuis', icon: HelpCircle },
       { id: 'video-interaktif', label: 'Video Kuliah Interaktif', path: '/video', icon: Video },
@@ -161,9 +160,8 @@ export const NAVIGATION_DOSEN_PA: NavGroup[] = [
     id: 'perkuliahan-group',
     title: 'KEGIATAN BELAJAR DARING',
     items: [
-      { id: 'mata-kuliah-saya', label: 'Mata Kuliah Diampu', path: '/mata-kuliah', icon: BookOpen },
+      { id: 'mata-kuliah-saya', label: 'Mata Kuliah & Materi', path: '/mata-kuliah', icon: BookOpen },
       { id: 'presensi-kuliah', label: 'Presensi & BAP Kuliah', path: '/presensi', icon: QrCode },
-      { id: 'materi-pembelajaran', label: 'Materi & RPS Pertemuan', path: '/materi', icon: Layers },
       { id: 'tugas-kelola', label: 'Tugas & Penilaian Daring', path: '/tugas', icon: CheckSquare },
       { id: 'kuis-kelola', label: 'Bank Soal & Kuis CBT', path: '/kuis', icon: HelpCircle },
       { id: 'video-interaktif', label: 'Video Kuliah Interaktif', path: '/video', icon: Video },
@@ -222,7 +220,7 @@ export const NAVIGATION_KAPRODI: NavGroup[] = [
     items: [
       { id: 'monitoring-aktivitas', label: 'Monitoring Pembelajaran Daring', path: '/admin/monitoring', icon: Activity },
       { id: 'laporan-akademik', label: 'Laporan Kinerja Belajar LMS', path: '/laporan', icon: BarChart2 },
-      { id: 'mata-kuliah-diampu', label: 'Mata Kuliah Diampu', path: '/mata-kuliah', icon: BookOpen },
+      { id: 'mata-kuliah-diampu', label: 'Mata Kuliah & Materi', path: '/mata-kuliah', icon: BookOpen },
     ]
   },
   {

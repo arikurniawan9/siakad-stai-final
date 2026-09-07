@@ -80,7 +80,13 @@ import './styles/components.css';
 function MainAppContent() {
   const { user, isAuthenticated } = useAuth();
   const [activePath, setActivePath] = useState<string>(() => {
-    const p = typeof window !== 'undefined' ? window.location.pathname : '/';
+    let p = typeof window !== 'undefined' ? window.location.pathname : '/';
+    if (p === '/materi' || p.startsWith('/materi/')) {
+      p = p.replace('/materi', '/mata-kuliah');
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, '', p);
+      }
+    }
     return p && p !== '/login' ? p : '/';
   });
 
@@ -158,6 +164,15 @@ function MainAppContent() {
 
     if (window.location.pathname !== path) {
       window.history.pushState(null, '', path);
+    }
+
+    if (path === '/materi' || path.startsWith('/materi/')) {
+      const clsId = path.replace('/materi/', '').replace('/materi', '');
+      const target = clsId ? `/mata-kuliah/${clsId}` : '/mata-kuliah';
+      window.history.replaceState(null, '', target);
+      setActivePath('/mata-kuliah');
+      setSelectedClassId(clsId || null);
+      return;
     }
 
     if (path.startsWith('/mata-kuliah/')) {

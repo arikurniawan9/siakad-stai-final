@@ -49,14 +49,53 @@ export async function getClasses(req: AuthenticatedRequest, res: Response, next:
 
     // Filter berdasarkan peran pengguna
     if (user.role === 'mahasiswa') {
+      const cleanNim = (user.identityNumber || user.username || '').replace(/[^0-9]/g, '');
+      const parsedId = /^\d+$/.test(String(user.id)) ? parseInt(String(user.id), 10) : null;
+
       query += ` AND (
-        cc.id IN (SELECT course_class_id FROM class_enrollments WHERE student_id = $1)
-        OR cc.id IN (SELECT ki.course_class_id FROM krs_items ki JOIN krs_submissions ks ON ks.id = ki.krs_submission_id WHERE ks.student_id = $1 AND ki.status = 'DISETUJUI')
+        cc.id IN (
+          SELECT ce.course_class_id 
+          FROM class_enrollments ce
+          JOIN users su ON su.id = ce.student_id
+          WHERE ($1::bigint IS NOT NULL AND ce.student_id = $1::bigint)
+             OR (NULLIF($2, '') IS NOT NULL AND (
+                  su.identity_number = $2 
+                  OR REPLACE(su.identity_number, '.', '') = $2 
+                  OR su.username = $2
+                ))
+        )
+        OR cc.id IN (
+          SELECT ki.course_class_id 
+          FROM krs_items ki 
+          JOIN krs_submissions ks ON ks.id = ki.krs_submission_id 
+          JOIN users ku ON ku.id = ks.student_id
+          WHERE (($1::bigint IS NOT NULL AND ks.student_id = $1::bigint)
+             OR (NULLIF($2, '') IS NOT NULL AND (
+                  ku.identity_number = $2 
+                  OR REPLACE(ku.identity_number, '.', '') = $2 
+                  OR ku.username = $2
+                )))
+            AND ki.status = 'DISETUJUI'
+        )
       )`;
-      params.push(user.id);
+      params.push(parsedId, cleanNim);
     } else if (user.role === 'dosen' || user.role === 'dosen_pa') {
-      query += ` AND cc.id IN (SELECT course_class_id FROM class_lecturers WHERE lecturer_id = $1)`;
-      params.push(user.id);
+      const cleanIdent = (user.identityNumber || user.username || '').replace(/[^0-9]/g, '');
+      const parsedId = /^\d+$/.test(String(user.id)) ? parseInt(String(user.id), 10) : null;
+
+      query += ` AND cc.id IN (
+        SELECT cl.course_class_id 
+        FROM class_lecturers cl
+        JOIN users lu ON lu.id = cl.lecturer_id
+        WHERE ($1::bigint IS NOT NULL AND cl.lecturer_id = $1::bigint)
+           OR (NULLIF($2, '') IS NOT NULL AND (
+                lu.identity_number = $2 
+                OR REPLACE(lu.identity_number, '.', '') = $2 
+                OR lu.username = $2
+              ))
+           OR (NULLIF($3, '') IS NOT NULL AND LOWER(lu.name) = LOWER($3))
+      )`;
+      params.push(parsedId, cleanIdent, user.name ? user.name.trim() : null);
     }
 
     query += ` ORDER BY c.code ASC`;

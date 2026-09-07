@@ -28,7 +28,10 @@ import {
   HelpCircle,
   MessageSquare,
   Clock,
-  Sparkles
+  Sparkles,
+  Users,
+  ShieldCheck,
+  Copy
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardSubtitle, CardBody, CardFooter } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -40,7 +43,7 @@ import { OnlineModuleReader } from '../../components/learning/OnlineModuleReader
 import { InteractiveVideoPlayer } from '../../components/video/InteractiveVideoPlayer';
 import { DynamicQrModal } from '../../components/attendance/DynamicQrModal';
 import { StudentAttendanceModal } from '../../components/attendance/StudentAttendanceModal';
-import { AcademicClass } from '../../types/academic';
+import { AcademicClass, ClassMember } from '../../types/academic';
 import { CourseMeeting, LearningMaterial, RPSSection, MaterialType, PublishStatus } from '../../types/learning';
 import { InteractiveVideo } from '../../types/video';
 import { academicService } from '../../services/academicService';
@@ -117,7 +120,8 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
   const [classInfo, setClassInfo] = useState<AcademicClass | null>(null);
   const [rps, setRps] = useState<RPSSection | null>(null);
   const [meetings, setMeetings] = useState<CourseMeeting[]>([]);
-  const [activeTab, setActiveTab] = useState<'pertemuan' | 'rps' | 'materi'>('pertemuan');
+  const [enrolledStudents, setEnrolledStudents] = useState<ClassMember[]>([]);
+  const [activeTab, setActiveTab] = useState<'pertemuan' | 'rps' | 'materi' | 'mahasiswa'>('pertemuan');
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
 
   // Reader & Player states
@@ -128,6 +132,7 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
   // Repositori Search & Filter
   const [materialFilterType, setMaterialFilterType] = useState<string>('SEMUA');
   const [materialSearchQuery, setMaterialSearchQuery] = useState<string>('');
+  const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
 
   // =========================================================================
   // MODAL STATES
@@ -251,12 +256,27 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
     });
   }, [allMaterials, materialFilterType, materialSearchQuery]);
 
+  const filteredStudents = useMemo(() => {
+    if (!studentSearchQuery.trim()) return enrolledStudents;
+    const q = studentSearchQuery.toLowerCase();
+    return enrolledStudents.filter(
+      (s) =>
+        s.studentName.toLowerCase().includes(q) ||
+        s.studentNim.toLowerCase().includes(q)
+    );
+  }, [enrolledStudents, studentSearchQuery]);
+
   const loadData = () => {
     const cls = academicService.getClassById(classId) || academicService.getClasses().find((c) => c.id === classId || c.code === classId);
-    if (cls) setClassInfo(cls);
-    const existingRps = learningService.getRPS(classId) || DEFAULT_EMPTY_RPS;
+    if (cls) {
+      setClassInfo(cls);
+    }
+    const members = academicService.getClassMembers(classId);
+    setEnrolledStudents(members);
+
+    const existingRps = learningService.getRPS(classId, cls) || DEFAULT_EMPTY_RPS;
     setRps(existingRps);
-    setMeetings(learningService.getMeetingsByClass(classId, effectiveIsStudent));
+    setMeetings(learningService.getMeetingsByClass(classId, effectiveIsStudent, cls));
   };
 
   useEffect(() => {
@@ -862,32 +882,48 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 'var(--space-2)' }}>
-                <Badge variant="primary" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', borderColor: 'transparent', fontWeight: 'bold' }}>
-                  {classInfo.code}
+                <Badge variant="primary" style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: 'white', borderColor: 'transparent', fontWeight: 'bold' }}>
+                  {classInfo.courseCode || classInfo.code}
                 </Badge>
                 <Badge variant="primary" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', borderColor: 'transparent' }}>
                   {classInfo.credits} SKS
                 </Badge>
                 <Badge variant="primary" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', borderColor: 'transparent' }}>
-                  Prodi: {classInfo.studyProgramCode}
+                  Prodi: {classInfo.studyProgramCode || 'PAI'}
                 </Badge>
                 <Badge variant="primary" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', borderColor: 'transparent' }}>
-                  Kelas {classInfo.name}
+                  {classInfo.name}
                 </Badge>
               </div>
 
-              <h1 style={{ color: 'white', fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-1)', fontWeight: 'bold' }}>
+              <h1 style={{ color: 'white', fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-2)', fontWeight: 'bold', lineHeight: 1.25 }}>
                 {classInfo.courseName || classInfo.name}
               </h1>
-              <p style={{ color: '#d1fae5', fontSize: 'var(--text-sm)' }}>
-                Dosen Pengampu: <strong>{classInfo.lecturerName}</strong> (NIDN: {classInfo.lecturerNidn || '-'}) • {classInfo.studentCount} Mahasiswa Terdaftar
-              </p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" style={{ color: '#d1fae5', fontSize: 'var(--text-sm)' }}>
+                <span>
+                  Dosen Pengampu: <strong>{classInfo.lecturerName}</strong> {classInfo.lecturerNidn ? `(NIDN: ${classInfo.lecturerNidn})` : ''}
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Users size={14} />
+                  <strong>{enrolledStudents.length || classInfo.studentCount}</strong> Mahasiswa Terdaftar (SIAKAD)
+                </span>
+                {classInfo.schedules && classInfo.schedules.length > 0 && (
+                  <>
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <Clock size={14} />
+                      {classInfo.schedules[0].dayOfWeek}, {classInfo.schedules[0].startTime}–{classInfo.schedules[0].endTime} WIB ({classInfo.schedules[0].room})
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
 
             <div style={{ textAlign: 'right' }} className="hidden sm:block">
               <div style={{ fontSize: 'var(--text-xs)', color: '#a7f3d0' }}>Semester Akademik</div>
               <div style={{ fontWeight: 'bold', fontSize: 'var(--text-sm)' }}>{classInfo.academicPeriodName || 'Semester Ganjil 2026/2027'}</div>
-              <div style={{ fontSize: 'var(--text-xs)', color: '#a7f3d0', marginTop: '4px' }}>{meetings.length} Sesi Perkuliahan</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: '#a7f3d0', marginTop: '4px' }}>{meetings.length} Sesi Kurikulum Baku</div>
             </div>
           </div>
         </CardBody>
@@ -896,7 +932,7 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
       {/* =====================================================================
           NAVIGATION TABS
           ===================================================================== */}
-      <div className="tabs-nav-container pb-2">
+      <div className="tabs-nav-container pb-2 flex-wrap gap-2">
         <Button 
           variant={activeTab === 'pertemuan' ? 'primary' : 'secondary'} 
           size="sm" 
@@ -917,6 +953,14 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
           onClick={() => setActiveTab('materi')}
         >
           Repositori Materi ({allMaterials.length})
+        </Button>
+        <Button 
+          variant={activeTab === 'mahasiswa' ? 'primary' : 'secondary'} 
+          size="sm" 
+          icon={Users}
+          onClick={() => setActiveTab('mahasiswa')}
+        >
+          Daftar Mahasiswa ({enrolledStudents.length || classInfo.studentCount})
         </Button>
       </div>
 
@@ -1759,6 +1803,247 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
               )}
             </div>
           </CardBody>
+        </Card>
+      )}
+
+      {/* =====================================================================
+          TAB 4: DAFTAR MAHASISWA TERDAFTAR (SIAKAD)
+          ===================================================================== */}
+      {activeTab === 'mahasiswa' && (
+        <Card style={{ border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-sm)' }}>
+          <CardHeader style={{ padding: 'var(--space-4) var(--space-6)', borderBottom: '1px solid var(--border-subtle)' }}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 w-full">
+              <div>
+                <div className="flex items-center gap-2">
+                  <CardTitle style={{ fontSize: 'var(--text-lg)', color: 'var(--text-primary)' }}>
+                    Daftar Mahasiswa Terdaftar (SIAKAD)
+                  </CardTitle>
+                  <Badge variant="primary" style={{ fontWeight: 'bold' }}>
+                    {enrolledStudents.length} Mahasiswa
+                  </Badge>
+                </div>
+                <CardSubtitle style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Mahasiswa yang sah mengambil mata kuliah {classInfo.courseName || classInfo.name} pada KRS Semester {classInfo.academicPeriodName || 'Ganjil 2026/2027'}
+                </CardSubtitle>
+              </div>
+
+              {/* Search Box Mahasiswa */}
+              <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
+                <Search 
+                  size={15} 
+                  style={{ 
+                    position: 'absolute', 
+                    left: '12px', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)', 
+                    color: 'var(--text-muted)',
+                    pointerEvents: 'none'
+                  }} 
+                />
+                <input
+                  type="text"
+                  placeholder="Cari nama atau NIM..."
+                  value={studentSearchQuery}
+                  onChange={(e) => setStudentSearchQuery(e.target.value)}
+                  className="form-input text-xs"
+                  style={{
+                    paddingLeft: '34px',
+                    paddingRight: studentSearchQuery ? '30px' : '12px',
+                    height: '36px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-default)',
+                    backgroundColor: 'var(--bg-surface)'
+                  }}
+                />
+                {studentSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setStudentSearchQuery('')}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)'
+                    }}
+                    title="Hapus pencarian"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardBody style={{ padding: 0 }}>
+            {filteredStudents.length === 0 ? (
+              <div style={{ padding: 'var(--space-12)', textAlign: 'center' }}>
+                <div 
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    width: '56px', 
+                    height: '56px', 
+                    borderRadius: '50%', 
+                    backgroundColor: 'var(--color-slate-100)',
+                    color: 'var(--text-muted)',
+                    marginBottom: 'var(--space-3)'
+                  }}
+                >
+                  <Users size={26} />
+                </div>
+                <h4 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                  {studentSearchQuery ? 'Mahasiswa Tidak Ditemukan' : 'Belum Ada Mahasiswa Terdaftar'}
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto' }}>
+                  {studentSearchQuery 
+                    ? `Tidak ada mahasiswa dengan kata kunci "${studentSearchQuery}". Silakan coba kata kunci lain.`
+                    : 'Belum ada mahasiswa yang terekam mengambil kelas perkuliahan ini dalam basis data SIAKAD.'}
+                </p>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--color-slate-50)', borderBottom: '1.5px solid var(--border-default)' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', width: '50px', color: 'var(--text-muted)', fontWeight: 600 }}>NO</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', width: '150px', color: 'var(--text-muted)', fontWeight: 600 }}>NIM</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>NAMA MAHASISWA</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>PROGRAM STUDI</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600 }}>TGL KRS / DAFTAR</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600 }}>STATUS</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600 }}>VERIFIKASI</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStudents.map((m, idx) => {
+                      const initials = m.studentName
+                        .split(' ')
+                        .slice(0, 2)
+                        .map(n => n[0])
+                        .join('')
+                        .toUpperCase();
+
+                      return (
+                        <tr 
+                          key={m.id || idx} 
+                          style={{ 
+                            borderBottom: '1px solid var(--border-subtle)',
+                            backgroundColor: idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--color-slate-50)'
+                          }}
+                        >
+                          <td style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div className="flex items-center gap-1.5">
+                              <span 
+                                style={{ 
+                                  fontFamily: 'monospace', 
+                                  fontWeight: 700, 
+                                  color: 'var(--color-primary-800)',
+                                  backgroundColor: 'var(--color-primary-50)',
+                                  padding: '2px 8px',
+                                  borderRadius: 'var(--radius-sm)',
+                                  border: '1px solid var(--color-primary-200)',
+                                  fontSize: '11px'
+                                }}
+                              >
+                                {m.studentNim}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(m.studentNim);
+                                  toast.info('NIM Disalin', `NIM ${m.studentNim} disalin ke clipboard.`);
+                                }}
+                                title="Salin NIM"
+                                style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', color: 'var(--text-muted)' }}
+                              >
+                                <Copy size={12} />
+                              </button>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div className="flex items-center gap-3">
+                              <div 
+                                style={{ 
+                                  width: '32px', 
+                                  height: '32px', 
+                                  borderRadius: '50%', 
+                                  backgroundColor: 'var(--color-primary-700)', 
+                                  color: '#ffffff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  flexShrink: 0
+                                }}
+                              >
+                                {initials}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>
+                                  {m.studentName}
+                                </div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                  Mahasiswa Aktif STAI Al-Ittihad
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
+                            {classInfo.studyProgramCode === 'PAI' ? 'Pendidikan Agama Islam (S1)' : 
+                             classInfo.studyProgramCode === 'PIAUD' ? 'Pendidikan Islam Anak Usia Dini (S1)' : 
+                             classInfo.studyProgramCode === 'MKU' ? 'Mata Kuliah Umum' : classInfo.studyProgramCode}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            {m.enrollmentDate || '2026-08-20'}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <Badge variant="success" style={{ fontWeight: 600, fontSize: '11px' }}>
+                              AKTIF TERDAFTAR
+                            </Badge>
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span 
+                              style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '4px', 
+                                fontSize: '11px', 
+                                fontWeight: 600, 
+                                color: 'var(--color-primary-700)',
+                                backgroundColor: 'var(--color-primary-50)',
+                                padding: '2px 8px',
+                                borderRadius: 'var(--radius-full)',
+                                border: '1px solid var(--color-primary-200)'
+                              }}
+                            >
+                              <ShieldCheck size={12} />
+                              SIAKAD SAH
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardBody>
+
+          <CardFooter style={{ padding: 'var(--space-3) var(--space-6)', backgroundColor: 'var(--color-slate-50)', borderTop: '1px solid var(--border-subtle)' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={13} color="var(--color-primary-600)" />
+              Data mahasiswa terverifikasi langsung dari basis data Kartu Rencana Studi (KRS) SIAKAD STAI Al-Ittihad Cianjur.
+            </span>
+          </CardFooter>
         </Card>
       )}
 
