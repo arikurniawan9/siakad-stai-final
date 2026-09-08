@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   PlayCircle, 
   Clock, 
   HelpCircle, 
   ArrowRight,
-  Plus
+  Plus,
+  Video
 } from 'lucide-react';
 import { Card, CardHeader, CardBody, CardFooter } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -18,6 +19,7 @@ import { academicService, AcademicClass } from '../../services/academicService';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/feedback/ToastContext';
 import { KAMUS_UI } from '../../constants/dictionary';
+import { getYouTubeVideoId } from '../../components/video/InteractiveVideoPlayer';
 
 export interface VideoListPageProps {
   onSelectVideo: (videoId: string) => void;
@@ -28,6 +30,8 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
   const toast = useToast();
   const [videos, setVideos] = useState<InteractiveVideo[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProdi, setSelectedProdi] = useState<'all' | 'PAI' | 'PIAUD'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'belum' | 'proses' | 'selesai'>('all');
 
   // Create Video Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -53,7 +57,7 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
   const [newClassId, setNewClassId] = useState(() => availableClasses[0]?.id || 'cls-20261-pai301-a');
   const [newMeetingNumber, setNewMeetingNumber] = useState(1);
   const [newDescription, setNewDescription] = useState('');
-  const [newVideoUrl, setNewVideoUrl] = useState('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+  const [newVideoUrl, setNewVideoUrl] = useState('https://vjs.zencdn.net/v/oceans.mp4');
   const [newDurationMinutes, setNewDurationMinutes] = useState(5);
   const [newMinPercentage, setNewMinPercentage] = useState(80);
   const [newAllowFastForward, setNewAllowFastForward] = useState(false);
@@ -95,6 +99,10 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
       toast.warning('Validasi Gagal', 'Silakan masukkan judul video pembelajaran.');
       return;
     }
+    if (!newVideoUrl.trim()) {
+      toast.warning('Validasi Gagal', 'Silakan masukkan tautan video (YouTube atau URL MP4).');
+      return;
+    }
 
     try {
       const padMeeting = newMeetingNumber < 10 ? `0${newMeetingNumber}` : `${newMeetingNumber}`;
@@ -106,8 +114,8 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
         courseName: newCourseName,
         meetingNumber: newMeetingNumber,
         title: newTitle,
-        description: newDescription || 'Video materi pembelajaran interaktif perkuliahan.',
-        videoUrl: newVideoUrl,
+        description: newDescription || 'Video materi pembelajaran interaktif kurikulum perkuliahan STAI Al-Ittihad.',
+        videoUrl: newVideoUrl.trim(),
         durationSeconds: newDurationMinutes * 60,
         minWatchedPercentage: newMinPercentage,
         allowFastForward: newAllowFastForward,
@@ -125,11 +133,35 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
     }
   };
 
-  const filteredVideos = videos.filter((v) =>
-    v.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredVideos = useMemo(() => {
+    return videos.filter((v) => {
+      // 1. Search filter
+      const q = searchQuery.toLowerCase();
+      const matchQuery = 
+        v.title.toLowerCase().includes(q) ||
+        v.courseName.toLowerCase().includes(q) ||
+        v.description.toLowerCase().includes(q);
+      if (!matchQuery) return false;
+
+      // 2. Prodi filter
+      if (selectedProdi !== 'all') {
+        const isPAI = v.classId.toLowerCase().includes('pai') || v.courseName.toLowerCase().includes('fiqih') || v.courseName.toLowerCase().includes('ulumul');
+        const isPIAUD = v.classId.toLowerCase().includes('piaud') || v.courseName.toLowerCase().includes('piaud');
+        if (selectedProdi === 'PAI' && !isPAI) return false;
+        if (selectedProdi === 'PIAUD' && !isPIAUD) return false;
+      }
+
+      // 3. Status filter (jika login sebagai mahasiswa)
+      if (user && selectedStatus !== 'all') {
+        const prog = videoService.getStudentProgress(v.id, user.id);
+        if (selectedStatus === 'selesai' && !prog?.isCompleted) return false;
+        if (selectedStatus === 'proses' && (!prog || prog.isCompleted || prog.effectiveWatchedPercentage === 0)) return false;
+        if (selectedStatus === 'belum' && prog && prog.effectiveWatchedPercentage > 0) return false;
+      }
+
+      return true;
+    });
+  }, [videos, searchQuery, selectedProdi, selectedStatus, user]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -142,17 +174,22 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1>{KAMUS_UI.VIDEO_INTERAKTIF}</h1>
-          <p>
+          <div className="flex items-center gap-2 mb-1">
+            <Video size={24} color="var(--color-primary-700)" />
+            <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+              {KAMUS_UI.VIDEO_INTERAKTIF}
+            </h1>
+          </div>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
             {isStudent 
-              ? 'Tonton video pembelajaran interaktif dan jawab pertanyaan reflektif untuk melengkapi progres'
-              : 'Kelola media video pembelajaran dan konfigurasi titik checkpoint pertanyaan'}
+              ? 'Tonton video perkuliahan kurikulum STAI Al-Ittihad dan jawab pertanyaan checkpoint pemahaman untuk memenuhi syarat tuntas perkuliahan.'
+              : 'Kelola video materi perkuliahan interaktif, sematkan titik soal pemahaman konsep, dan pantau progres tontonan mahasiswa.'}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <Badge variant="primary" style={{ padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
-            {videos.length} Video Tersedia
+            {videos.length} Materi Video Tersedia
           </Badge>
           {isLecturer && (
             <Button
@@ -167,14 +204,37 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
         </div>
       </div>
 
-      {/* Filter Bar */}
+      {/* Filter & Search Bar */}
       <Card>
         <CardBody>
-          <Input
-            placeholder="Cari video pembelajaran atau mata kuliah..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Input
+              placeholder="Cari judul video, mata kuliah, atau materi..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+
+            <Select
+              value={selectedProdi}
+              options={[
+                { value: 'all', label: 'Semua Program Studi' },
+                { value: 'PAI', label: 'S1 Pendidikan Agama Islam (PAI)' },
+                { value: 'PIAUD', label: 'S1 Pendidikan Islam Anak Usia Dini (PIAUD)' }
+              ]}
+              onChange={(e) => setSelectedProdi(e.target.value as any)}
+            />
+
+            <Select
+              value={selectedStatus}
+              options={[
+                { value: 'all', label: 'Semua Status Progres' },
+                { value: 'belum', label: 'Belum Ditonton' },
+                { value: 'proses', label: 'Sedang Dipelajari' },
+                { value: 'selesai', label: 'Selesai / Tuntas' }
+              ]}
+              onChange={(e) => setSelectedStatus(e.target.value as any)}
+            />
+          </div>
         </CardBody>
       </Card>
 
@@ -190,32 +250,103 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
           {filteredVideos.map((vid) => {
             const studentProg = user ? videoService.getStudentProgress(vid.id, user.id) : null;
             const isCompleted = studentProg?.isCompleted;
+            const isYouTube = !!getYouTubeVideoId(vid.videoUrl);
 
             return (
               <Card key={vid.id} interactive onClick={() => onSelectVideo(vid.id)}>
+                {/* Visual Thumbnail Cover */}
                 <div 
                   style={{ 
                     position: 'relative', 
                     width: '100%', 
                     aspectRatio: '16/9', 
-                    backgroundColor: 'var(--color-slate-900)',
+                    background: 'linear-gradient(135deg, #064e3b 0%, #0f172a 100%)',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'white'
+                    color: 'white',
+                    overflow: 'hidden'
                   }}
                 >
-                  <PlayCircle size={48} color="rgba(255,255,255,0.85)" />
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      opacity: 0.15,
+                      backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)',
+                      backgroundSize: '16px 16px'
+                    }} 
+                  />
+
+                  <div 
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: 'var(--radius-full)',
+                      backgroundColor: 'rgba(4, 120, 87, 0.85)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid rgba(255, 255, 255, 0.8)',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+                      zIndex: 2
+                    }}
+                  >
+                    <PlayCircle size={32} color="white" />
+                  </div>
+
+                  {/* Top Badges */}
+                  <div 
+                    style={{ 
+                      position: 'absolute', 
+                      top: '10px', 
+                      left: '10px', 
+                      display: 'flex', 
+                      gap: '6px',
+                      zIndex: 3 
+                    }}
+                  >
+                    <span 
+                      style={{ 
+                        backgroundColor: 'rgba(4, 120, 87, 0.9)', 
+                        color: 'white', 
+                        padding: '2px 8px', 
+                        borderRadius: 'var(--radius-sm)', 
+                        fontSize: '11px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      P#{vid.meetingNumber}
+                    </span>
+                    {isYouTube && (
+                      <span 
+                        style={{ 
+                          backgroundColor: '#ff0000', 
+                          color: 'white', 
+                          padding: '2px 6px', 
+                          borderRadius: 'var(--radius-sm)', 
+                          fontSize: '10px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        YouTube
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bottom Duration Badge */}
                   <div 
                     style={{ 
                       position: 'absolute', 
                       bottom: '8px', 
                       right: '8px', 
-                      backgroundColor: 'rgba(0,0,0,0.75)', 
+                      backgroundColor: 'rgba(0,0,0,0.8)', 
                       padding: '2px 8px', 
-                      borderRadius: 'var(--radius-sm)',
+                      borderRadius: 'var(--radius-sm)', 
                       fontSize: '0.6875rem',
-                      fontFamily: 'var(--font-mono)'
+                      fontFamily: 'var(--font-mono)',
+                      zIndex: 3
                     }}
                   >
                     {formatDuration(vid.durationSeconds)}
@@ -223,18 +354,24 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
                 </div>
 
                 <CardHeader>
-                  <Badge variant="primary">Pertemuan {vid.meetingNumber}</Badge>
-                  <Badge variant={isCompleted ? 'success' : studentProg ? 'warning' : 'default'}>
-                    {isCompleted ? KAMUS_UI.STATUS_SELESAI : studentProg ? KAMUS_UI.STATUS_SEDANG_DIPELAJARI : KAMUS_UI.STATUS_BELUM_DIMULAI}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="primary">Pertemuan {vid.meetingNumber}</Badge>
+                    <Badge variant={isCompleted ? 'success' : studentProg && studentProg.effectiveWatchedPercentage > 0 ? 'warning' : 'default'}>
+                      {isCompleted ? KAMUS_UI.STATUS_SELESAI : studentProg && studentProg.effectiveWatchedPercentage > 0 ? KAMUS_UI.STATUS_SEDANG_DIPELAJARI : KAMUS_UI.STATUS_BELUM_DIMULAI}
+                    </Badge>
+                  </div>
                 </CardHeader>
 
                 <CardBody>
-                  <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>
+                  <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 'bold', marginBottom: 'var(--space-1)', color: 'var(--text-primary)', lineHeight: 1.3 }}>
                     {vid.title}
                   </h3>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 'var(--space-4)' }}>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-700)', fontWeight: '600', marginBottom: 'var(--space-3)' }}>
                     {vid.courseName}
+                  </p>
+
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)', lineClamp: 2, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {vid.description}
                   </p>
 
                   <div className="flex flex-col gap-2" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
@@ -244,7 +381,7 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock size={14} color="var(--color-primary-700)" />
-                      <span>Syarat Tontonan: Minimal {vid.minWatchedPercentage}%</span>
+                      <span>Syarat Tuntas: Minimal {vid.minWatchedPercentage}% Tontonan Sah</span>
                     </div>
                   </div>
 
@@ -260,7 +397,8 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
                           style={{ 
                             width: `${studentProg.effectiveWatchedPercentage}%`, 
                             height: '100%', 
-                            backgroundColor: studentProg.isCompleted ? 'var(--color-success-main)' : 'var(--color-primary-600)' 
+                            backgroundColor: studentProg.isCompleted ? 'var(--color-success-main)' : 'var(--color-primary-600)',
+                            transition: 'width 300ms ease'
                           }} 
                         />
                       </div>
@@ -270,10 +408,10 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
 
                 <CardFooter>
                   <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                    {vid.status}
+                    Status: {vid.status}
                   </span>
                   <Button variant="outline" size="sm" icon={ArrowRight} iconPosition="right">
-                    Putar Video
+                    {isCompleted ? 'Tinjau Materi' : studentProg ? 'Lanjutkan Belajar' : 'Tonton Video'}
                   </Button>
                 </CardFooter>
               </Card>
@@ -288,7 +426,7 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Tambah Video Pembelajaran Interaktif"
+        title="Tambah Video Pembelajaran Interaktif STAI Al-Ittihad"
         maxWidth="620px"
         footer={
           <div className="flex justify-end gap-2">
@@ -302,6 +440,10 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
         }
       >
         <form onSubmit={handleCreateVideo} className="flex flex-col gap-4">
+          <div style={{ padding: 'var(--space-3) var(--space-4)', backgroundColor: 'var(--color-primary-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-primary-200)', fontSize: 'var(--text-xs)', color: 'var(--color-primary-800)' }}>
+            <strong>Panduan Format Video:</strong> Sistem mendukung pemutaran langsung melalui tautan YouTube (misal: <code>https://www.youtube.com/watch?v=...</code> atau <code>https://youtu.be/...</code>) maupun URL berkas MP4 langsung pada server/CDN.
+          </div>
+
           <div>
             <label className="form-label" style={{ fontWeight: 'bold', fontSize: 'var(--text-xs)' }}>
               Judul Video Pembelajaran <span style={{ color: 'var(--color-danger-main)' }}>*</span>
@@ -352,17 +494,14 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
 
           <div>
             <label className="form-label" style={{ fontWeight: 'bold', fontSize: 'var(--text-xs)' }}>
-              Tautan Berkas Video (MP4 / Web Video URL) <span style={{ color: 'var(--color-danger-main)' }}>*</span>
+              Tautan Video (URL YouTube / MP4 Langsung) <span style={{ color: 'var(--color-danger-main)' }}>*</span>
             </label>
             <Input
-              placeholder="https://domain.ac.id/videos/materi-ushul-fiqih.mp4"
+              placeholder="https://www.youtube.com/watch?v=... atau https://domain.ac.id/video.mp4"
               value={newVideoUrl}
               onChange={(e) => setNewVideoUrl(e.target.value)}
               required
             />
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-              Mendukung URL video langsung (.mp4, .webm, storage S3/MinIO, atau CDN).
-            </span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
@@ -395,12 +534,12 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
 
           <div>
             <label className="form-label" style={{ fontWeight: 'bold', fontSize: 'var(--text-xs)' }}>
-              Deskripsi Materi Video
+              Deskripsi Materi Perkuliahan
             </label>
             <textarea
               className="form-textarea"
               rows={2}
-              placeholder="Jelaskan ringkasan materi, capaian pembelajaran, atau instruksi bagi mahasiswa..."
+              placeholder="Jelaskan ringkasan materi, capaian pembelajaran perkuliahan, atau instruksi bagi mahasiswa..."
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
               style={{ width: '100%' }}

@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../../db/pool.js';
 import { AuthenticatedRequest } from '../../middleware/authMiddleware.js';
+import { executeUserInsert, executeUserPasswordUpdate } from '../../db/userCompat.js';
 
 // =========================================================================
 // 1. STATISTIK RINGKASAN DATA DOSEN
@@ -333,21 +334,17 @@ export async function createLecturer(
 
     await db.transaction(async (client) => {
       // 1. Buat User Row
-      await client.query(`
-        INSERT INTO users (
-          id, username, password_hash, name, identity_number, email, role, study_program, is_active
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE)
-      `, [
-        userId,
-        cleanUsername,
+      await executeUserInsert(client, {
+        id: userId,
+        username: cleanUsername,
         passwordHash,
-        fullName,
-        cleanNidn,
-        cleanEmail,
-        role,
-        prodiName
-      ]);
+        name: fullName,
+        identityNumber: cleanNidn,
+        email: cleanEmail,
+        role: role,
+        studyProgram: prodiName,
+        isActive: true,
+      });
 
       // 2. Buat Lecturer Profile Row
       await client.query(`
@@ -558,11 +555,7 @@ export async function resetLecturerPassword(
 
     const { id: user_id, name } = userRes.rows[0];
 
-    await db.query(`
-      UPDATE users 
-      SET password_hash = $1, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $2
-    `, [passwordHash, user_id]);
+    await executeUserPasswordUpdate(db, user_id, passwordHash);
 
     res.json({
       message: `Kata sandi akun dosen ${name} berhasil di-reset menjadi default '${defaultPassword}'.`
@@ -712,20 +705,17 @@ export async function bulkCreateLecturers(
           const userId = `usr-dsn-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
           const profileId = `prof-${userId}`;
 
-          await client.query(`
-            INSERT INTO users (
-              id, username, password_hash, name, identity_number, email, role, study_program, is_active
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, 'dosen', $7, TRUE)
-          `, [
-            userId,
-            cleanUsername,
+          await executeUserInsert(client, {
+            id: userId,
+            username: cleanUsername,
             passwordHash,
-            cleanName,
-            cleanNidn,
-            cleanEmail,
-            prodiName
-          ]);
+            name: cleanName,
+            identityNumber: cleanNidn,
+            email: cleanEmail,
+            role: 'dosen',
+            studyProgram: prodiName,
+            isActive: true,
+          });
 
           await client.query(`
             INSERT INTO lecturer_profiles (

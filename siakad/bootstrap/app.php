@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
             guests: '/login',
             users: '/dashboard',
         );
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+        ]);
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);

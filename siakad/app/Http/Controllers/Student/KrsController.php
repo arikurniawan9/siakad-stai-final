@@ -90,12 +90,26 @@ class KrsController extends Controller
         $classIds = $request->input('class_ids', []);
 
         $activePeriod = DB::table('academic_periods')->where('is_active', true)->first();
+        if (!$activePeriod) {
+            return back()->with('error', 'Tidak ada periode akademik aktif saat ini.');
+        }
+
+        // 1. FINANCIAL LOCK GUARD SERVER-SIDE: Cek tunggakan SPP/UKT
+        $hasUnpaidTuition = DB::table('student_invoices')
+            ->where('user_id', $user->id)
+            ->where('status', '!=', 'LUNAS')
+            ->where('academic_period_id', $activePeriod->id)
+            ->exists();
+
+        if ($hasUnpaidTuition) {
+            return back()->with('error', 'Akses Ditolak: Anda memiliki tagihan pembayaran SPP/UKT yang belum lunas. Pengisian KRS terkunci secara finansial.');
+        }
 
         if (empty($classIds)) {
             return back()->with('error', 'Silakan pilih minimal 1 mata kuliah untuk disimpan ke KRS.');
         }
 
-        // Hitung total SKS
+        // 2. Hitung total SKS & validasi batas beban
         $totalCredits = DB::table('course_classes')
             ->join('courses', 'course_classes.course_id', '=', 'courses.id')
             ->whereIn('course_classes.id', $classIds)
@@ -105,9 +119,62 @@ class KrsController extends Controller
             return back()->with('error', "Beban SKS melebihi batas maksimum 24 SKS (Total SKS dipilih: {$totalCredits} SKS).");
         }
 
-        DB::transaction(function () use ($user, $activePeriod, $classIds, $totalCredits) {
+        // 3. Validasi Kapasitas Kuota Kelas
+        foreach ($classIds as $clsId) {
+            $class = DB::table('course_classes')->find($clsId);
+            if ($class) {
+                $enrolledCount = DB::table('krs_items')
+                    ->join('krs_submissions', 'krs_items.krs_submission_id', '=', 'krs_submissions.id')
+                    ->where('krs_items.course_class_id', $clsId)
+                    ->where('krs_submissions.academic_period_id', $activePeriod->id)
+                    ->where('krs_submissions.student_id', '!=', $user->id)
+                    ->count();
+
+                if ($enrolledCount >= $class->capacity) {
+                    $course = DB::table('courses')->find($class->course_id);
+                    return back()->with('error', "Kapasitas kelas {$class->name} ({$course?->name}) sudah penuh ({$class->capacity} mahasiswa). Silakan pilih kelas paralel lain.");
+                }
+            }
+        }
+
+        // 4. Validasi Anti-Clash (Jadwal Bentrok)
+        $schedules = DB::table('class_schedules')
+            ->whereIn('course_class_id', $classIds)
+            ->get();
+
+        for ($i = 0; $i < count($schedules); $i++) {
+            for ($j = $i + 1; $j < count($schedules); $j++) {
+                $s1 = $schedules[$i];
+                $s2 = $schedules[$j];
+                if (
+                    $s1->day_of_week === $s2->day_of_week &&
+                    !$s1->is_online && !$s2->is_online &&
+                    $s1->start_time < $s2->end_time &&
+                    $s2->start_time < $s1->end_time
+                ) {
+                    $c1 = DB::table('course_classes')->join('courses', 'course_classes.course_id', '=', 'courses.id')->where('course_classes.id', $s1->course_class_id)->select('courses.name as course_name', 'course_classes.name as class_name')->first();
+                    $c2 = DB::table('course_classes')->join('courses', 'course_classes.course_id', '=', 'courses.id')->where('course_classes.id', $s2->course_class_id)->select('courses.name as course_name', 'course_classes.name as class_name')->first();
+                    return back()->with('error', "Jadwal bentrok pada hari {$s1->day_of_week} antara {$c1?->course_name} ({$c1?->class_name}) dan {$c2?->course_name} ({$c2?->class_name}). Silakan pilih kelas dengan jadwal lain.");
+                }
+            }
+        }
+
+        // 5. Tentukan Dosen PA secara dinamis
+        $advisorId = $user->academic_advisor_id;
+        if (!$advisorId) {
+            $advisor = DB::table('users')
+                ->where('role', 'dosen_pa')
+                ->where(function ($q) use ($user) {
+                    $q->where('study_program', $user->study_program)
+                      ->orWhere('study_program', 'LIKE', "%{$user->study_program}%");
+                })
+                ->first();
+            $advisorId = $advisor?->id ?? 5;
+        }
+
+        DB::transaction(function () use ($user, $activePeriod, $classIds, $totalCredits, $advisorId) {
             // 1. Buat / Update Submission KRS
-            $submissionId = DB::table('krs_submissions')->updateOrInsert(
+            DB::table('krs_submissions')->updateOrInsert(
                 [
                     'student_id' => $user->id,
                     'academic_period_id' => $activePeriod->id,
@@ -116,7 +183,7 @@ class KrsController extends Controller
                     'total_credits' => $totalCredits,
                     'max_credits_allowed' => 24,
                     'status' => 'DIAJUKAN',
-                    'academic_advisor_id' => 5, // Dra. Hj. Siti Maryam (Dosen PA)
+                    'academic_advisor_id' => $advisorId,
                     'submitted_at' => now(),
                     'updated_at' => now(),
                 ]
@@ -127,13 +194,13 @@ class KrsController extends Controller
                 ->where('academic_period_id', $activePeriod->id)
                 ->first();
 
-            // 2. Re-sync items
+            // 2. Re-sync items dengan status TERDAFTAR (menunggu persetujuan dosen PA)
             DB::table('krs_items')->where('krs_submission_id', $submission->id)->delete();
             foreach ($classIds as $clsId) {
                 DB::table('krs_items')->insert([
                     'krs_submission_id' => $submission->id,
                     'course_class_id' => $clsId,
-                    'status' => 'DISETUJUI',
+                    'status' => 'TERDAFTAR',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -146,7 +213,7 @@ class KrsController extends Controller
                 'ip_address' => request()->ip(),
                 'target_entity' => 'KrsSubmission',
                 'target_id' => (string) $submission->id,
-                'details' => json_encode(['total_credits' => $totalCredits, 'class_count' => count($classIds)]),
+                'details' => json_encode(['total_credits' => $totalCredits, 'class_count' => count($classIds), 'advisor_id' => $advisorId]),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

@@ -8,19 +8,22 @@ import {
 const VIDEOS_STORAGE_KEY = 'salam_interactive_videos';
 const PROGRESS_STORAGE_KEY = 'salam_video_progress';
 
+const SCHEMA_VERSION_KEY = 'salam_video_service_v7_real_academic_data';
+
 export const INITIAL_INTERACTIVE_VIDEOS: InteractiveVideo[] = [
+  // 1. PAI-301: Fiqih Mawaris (3 SKS)
   {
     id: 'vid-ushul-01',
     classId: 'cls-20261-pai301-a',
     meetingId: 'mtg-pai301a-01',
     courseName: 'Fiqih Mawaris',
     meetingNumber: 1,
-    title: 'Konsep Dasar Kewarisan Islam & Rukun Mawaris',
-    description: 'Video pembelajaran interaktif yang menguraikan perbedaan esensial antara Fiqih dan Ushul Fiqih, disertai pertanyaan reflektif di beberapa titik materi.',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    durationSeconds: 300, // 5 menit simulasi
+    title: 'Hukum Kewarisan Islam: Hakikat Tirkah & Rukun Pokok Mawaris',
+    description: 'Kuliah interaktif komprehensif menguraikan rukun pokok mawaris (muwarrits, warits, mauruts), syarat kelayakan penerimaan warisan, dan kewajiban penyelesaian tirkah (tajhiz, utang, wasiat) sebelum pembagian harta waris menurut syariat Islam.',
+    videoUrl: 'https://vjs.zencdn.net/v/oceans.mp4',
+    durationSeconds: 300,
     minWatchedPercentage: 80,
-    allowFastForward: false, // Mahasiswa tidak dapat melompati bagian yang belum ditonton
+    allowFastForward: false,
     status: 'DITERBITKAN',
     createdAt: '2026-09-01T08:00:00Z',
     updatedAt: '2026-09-01T08:00:00Z',
@@ -28,115 +31,222 @@ export const INITIAL_INTERACTIVE_VIDEOS: InteractiveVideo[] = [
       {
         id: 'chk-01',
         videoId: 'vid-ushul-01',
-        timestampSeconds: 60, // Menit 01:00
-        title: 'Pertanyaan Pemahaman 1: Definisi Ushul Fiqih',
-        questionText: 'Apakah perbedaan mendasar antara Fiqih dan Ushul Fiqih menurut mayoritas ulama jumhur?',
+        timestampSeconds: 60,
+        title: 'Pertanyaan Pemahaman 1: Rukun Pokok Mawaris',
+        questionText: 'Manakah di bawah ini yang merupakan rukun pokok dalam pembagian kewarisan Islam (ilmu faraidh)?',
         type: 'PILIHAN_GANDA',
         options: [
-          { id: 'opt-1', text: 'Fiqih adalah kaidah istinbath, sedangkan Ushul Fiqih adalah hukum cabang amaliyah.', isCorrect: false },
-          { id: 'opt-2', text: 'Fiqih adalah hukum praktis dari dalil terperinci, sedangkan Ushul Fiqih adalah metodologi/kaidah penggaliannya.', isCorrect: true },
-          { id: 'opt-3', text: 'Fiqih dan Ushul Fiqih memiliki makna yang sama persis tanpa perbedaan metodologis.', isCorrect: false },
+          { id: 'opt-1', text: 'Warits dan Mauruts saja tanpa mensyaratkan wafatnya muwarrits.', isCorrect: false },
+          { id: 'opt-2', text: 'Muwarrits (pewaris yang wafat), Warits (ahli waris yang hidup), dan Mauruts (harta tirkah).', isCorrect: true },
+          { id: 'opt-3', text: 'Penetapan saksi notaris dan persetujuan seluruh anggota keluarga semata.', isCorrect: false },
         ],
-        explanation: 'Fiqih membahas hukum syar\'i yang bersifat amaliyah dari dalil tafshili, sedangkan Ushul Fiqih adalah alat atau metodologi (kaidah-kaidah) untuk menghasilkan fiqih tersebut.',
+        explanation: 'Rukun mawaris ada tiga: (1) Muwarrits (orang yang meninggal dunia), (2) Warits (orang yang berhak menerima warisan yang masih hidup hakiki/hukmi saat muwarrits wafat), dan (3) Mauruts/Tirkah (harta peninggalan yang sah).',
         isRequired: true,
         allowRetry: true,
       },
       {
         id: 'chk-02',
         videoId: 'vid-ushul-01',
-        timestampSeconds: 180, // Menit 03:00
-        title: 'Pertanyaan Pemahaman 2: Mazhab Syafi\'iyah vs Hanafiyah',
-        questionText: 'Metode penulisan Ushul Fiqih yang membangun kaidah secara murni tanpa terikat hukum furu\' cabang dikenal dengan metode:',
+        timestampSeconds: 180,
+        title: 'Pertanyaan Pemahaman 2: Penyelesaian Tirkah Sebelum Pembagian',
+        questionText: 'Berdasarkan dalil nash "Min ba\'di washiyyatin yushi biha aw dayn" (QS. An-Nisa: 11) dan ijma\' ulama, urutan prioritas penyelesaian hak atas harta tirkah sebelum dibagikan kepada ahli waris adalah:',
         type: 'PILIHAN_GANDA',
         options: [
-          { id: 'opt-4', text: 'Thariqah al-Mutakallimin (Jumhur / Syafi\'iyyah)', isCorrect: true },
-          { id: 'opt-5', text: 'Thariqah al-Fuqaha (Ahnaf)', isCorrect: false },
-          { id: 'opt-6', text: 'Thariqah al-Muqaranah', isCorrect: false },
+          { id: 'opt-4', text: 'Biaya tajhiz jenazah dan pelunasan utang didahulukan, lalu penunaian wasiat (maksimal 1/3), barulah sisa harta dibagikan kepada ahli waris.', isCorrect: true },
+          { id: 'opt-5', text: 'Pembagian waris didahulukan tanpa perlu melunasi utang piutang atau menunaikan wasiat almarhum.', isCorrect: false },
+          { id: 'opt-6', text: 'Wasiat ditunaikan seluruhnya tanpa batas sepertiga dan mengabaikan hak ahli waris.', isCorrect: false },
         ],
-        explanation: 'Thariqah al-Mutakallimin (dianut Syafi\'iyyah, Malikiyyah, Hanabilah) menetapkan kaidah secara teoritis rasional tanpa memaksakan kesesuaian dengan fatwa furu\' imam mazhab.',
+        explanation: 'Urutan penyelesaian hak tirkah menurut syariat Islam: (1) Biaya pengurusan jenazah (tajhiz), (2) Pelunasan utang almarhum (dayn), (3) Pelaksanaan wasiat sah (maksimal 1/3), (4) Pembagian sisa tirkah kepada para ahli waris sesuai ketentuan faraidh.',
         isRequired: true,
         allowRetry: true,
       }
     ]
   },
+
+  // 2. PAI-202: Fiqih Ibadah & Muamalah (3 SKS)
   {
-    id: 'vid-ushul-02',
-    classId: 'cls-pai301-a',
-    meetingId: 'mtg-pai301a-04',
-    courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah',
-    meetingNumber: 4,
-    title: 'Kaidah Amar dan Nahyi dalam Tafsir Ahkam',
-    description: 'Pembahasan interaktif mengenai kaidah dasar "Al-Ashlu fil Amri Lil Wujub" dan pengecualiannya.',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    durationSeconds: 360,
+    id: 'vid-muamalah-01',
+    classId: 'cls-20261-pai202-a',
+    meetingId: 'mtg-pai202a-05',
+    courseName: 'Fiqih Ibadah & Muamalah',
+    meetingNumber: 5,
+    title: 'Fiqih Muamalah Kontemporer: Prinsip Akad Tijariyyah & Batasan Riba',
+    description: 'Kajian telaah akad bisnis Islam: perbedaan mendasar riba fadhl dan riba nasi\'ah, rukun keabsahan transaksi jual-beli modern, serta implementasi fatwa DSN-MUI dalam perbankan syariah.',
+    videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+    durationSeconds: 240,
     minWatchedPercentage: 80,
     allowFastForward: false,
     status: 'DITERBITKAN',
-    createdAt: '2026-09-15T08:00:00Z',
-    updatedAt: '2026-09-15T08:00:00Z',
+    createdAt: '2026-09-03T08:00:00Z',
+    updatedAt: '2026-09-03T08:00:00Z',
     checkpoints: [
       {
-        id: 'chk-03',
-        videoId: 'vid-ushul-02',
-        timestampSeconds: 120,
-        title: 'Kaidah Amar',
-        questionText: 'Pernyataan "Kaidah asal kalimat perintah (amar) menunjukkan hukum wajib kecuali terdapat qarinah yang memalingkannya" adalah:',
+        id: 'chk-mua-01',
+        videoId: 'vid-muamalah-01',
+        timestampSeconds: 45,
+        title: 'Karakteristik Riba Nasi\'ah',
+        questionText: 'Tambahan atau kelebihan pembayaran yang disyaratkan atas penangguhan waktu pembayaran utang-piutang disebut:',
+        type: 'PILIHAN_GANDA',
+        options: [
+          { id: 'opt-m1', text: 'Riba Nasi\'ah (Riba Jahiliyyah)', isCorrect: true },
+          { id: 'opt-m2', text: 'Riba Fadhl', isCorrect: false },
+          { id: 'opt-m3', text: 'Riba Qardh Halal', isCorrect: false },
+        ],
+        explanation: 'Riba Nasi\'ah adalah tambahan yang disyaratkan oleh kreditur sebagai kompensasi atas penundaan waktu pembayaran utang.',
+        isRequired: true,
+        allowRetry: true
+      },
+      {
+        id: 'chk-mua-02',
+        videoId: 'vid-muamalah-01',
+        timestampSeconds: 150,
+        title: 'Rukun Jual Beli Islami',
+        questionText: 'Ketiadaan unsur gharar (ketidakjelasan/spekulasi) dan tadlis (penipuan) adalah syarat mutlak keabsahan objek akad muamalah.',
         type: 'BENAR_SALAH',
         options: [
-          { id: 'opt-bs-1', text: 'Benar', isCorrect: true },
-          { id: 'opt-bs-2', text: 'Salah', isCorrect: false }
+          { id: 'opt-bs-m1', text: 'Benar', isCorrect: true },
+          { id: 'opt-bs-m2', text: 'Salah', isCorrect: false }
         ],
-        explanation: 'Kaidah ushul menyatakan: Al-Ashlu fil amri lil wujub illa ma dalla ad-dalilu \'ala khilafih.',
+        explanation: 'Rasulullah SAW melarang jual-beli gharar sebagaimana diriwayatkan dalam Shahih Muslim dari sahabat Abu Hurairah RA.',
         isRequired: true,
         allowRetry: true
       }
     ]
   },
+
+  // 3. PAI-101: Ulumul Qur'an (2 SKS)
   {
-    id: 'vid-ushul-03',
-    classId: 'cls-pai301-a',
-    meetingId: 'mtg-pai301a-07',
-    courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah',
-    meetingNumber: 7,
-    title: 'Kaidah Asasiyyah 1: Al-Umuru bi Maqashidiha',
-    description: 'Video telaah komprehensif kaidah pertama dari lima kaidah asasi fiqih Islam: Segala perkara bergantung pada niat dan tujuannya.',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    durationSeconds: 240,
+    id: 'vid-ulumul-01',
+    classId: 'cls-20261-pai101-a',
+    meetingId: 'mtg-pai101a-03',
+    courseName: 'Ulumul Qur\'an',
+    meetingNumber: 3,
+    title: 'Sejarah Kodifikasi Mushaf Al-Qur\'an: Dari Era Kenabian ke Mushaf Utsmani',
+    description: 'Dokumentasi ilmiah sejarah pengumpulan mushaf Al-Qur\'an dari era Kenabian, kodifikasi pertama pasca Perang Yamamah pada era Khalifah Abu Bakar Ash-Shiddiq, hingga standarisasi Rasm Utsmani.',
+    videoUrl: 'https://vjs.zencdn.net/v/oceans.mp4',
+    durationSeconds: 360,
     minWatchedPercentage: 80,
     allowFastForward: false,
     status: 'DITERBITKAN',
-    createdAt: '2026-10-01T08:00:00Z',
-    updatedAt: '2026-10-01T08:00:00Z',
+    createdAt: '2026-09-05T08:00:00Z',
+    updatedAt: '2026-09-05T08:00:00Z',
     checkpoints: [
       {
-        id: 'chk-04',
-        videoId: 'vid-ushul-03',
-        timestampSeconds: 45,
-        title: 'Fungsi Niat dalam Ibadah',
-        questionText: 'Fungsi utama niat dalam hukum Islam terbagi menjadi dua aspek, yaitu:',
+        id: 'chk-ulum-01',
+        videoId: 'vid-ulumul-01',
+        timestampSeconds: 60,
+        title: 'Latar Belakang Kodifikasi Era Abu Bakar',
+        questionText: 'Peristiwa krusial yang melatarbelakangi usulan Umar bin Al-Khaththab kepada Abu Bakar untuk mengumpulkan Al-Qur\'an adalah:',
         type: 'PILIHAN_GANDA',
         options: [
-          { id: 'opt-03-1', text: 'Membedakan adat dari ibadah, dan membedakan tingkatan satu ibadah dengan ibadah lainnya.', isCorrect: true },
-          { id: 'opt-03-2', text: 'Menghapuskan syarat sah shalat dan membatalkan wudhu secara mutlak.', isCorrect: false },
-          { id: 'opt-03-3', text: 'Menghitung pahala secara otomatis tanpa perlu pelaksanaan rukun fiqih.', isCorrect: false }
+          { id: 'opt-u1', text: 'Gugurnya puluhan sahabat penghafal Al-Qur\'an (huffazh) dalam Perang Yamamah.', isCorrect: true },
+          { id: 'opt-u2', text: 'Perbedaan dialek bahasa di kalangan bangsa Romawi dan Persia.', isCorrect: false },
+          { id: 'opt-u3', text: 'Permintaan resmi dari Raja Najasyi di Habasyah.', isCorrect: false },
         ],
-        explanation: 'Menurut jumhur fuqaha, niat berfungsi: (1) Tamyiz al-\'ibadat \'an al-\'adat, dan (2) Tamyiz ba\'dh al-\'ibadat \'an ba\'dh.',
+        explanation: 'Umar RA khawatir Al-Qur\'an akan berkurang seiring syahidnya para penghafal Al-Qur\'an dalam Perang Yamamah.',
         isRequired: true,
         allowRetry: true
       },
       {
-        id: 'chk-05',
-        videoId: 'vid-ushul-03',
-        timestampSeconds: 150,
-        title: 'Dalil Hadits Niat',
-        questionText: 'Hadits "Innamal a\'malu bin-niyyat" diriwayatkan oleh sahabat Nabi:',
+        id: 'chk-ulum-02',
+        videoId: 'vid-ulumul-01',
+        timestampSeconds: 180,
+        title: 'Ketua Tim Kodifikasi Mushaf Utsmani',
+        questionText: 'Sahabat terkemuka yang dipercaya memimpin penulisan mushaf Al-Qur\'an pada era Abu Bakar maupun Utsman bin Affan adalah:',
         type: 'PILIHAN_GANDA',
         options: [
-          { id: 'opt-03-4', text: 'Umar bin Al-Khaththab radhiyallahu \'anhu', isCorrect: true },
-          { id: 'opt-03-5', text: 'Abu Hurairah radhiyallahu \'anhu', isCorrect: false },
-          { id: 'opt-03-6', text: 'Anas bin Malik radhiyallahu \'anhu', isCorrect: false }
+          { id: 'opt-u4', text: 'Zaid bin Tsabit radhiyallahu \'anhu', isCorrect: true },
+          { id: 'opt-u5', text: 'Abu Hurairah radhiyallahu \'anhu', isCorrect: false },
+          { id: 'opt-u6', text: 'Khalid bin Walid radhiyallahu \'anhu', isCorrect: false },
         ],
-        explanation: 'Hadits pembuka Shahih Al-Bukhari No. 1 ini diriwayatkan dari jalur Amirul Mukminin Umar bin Al-Khaththab RA.',
+        explanation: 'Zaid bin Tsabit RA adalah sekretaris wahyu Rasulullah SAW yang memiliki hafalan kuat dan kecermatan tinggi.',
+        isRequired: true,
+        allowRetry: true
+      }
+    ]
+  },
+
+  // 4. PAI-201: Ushul Fiqih & Qawaid Fiqhiyyah (2 SKS)
+  {
+    id: 'vid-ushul-02',
+    classId: 'cls-20261-pai201-a',
+    meetingId: 'mtg-pai201a-07',
+    courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah',
+    meetingNumber: 7,
+    title: 'Kaidah Asasiyyah 1: Al-Umuru bi Maqashidiha (Segala Urusan Bergantung pada Niatnya)',
+    description: 'Pembahasan komprehensif kaidah pertama dari 5 kaidah asasi hukum Islam, mencakup fungsi niat dalam membedakan adat dengan ibadah mahdhah, serta implikasi hukum niat dalam akad muamalah.',
+    videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+    durationSeconds: 300,
+    minWatchedPercentage: 80,
+    allowFastForward: false,
+    status: 'DITERBITKAN',
+    createdAt: '2026-09-07T08:00:00Z',
+    updatedAt: '2026-09-07T08:00:00Z',
+    checkpoints: [
+      {
+        id: 'chk-ush-01',
+        videoId: 'vid-ushul-02',
+        timestampSeconds: 60,
+        title: 'Fungsi Pokok Niat dalam Ibadah',
+        questionText: 'Fungsi utama niat dalam hukum syariat Islam menurut jumhur fuqaha adalah:',
+        type: 'PILIHAN_GANDA',
+        options: [
+          { id: 'opt-s1', text: 'Membedakan antara adat (kebiasaan) dengan ibadah, serta membedakan derajat satu ibadah dengan ibadah lainnya.', isCorrect: true },
+          { id: 'opt-s2', text: 'Menggugurkan rukun shalat dan membatalkan syarat suci wudhu.', isCorrect: false },
+          { id: 'opt-s3', text: 'Menentukan besaran denda kafarat secara sepihak.', isCorrect: false },
+        ],
+        explanation: 'Dua fungsi niat: Tamyizul \'ibadat \'anil \'adat dan Tamyizul \'ibadat ba\'dhiha \'an ba\'dh.',
+        isRequired: true,
+        allowRetry: true
+      },
+      {
+        id: 'chk-ush-02',
+        videoId: 'vid-ushul-02',
+        timestampSeconds: 180,
+        title: 'Kaidah Asasi Ushul',
+        questionText: 'Kaidah "Al-Umuru bi Maqashidiha" bersumber langsung dari hadits masyhur "Innamal a\'malu bin-niyyat" riwayat Umar bin Al-Khaththab RA.',
+        type: 'BENAR_SALAH',
+        options: [
+          { id: 'opt-bs-s1', text: 'Benar', isCorrect: true },
+          { id: 'opt-bs-s2', text: 'Salah', isCorrect: false }
+        ],
+        explanation: 'Hadits riwayat Bukhari dan Muslim ini menjadi landasan sepertiga ilmu fiqih menurut para imam madzhab.',
+        isRequired: true,
+        allowRetry: true
+      }
+    ]
+  },
+
+  // 5. PIAUD-101: Konsep Dasar Pendidikan Islam Anak Usia Dini (3 SKS)
+  {
+    id: 'vid-piaud-01',
+    classId: 'cls-20261-piaud101-a',
+    meetingId: 'mtg-piaud101a-01',
+    courseName: 'Konsep Dasar PIAUD',
+    meetingNumber: 1,
+    title: 'Paradigma Keilmuan PIAUD & Karakteristik Usia Emas (Golden Age)',
+    description: 'Pembekalan bagi calon pendidik PAUD/TK Islam mengenai tahapan perkembangan fitrah keimanan anak, stimulasi sensorik-motorik, dan keteladanan akhlakul karimah.',
+    videoUrl: 'https://vjs.zencdn.net/v/oceans.mp4',
+    durationSeconds: 240,
+    minWatchedPercentage: 80,
+    allowFastForward: false,
+    status: 'DITERBITKAN',
+    createdAt: '2026-09-07T08:00:00Z',
+    updatedAt: '2026-09-07T08:00:00Z',
+    checkpoints: [
+      {
+        id: 'chk-piaud-01',
+        videoId: 'vid-piaud-01',
+        timestampSeconds: 60,
+        title: 'Fase Golden Age Anak Usia Dini',
+        questionText: 'Mengapa usia 0 hingga 6 tahun disebut sebagai periode keemasan (golden age) dalam tarbiyatul aulad?',
+        type: 'PILIHAN_GANDA',
+        options: [
+          { id: 'opt-p1', text: 'Karena 80% perkembangan koneksi sinapsis otak dan internalisasi adab dasar terbentuk secara optimal pada fase ini.', isCorrect: true },
+          { id: 'opt-p2', text: 'Karena anak sudah memiliki kemampuan penalaran logika formal yang sempurna.', isCorrect: false },
+          { id: 'opt-p3', text: 'Karena anak tidak memerlukan pendampingan orang tua atau guru dalam pembiasaan akhlak.', isCorrect: false }
+        ],
+        explanation: 'Masa golden age adalah masa kritis di mana otak anak berkembang sangat pesat dan fitrah keimanan paling mudah ditanamkan lewat pembiasaan positif.',
         isRequired: true,
         allowRetry: true
       }
@@ -145,32 +255,35 @@ export const INITIAL_INTERACTIVE_VIDEOS: InteractiveVideo[] = [
 ];
 
 class VideoService {
+  private inMemoryVideos: InteractiveVideo[] = JSON.parse(JSON.stringify(INITIAL_INTERACTIVE_VIDEOS));
+  private inMemoryProgress: StudentVideoProgress[] = [];
+
   private getVideos(): InteractiveVideo[] {
     try {
+      if (typeof localStorage === 'undefined') return this.inMemoryVideos;
+
+      const version = localStorage.getItem(SCHEMA_VERSION_KEY);
+      if (version !== 'true') {
+        // MIGRASI TOTAL: Bersihkan data dummy lama (kartun/BigBuckBunny) dan terapkan kurikulum riil STAI
+        localStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(INITIAL_INTERACTIVE_VIDEOS));
+        localStorage.setItem(SCHEMA_VERSION_KEY, 'true');
+        return INITIAL_INTERACTIVE_VIDEOS;
+      }
+
       const raw = localStorage.getItem(VIDEOS_STORAGE_KEY);
       if (!raw) {
         localStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(INITIAL_INTERACTIVE_VIDEOS));
         return INITIAL_INTERACTIVE_VIDEOS;
       }
       const parsed: InteractiveVideo[] = JSON.parse(raw);
-      // Auto-merge initial sample videos if not present
-      let hasChanges = false;
-      INITIAL_INTERACTIVE_VIDEOS.forEach((initVid) => {
-        if (!parsed.some((p) => p.id === initVid.id)) {
-          parsed.push(initVid);
-          hasChanges = true;
-        }
-      });
-      if (hasChanges) {
-        localStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(parsed));
-      }
-      return parsed;
+      return parsed.length > 0 ? parsed : INITIAL_INTERACTIVE_VIDEOS;
     } catch {
-      return INITIAL_INTERACTIVE_VIDEOS;
+      return this.inMemoryVideos;
     }
   }
 
   private saveVideos(videos: InteractiveVideo[]): void {
+    this.inMemoryVideos = videos;
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(videos));
@@ -186,13 +299,14 @@ class VideoService {
         const raw = localStorage.getItem(PROGRESS_STORAGE_KEY);
         return raw ? JSON.parse(raw) : [];
       }
-      return [];
+      return this.inMemoryProgress;
     } catch {
-      return [];
+      return this.inMemoryProgress;
     }
   }
 
   private saveProgressList(list: StudentVideoProgress[]): void {
+    this.inMemoryProgress = list;
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(list));

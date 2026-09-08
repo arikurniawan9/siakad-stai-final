@@ -8,7 +8,10 @@ import {
   CheckCircle2, 
   AlertCircle, 
   HelpCircle, 
-  Clock
+  Clock,
+  RefreshCw,
+  ExternalLink,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardBody } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -25,6 +28,14 @@ export interface InteractiveVideoPlayerProps {
   onCompleted?: () => void;
 }
 
+// Utility untuk mengekstrak YouTube ID dari berbagai format URL
+export function getYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+}
+
 export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ video, onCompleted }) => {
   const { user } = useAuth();
   const toast = useToast();
@@ -33,6 +44,7 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(video.durationSeconds || 300);
   const [isMuted, setIsMuted] = useState(false);
+  const [hasMediaError, setHasMediaError] = useState(false);
   const [progress, setProgress] = useState<StudentVideoProgress | null>(null);
   
   // Checkpoint modal state
@@ -43,8 +55,12 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
   const [showResumeDialog, setShowResumeDialog] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const ytPlayerRef = useRef<any>(null);
+  const ytIntervalRef = useRef<any>(null);
   const lastSyncTimeRef = useRef<number>(0);
   const triggeredCheckpointsRef = useRef<Set<string>>(new Set());
+
+  const youtubeId = getYouTubeVideoId(video.videoUrl);
 
   // Load existing progress
   useEffect(() => {
@@ -60,6 +76,7 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
         setShowResumeDialog(true);
       }
     }
+    setHasMediaError(false);
   }, [video.id, user]);
 
   const syncProgress = useCallback((pos: number, durationElapsed = 5) => {
@@ -83,28 +100,8 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
     }
   }, [video.id, user, progress, toast, onCompleted]);
 
-  // Handle Play/Pause
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    if (isPlaying) {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-      }).catch((e) => {
-        console.warn('Playback error:', e);
-      });
-    }
-  };
-
-  // Time update loop
-  const handleTimeUpdate = () => {
-    if (!videoRef.current) return;
-    const cur = videoRef.current.currentTime;
-    setCurrentTime(cur);
-
-    // Cek titik pertanyaan (Checkpoint evaluation)
+  // Evaluasi checkpoint pada timestamp tertentu
+  const checkTimeForCheckpoints = useCallback((curTime: number) => {
     video.checkpoints.forEach((chk) => {
       const isAlreadyAnswered = progress?.answeredQuestions.some(
         (ans) => ans.checkpointId === chk.id && ans.isCorrect
@@ -112,8 +109,12 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
 
       if (!isAlreadyAnswered && !triggeredCheckpointsRef.current.has(chk.id)) {
         // Toleransi waktu 0.75 detik
-        if (Math.abs(cur - chk.timestampSeconds) < 0.75) {
-          videoRef.current?.pause();
+        if (Math.abs(curTime - chk.timestampSeconds) < 0.8) {
+          if (youtubeId && ytPlayerRef.current?.pauseVideo) {
+            ytPlayerRef.current.pauseVideo();
+          } else if (videoRef.current) {
+            videoRef.current.pause();
+          }
           setIsPlaying(false);
           setActiveCheckpoint(chk);
           triggeredCheckpointsRef.current.add(chk.id);
@@ -125,30 +126,167 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
     });
 
     // Throttled sync: setiap 5 detik
-    if (Math.abs(cur - lastSyncTimeRef.current) >= 5) {
-      syncProgress(cur, 5);
-      lastSyncTimeRef.current = cur;
+    if (Math.abs(curTime - lastSyncTimeRef.current) >= 5) {
+      syncProgress(curTime, 5);
+      lastSyncTimeRef.current = curTime;
     }
+  }, [video.checkpoints, progress, youtubeId, syncProgress]);
+
+  // Inisialisasi YouTube Player jika URL merupakan tautan YouTube
+  useEffect(() => {
+    if (!youtubeId) return;
+
+    let isSubscribed = true;
+
+    const initYT = () => {
+      if (!(window as any).YT || !(window as any).YT.Player) return;
+      if (!isSubscribed) return;
+
+      try {
+        const container = document.getElementById('salam-yt-player');
+        if (!container) return;
+
+        ytPlayerRef.current = new (window as any).YT.Player('salam-yt-player', {
+          videoId: youtubeId,
+          playerVars: {
+            autoplay: 0,
+            controls: 1,
+            modestbranding: 1,
+            rel: 0,
+            origin: window.location.origin
+          },
+          events: {
+            onReady: (event: any) => {
+              if (!isSubscribed) return;
+              const dur = event.target.getDuration();
+              if (dur && dur > 0) setDuration(dur);
+            },
+            onStateChange: (event: any) => {
+              if (!isSubscribed) return;
+              // 1 = PLAYING, 2 = PAUSED, 0 = ENDED
+              if (event.data === 1) {
+                setIsPlaying(true);
+                if (ytIntervalRef.current) clearInterval(ytIntervalRef.current);
+                ytIntervalRef.current = setInterval(() => {
+                  if (ytPlayerRef.current?.getCurrentTime) {
+                    const t = ytPlayerRef.current.getCurrentTime();
+                    setCurrentTime(t);
+                    checkTimeForCheckpoints(t);
+                  }
+                }, 500);
+              } else if (event.data === 2) {
+                setIsPlaying(false);
+                if (ytIntervalRef.current) clearInterval(ytIntervalRef.current);
+              } else if (event.data === 0) {
+                setIsPlaying(false);
+                if (ytIntervalRef.current) clearInterval(ytIntervalRef.current);
+                syncProgress(duration, 5);
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Gagal memuat YouTube player:', err);
+      }
+    };
+
+    if ((window as any).YT && (window as any).YT.Player) {
+      initYT();
+    } else {
+      const existingTag = document.getElementById('youtube-iframe-api');
+      if (!existingTag) {
+        const tag = document.createElement('script');
+        tag.id = 'youtube-iframe-api';
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
+      }
+      const prevHandler = (window as any).onYouTubeIframeAPIReady;
+      (window as any).onYouTubeIframeAPIReady = () => {
+        if (prevHandler) prevHandler();
+        initYT();
+      };
+    }
+
+    return () => {
+      isSubscribed = false;
+      if (ytIntervalRef.current) clearInterval(ytIntervalRef.current);
+      if (ytPlayerRef.current?.destroy) {
+        try {
+          ytPlayerRef.current.destroy();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [youtubeId, checkTimeForCheckpoints, duration, syncProgress]);
+
+  // Handle Play/Pause HTML5
+  const togglePlay = () => {
+    if (youtubeId && ytPlayerRef.current) {
+      if (isPlaying) {
+        ytPlayerRef.current.pauseVideo();
+        setIsPlaying(false);
+      } else {
+        ytPlayerRef.current.playVideo();
+        setIsPlaying(true);
+      }
+      return;
+    }
+
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+        setHasMediaError(false);
+      }).catch((e) => {
+        console.warn('Playback error:', e);
+        setHasMediaError(true);
+      });
+    }
+  };
+
+  // Time update loop HTML5
+  const handleTimeUpdate = () => {
+    if (!videoRef.current) return;
+    const cur = videoRef.current.currentTime;
+    setCurrentTime(cur);
+    checkTimeForCheckpoints(cur);
   };
 
   // Resume playback handler
   const handleResumePlayback = () => {
-    if (progress && videoRef.current) {
-      videoRef.current.currentTime = progress.lastPositionSeconds;
-      setCurrentTime(progress.lastPositionSeconds);
+    if (progress) {
+      const pos = progress.lastPositionSeconds;
+      setCurrentTime(pos);
       setShowResumeDialog(false);
-      togglePlay();
-      toast.info('Lanjutkan Tontonan', `Melanjutkan dari menit ${formatTime(progress.lastPositionSeconds)}.`);
+
+      if (youtubeId && ytPlayerRef.current?.seekTo) {
+        ytPlayerRef.current.seekTo(pos, true);
+        ytPlayerRef.current.playVideo();
+        setIsPlaying(true);
+      } else if (videoRef.current) {
+        videoRef.current.currentTime = pos;
+        togglePlay();
+      }
+      toast.info('Lanjutkan Tontonan', `Melanjutkan dari menit ${formatTime(pos)}.`);
     }
   };
 
   const handleStartFromBeginning = () => {
-    if (videoRef.current) {
+    if (youtubeId && ytPlayerRef.current?.seekTo) {
+      ytPlayerRef.current.seekTo(0, true);
+      ytPlayerRef.current.playVideo();
+      setIsPlaying(true);
+    } else if (videoRef.current) {
       videoRef.current.currentTime = 0;
       setCurrentTime(0);
+      togglePlay();
     }
     setShowResumeDialog(false);
-    togglePlay();
   };
 
   // Submit answer
@@ -175,13 +313,20 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
   };
 
   const handleContinueAfterCheckpoint = () => {
+    const resumeTargetSec = (activeCheckpoint?.timestampSeconds || currentTime) + 1.2;
     setActiveCheckpoint(null);
     setAnswerFeedback(null);
-    if (videoRef.current) {
-      // Majukan 1 detik agar tidak trigger checkpoint yang sama
-      videoRef.current.currentTime += 1;
-      videoRef.current.play();
+
+    if (youtubeId && ytPlayerRef.current?.seekTo) {
+      ytPlayerRef.current.seekTo(resumeTargetSec, true);
+      ytPlayerRef.current.playVideo();
       setIsPlaying(true);
+    } else if (videoRef.current) {
+      // Majukan 1.2 detik agar tidak langsung men-trigger ulang checkpoint yang sama
+      videoRef.current.currentTime = resumeTargetSec;
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(() => {});
     }
   };
 
@@ -204,7 +349,10 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
       }
     }
 
-    if (videoRef.current) {
+    if (youtubeId && ytPlayerRef.current?.seekTo) {
+      ytPlayerRef.current.seekTo(targetSec, true);
+      setCurrentTime(targetSec);
+    } else if (videoRef.current) {
       videoRef.current.currentTime = targetSec;
       setCurrentTime(targetSec);
     }
@@ -222,49 +370,94 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
             backgroundColor: '#000',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            overflow: 'hidden'
           }}
         >
-          <video
-            ref={videoRef}
-            src={video.videoUrl}
-            onTimeUpdate={handleTimeUpdate}
-            onLoadedMetadata={() => {
-              if (videoRef.current) {
-                setDuration(videoRef.current.duration || video.durationSeconds);
-              }
-            }}
-            onEnded={() => {
-              setIsPlaying(false);
-              syncProgress(duration, 5);
-            }}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            playsInline
-          />
+          {youtubeId ? (
+            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+              <div id="salam-yt-player" style={{ width: '100%', height: '100%' }} />
+            </div>
+          ) : hasMediaError ? (
+            <div className="flex flex-col items-center justify-center p-6 text-center text-white gap-3">
+              <AlertTriangle size={48} color="var(--color-warning-main)" />
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold' }}>Gagal Memuat Aliran Media</h3>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-slate-300)', maxWidth: '420px' }}>
+                Sumber video tidak dapat diputar langsung oleh peramban. Pastikan format video berupa MP4 H.264 atau tautan publik YouTube yang valid.
+              </p>
+              <div className="flex gap-2">
+                <Button 
+                  variant="primary" 
+                  size="sm" 
+                  icon={RefreshCw}
+                  onClick={() => {
+                    setHasMediaError(false);
+                    if (videoRef.current) {
+                      videoRef.current.load();
+                      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => setHasMediaError(true));
+                    }
+                  }}
+                >
+                  Muat Ulang
+                </Button>
+                <a 
+                  href={video.videoUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary btn-sm flex items-center gap-1"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <ExternalLink size={14} /> Buka Sumber Langsung
+                </a>
+              </div>
+            </div>
+          ) : (
+            <>
+              <video
+                ref={videoRef}
+                src={video.videoUrl}
+                onTimeUpdate={handleTimeUpdate}
+                onError={() => setHasMediaError(true)}
+                onLoadedMetadata={() => {
+                  if (videoRef.current) {
+                    setDuration(videoRef.current.duration || video.durationSeconds);
+                    setHasMediaError(false);
+                  }
+                }}
+                onEnded={() => {
+                  setIsPlaying(false);
+                  syncProgress(duration, 5);
+                }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                playsInline
+              />
 
-          {/* Big Play Overlay if paused */}
-          {!isPlaying && !activeCheckpoint && (
-            <button
-              onClick={togglePlay}
-              style={{
-                position: 'absolute',
-                width: '68px',
-                height: '68px',
-                borderRadius: 'var(--radius-full)',
-                backgroundColor: 'rgba(4, 120, 87, 0.9)',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '3px solid white',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                cursor: 'pointer',
-                transition: 'transform 150ms ease'
-              }}
-              aria-label="Putar video"
-            >
-              <Play size={32} style={{ marginLeft: '4px' }} />
-            </button>
+              {/* Big Play Overlay if paused */}
+              {!isPlaying && !activeCheckpoint && (
+                <button
+                  onClick={togglePlay}
+                  style={{
+                    position: 'absolute',
+                    width: '68px',
+                    height: '68px',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: 'rgba(4, 120, 87, 0.9)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '3px solid white',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                    cursor: 'pointer',
+                    transition: 'transform 150ms ease',
+                    zIndex: 4
+                  }}
+                  aria-label="Putar video"
+                >
+                  <Play size={32} style={{ marginLeft: '4px' }} />
+                </button>
+              )}
+            </>
           )}
         </div>
 
@@ -299,7 +492,7 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
 
             {/* Render Checkpoint Dots on Scrubber */}
             {video.checkpoints.map((chk) => {
-              const posPercent = (chk.timestampSeconds / (duration || 300)) * 100;
+              const posPercent = Math.min(100, Math.max(0, (chk.timestampSeconds / (duration || 300)) * 100));
               const isAnswered = progress?.answeredQuestions.some(
                 (a) => a.checkpointId === chk.id && a.isCorrect
               );
@@ -340,8 +533,13 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
 
               <button 
                 onClick={() => {
-                  if (videoRef.current) {
-                    videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+                  const targetSec = Math.max(0, currentTime - 10);
+                  if (youtubeId && ytPlayerRef.current?.seekTo) {
+                    ytPlayerRef.current.seekTo(targetSec, true);
+                    setCurrentTime(targetSec);
+                  } else if (videoRef.current) {
+                    videoRef.current.currentTime = targetSec;
+                    setCurrentTime(targetSec);
                   }
                 }}
                 style={{ color: 'var(--color-slate-300)', background: 'none', border: 'none', cursor: 'pointer' }}
@@ -363,17 +561,19 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
                 </span>
               </div>
 
-              <button
-                onClick={() => {
-                  if (videoRef.current) {
-                    videoRef.current.muted = !isMuted;
-                    setIsMuted(!isMuted);
-                  }
-                }}
-                style={{ color: 'white', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-              </button>
+              {!youtubeId && (
+                <button
+                  onClick={() => {
+                    if (videoRef.current) {
+                      videoRef.current.muted = !isMuted;
+                      setIsMuted(!isMuted);
+                    }
+                  }}
+                  style={{ color: 'white', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -387,6 +587,11 @@ export const InteractiveVideoPlayer: React.FC<InteractiveVideoPlayerProps> = ({ 
                 <Badge variant={progress?.isCompleted ? 'success' : 'warning'}>
                   {progress?.isCompleted ? KAMUS_UI.STATUS_SELESAI : KAMUS_UI.STATUS_SEDANG_DIPELAJARI}
                 </Badge>
+                {youtubeId && (
+                  <Badge variant="default" style={{ backgroundColor: '#ff0000', color: 'white', border: 'none' }}>
+                    YouTube HD
+                  </Badge>
+                )}
               </div>
               <h2 style={{ fontSize: 'var(--text-xl)' }}>{video.title}</h2>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{video.courseName}</p>

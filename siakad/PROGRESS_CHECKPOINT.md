@@ -1,6 +1,6 @@
 # 📍 LEMBAR CATATAN PROGRES & CHECKPOINT PENGERJAAN SIAKAD & SALAM LMS
 ## SEKOLAH TINGGI AGAMA ISLAM (STAI) AL-ITTIHAD CIANJUR
-*Status Terakhir Diperbarui: 24 Agustus 2026 (22:40 WIB)*
+*Status Terakhir Diperbarui: 7 September 2026 (23:35 WIB)*
 *Tech Stack: Laravel 13 + Inertia.js (React) + PostgreSQL 16 (Docker) + SALAM LMS (React Vite TS & Node.js Express)*
 
 ---
@@ -24,8 +24,11 @@
 | **FASE 13** | Kurikulum OBE, Matakuliah Prasyarat & Konversi Nilai MBKM/Transfer | 🟢 **SELESAI** | Pohon Prasyarat Matakuliah, Manajemen Konversi Nilai MBKM (Kampus Mengajar, Magang, Studi Independen, RPL) dengan nomor SK Rekognisi resmi. |
 | **FASE 14** | Portal Verifikasi Dokumen Resmi Ber-QR Code Publik (`/verify/{hash}`) | 🟢 **SELESAI** | Portal publik verifikasi KHS, Transkrip & Surat Keterangan ber-seal institusi STAI Al-Ittihad, status keaslian real-time & cryptographic verification. |
 | **FASE 15** | PDDIKTI Neo Feeder Sync Connector & Dry-Run Validator | 🟢 **SELESAI** | Dashboard Kesiapan Pelaporan PDDIKTI, Dry-Run Integrity Validator (Otomatis deteksi format NIK, SKS nol, & kelas tanpa dosen), Ekspor format JSON resmi Feeder. |
-| **FASE 16** | **Modul Admin Enterprise (CRUD User & Excel, KRS Bulk Approval, Gradebook DPNA & Grade Lock, EDOM Mutu 4 Aspek, Surat Keterangan Aktif)** | 🟢 **SELESAI** | 1. CRUD Pengguna, 1-Klik Reset Password ke `salam123`, Toggle Status, & Batch Import Excel.<br>2. Monitoring & Bulk Approval KRS Mahasiswa dengan auto-enrollment.<br>3. Gradebook Admin dengan Grade Lock guard, kalkulasi bobot otomatis, histogram mutu, & cetak lembar DPNA resmi ber-kop institusi.<br>4. Dashboard Evaluasi Dosen (EDOM) 4 Aspek Kompetensi & Ulasan Anonim.<br>5. Generator Surat Keterangan Aktif Kuliah Digital ber-QR Code verifikasi publik. |
-| **FASE 17** | Single Sign-On (SSO) OAuth2 & SALAM LMS Realtime Features | 📋 **TERENCANA** | Spesifikasi teknis tersimpan di `ROADMAP_FASE_SELANJUTNYA_SSO_DAN_LMS.md` (SSO IdP/Client, WhatsApp Gateway Fonnte, Forum Diskusi, & CBT Proctoring Telemetry). |
+| **FASE 17** | **Single Sign-On (SSO) OAuth2 & SALAM LMS Realtime Features** | 🟢 **SELESAI** | 1. Single Sign-On (SSO) OAuth2 IdP & Client (`OAuthController.php`, `LoginPage.tsx`, `authService.ts`).<br>2. WhatsApp Gateway Notification Engine (Fonnte/Wablas multi-provider, auto format `62...`, sandbox simulator).<br>3. Forum Diskusi Terpadu RPS & Thread komentar bertingkat (`ForumListPage.tsx`, `ThreadDetailPage.tsx`).<br>4. CBT Exam Proctoring Live Telemetry & Anti-Cheating Engine (`QuizProctoringPage.tsx`, `QuizTakingPage.tsx`, deteksi fullscreen lock & tab switch). |
+| **FASE 18** | **Penyempurnaan UI/UX LMS, Presensi 16 Pertemuan, Studio Tugas & Komponen Premium** | 🟢 **SELESAI** | 1. Refaktor UI/UX Modul Pembelajaran Daring & RPS Dinamis per Mata Kuliah STAI.<br>2. Presensi Perkuliahan 16 Pertemuan terhubung langsung ke tabel PostgreSQL SIAKAD (`class_meetings`, `student_attendances`) dengan PIN & Dynamic QR.<br>3. Studio Tugas & Rubrik Analitik dengan progress bar submisi interaktif.<br>4. Komponen UI Ultra-Premium `PremiumSelect.tsx` dengan pencarian instan, lencana, dan animasi halus.<br>5. Verifikasi pengujian otomatis backend 100% Lulus (`npm run test:phase15`). |
+| **FASE 19** | **Executive Dashboard & Akreditasi Analytics (LAMDIK / BAN-PT / Kemenag)** | 🟢 **SELESAI** | 1. Modul Analitik Institusi & Akreditasi (`AnalyticsController.php`, `Admin/Analytics/Index.jsx`).<br>2. Perhitungan rasio dosen tetap (DTPS) terhadap mahasiswa aktif per prodi berstandar LAMDIK/BAN-PT (ideal 1:30).<br>3. Sebaran distribusi IPK dan capaian mutu kelulusan tepat waktu.<br>4. Evaluasi beban kerja dosen (EWMP / SKS BKD 12-16 SKS).<br>5. Rekapitulasi indeks mutu EDOM 4 kompetensi dosen.<br>6. Matriks kesiapan 9 kriteria borang akreditasi & 1-klik ekspor borang CSV/Excel resmi. |
+| **FASE 20** | **Hardening Keamanan Sistem, Penyelarasan Skema Multi-Subsystem & Penguatan KRS Guard** | 🟢 **SELESAI** | 1. Proteksi RBAC `switchRole` di LMS backend (hanya `administrator_sistem`).<br>2. Validasi Kriptografis HMAC SHA-256 & proteksi nominal pada Webhook Pembayaran BSI VA.<br>3. Whitelist ketat domain `redirect_uri` pada OAuth2 SSO IdP SIAKAD.<br>4. Penyelarasan skema tabel `users` multi-subsystem via `userCompat.ts` (dukungan kolom `password` & `password_hash`).<br>5. Financial Lock Guard, Anti-Clash matrix check, kuota kelas & penugasan Dosen PA dinamis pada submit KRS mahasiswa.<br>6. Penarikan nilai presensi, tugas & kuis CBT riil serta pemrosesan mutasi nilai inbound webhook pada `LmsSyncController.php`.<br>7. Modular chunking library ekspor (`xlsx`, `jspdf`, `papaparse`) pada bundle frontend LMS. |
+| **FASE 21** | **Backend RBAC Middleware Hardening, Dosen Curriculum Guard & Refaktor PMB 2-Tahap Premium** | 🟢 **SELESAI** | 1. Implementasi `RoleMiddleware.php` untuk seluruh route `/admin/*` & `/student/*` di `routes/web.php`. Akses URL manual ditolak dengan redirect 302 & notifikasi flash error.<br>2. Sembunyikan menu Struktur Kurikulum dari sidebar Dosen di `AppLayout.jsx`.<br>3. Pembuatan komponen `PremiumProdiSelect.jsx` dengan badge jenjang S1, akreditasi BAN-PT, gelar akademik, nama fakultas, dan proteksi pilihan ganda.<br>4. Penyederhanaan formulir PMB (`Register.jsx`) dari 4 tahap menjadi 2 tahap ringkas (Tahap 1: Pilihan Prodi & Jalur; Tahap 2: Biodata Lengkap, Kontak WA, Asal Sekolah & VA BSI). |
 
 ---
 
@@ -46,6 +49,8 @@
 ## 🌐 DAFTAR URL FITUR UTAMA ADMIN SISTEM
 
 - 🏛️ **Dasbor SIAKAD STAI:** [`http://localhost:8000`](http://localhost:8000)
+- 📝 **Portal PMB Online (2-Tahap):** [`http://localhost:8000/pmb`](http://localhost:8000/pmb)
+- 💳 **Cek Status & Billing VA PMB:** [`http://localhost:8000/pmb/status`](http://localhost:8000/pmb/status)
 - 👥 **Manajemen Pengguna & Akun (CRUD & Excel):** [`http://localhost:8000/admin/users`](http://localhost:8000/admin/users)
 - 📝 **Monitoring & Bulk Approval KRS Mahasiswa:** [`http://localhost:8000/admin/krs-approval`](http://localhost:8000/admin/krs-approval)
 - 📊 **Gradebook Kelas, Grade Lock & Cetak DPNA:** [`http://localhost:8000/admin/grades`](http://localhost:8000/admin/grades)
@@ -55,3 +60,4 @@
 - 🎓 **Kurikulum, Prasyarat & MBKM:** [`http://localhost:8000/admin/curricula`](http://localhost:8000/admin/curricula)
 - 🔄 **Gateway Sinkronisasi Realtime LMS:** [`http://localhost:8000/admin/lms-sync`](http://localhost:8000/admin/lms-sync)
 - 🏛️ **PDDIKTI Neo Feeder Connector:** [`http://localhost:8000/admin/pddikti`](http://localhost:8000/admin/pddikti)
+- 📈 **Executive Dashboard & Akreditasi Analytics (BAN-PT):** [`http://localhost:8000/admin/analytics`](http://localhost:8000/admin/analytics)

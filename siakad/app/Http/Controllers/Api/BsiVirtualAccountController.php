@@ -128,6 +128,25 @@ class BsiVirtualAccountController extends Controller
 
         $signature = $request->header('X-BSI-Signature');
 
+        // Validasi Tanda Tangan Kriptografis (HMAC SHA-256) jika kunci dikonfigurasi
+        $secretKey = env('BSI_SECRET_KEY');
+        if ($secretKey && app()->environment('production')) {
+            $rawContent = $request->getContent();
+            $expectedSignature = hash_hmac('sha256', $rawContent, $secretKey);
+            if (!$signature || !hash_equals($expectedSignature, $signature)) {
+                Log::warning('BSI VA Payment Callback Invalid Signature', [
+                    'ip' => $request->ip(),
+                    'received_signature' => $signature,
+                ]);
+                return response()->json([
+                    'responseCode' => '4012500',
+                    'responseMessage' => 'Invalid Security Signature',
+                    'response_code' => '401',
+                    'response_message' => 'Tanda tangan digital pembayaran tidak valid.',
+                ], 401);
+            }
+        }
+
         Log::info('BSI VA Payment Callback Received', ['payload' => $payload]);
 
         $vaTx = DB::table('va_bsi_transactions')
@@ -144,6 +163,16 @@ class BsiVirtualAccountController extends Controller
         }
 
         $invoice = DB::table('student_invoices')->find($vaTx->student_invoice_id);
+
+        // Validasi nominal pembayaran tidak kurang dari nominal tagihan
+        if ($amount > 0 && $amount < (float) $invoice->final_amount) {
+            return response()->json([
+                'responseCode' => '4002500',
+                'responseMessage' => 'Underpaid Amount',
+                'response_code' => '400',
+                'response_message' => 'Nominal pembayaran tidak sesuai dengan total tagihan.',
+            ], 400);
+        }
 
         if ($invoice->status === 'LUNAS') {
             return response()->json([
@@ -230,6 +259,23 @@ class BsiVirtualAccountController extends Controller
      */
     public function simulatePayment(Request $request): JsonResponse
     {
+        // Proteksi Lingkungan Produksi: Hanya Superadmin/Keuangan atau Token Khusus
+        if (app()->environment('production')) {
+            $user = auth()->user();
+            $simToken = $request->header('X-Simulator-Token') ?? $request->input('simulator_token');
+            $expectedToken = env('BSI_SIMULATOR_TOKEN', env('BSI_SECRET_KEY'));
+
+            $isAuthorizedAdmin = $user && in_array($user->role, ['superadmin', 'keuangan']);
+            $isValidToken = $expectedToken && $simToken === $expectedToken;
+
+            if (!$isAuthorizedAdmin && !$isValidToken) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akses ditolak: Endpoint simulator pembayaran hanya dapat digunakan oleh Superadmin/Keuangan atau dengan simulator token yang valid.',
+                ], 403);
+            }
+        }
+
         $vaNumber = $request->input('va_number');
 
         $vaTx = DB::table('va_bsi_transactions')

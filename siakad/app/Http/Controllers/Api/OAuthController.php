@@ -19,7 +19,7 @@ class OAuthController extends Controller
     public function authorizeClient(Request $request): RedirectResponse
     {
         $clientId = $request->input('client_id', 'salam_lms');
-        $redirectUri = $request->input('redirect_uri', env('LMS_FRONTEND_URL', 'https://lms.stai-alittihad.ac.id'));
+        $redirectUri = $this->validateRedirectUri($request->input('redirect_uri'));
         $state = $request->input('state', '');
 
         // Jika belum login ke SIAKAD, arahkan ke login dengan return URL
@@ -137,5 +137,40 @@ class OAuthController extends Controller
             'client_id' => 'salam_lms',
             'redirect_uri' => $lmsUrl,
         ]));
+    }
+
+    /**
+     * Validasi redirect URI terhadap whitelist domain terpercaya institusi
+     */
+    private function validateRedirectUri(?string $uri): string
+    {
+        $defaultUrl = env('LMS_FRONTEND_URL', 'https://lms.stai-alittihad.ac.id');
+        if (empty($uri)) {
+            return $defaultUrl;
+        }
+
+        $parsed = parse_url($uri);
+        if (!$parsed || empty($parsed['host'])) {
+            return $defaultUrl;
+        }
+
+        $allowedHosts = [
+            'lms.stai-alittihad.ac.id',
+            'salam.stai-alittihad.ac.id',
+            'localhost',
+            '127.0.0.1',
+        ];
+
+        // Tambahkan host dari environment jika ada
+        $envHost = parse_url($defaultUrl, PHP_URL_HOST);
+        if ($envHost && !in_array($envHost, $allowedHosts)) {
+            $allowedHosts[] = $envHost;
+        }
+
+        if (in_array(strtolower($parsed['host']), $allowedHosts)) {
+            return $uri;
+        }
+
+        return $defaultUrl;
     }
 }

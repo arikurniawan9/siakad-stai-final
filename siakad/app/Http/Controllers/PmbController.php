@@ -21,8 +21,10 @@ class PmbController extends Controller
             ->first();
 
         $studyPrograms = DB::table('study_programs')
-            ->where('is_active', true)
-            ->orderBy('id', 'asc')
+            ->leftJoin('faculties', 'study_programs.faculty_id', '=', 'faculties.id')
+            ->where('study_programs.is_active', true)
+            ->select('study_programs.*', 'faculties.name as faculty_name')
+            ->orderBy('study_programs.id', 'asc')
             ->get();
 
         return Inertia::render('Pmb/Register', [

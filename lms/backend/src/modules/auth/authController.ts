@@ -165,6 +165,17 @@ export async function getMe(req: AuthenticatedRequest, res: Response, next: Next
 
 export async function switchRole(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   try {
+    const caller = req.user;
+    if (!caller || (caller.role !== 'administrator_sistem' && caller.role !== 'superadmin')) {
+      res.status(403).json({
+        error: {
+          code: 'FORBIDDEN_ACCESS',
+          message: 'Akses ditolak: Fitur alih peran (Mode Menyamar) hanya dapat diakses oleh Administrator Sistem.'
+        }
+      });
+      return;
+    }
+
     const { targetRole } = req.body;
 
     const userResult = await db.query(
@@ -195,7 +206,7 @@ export async function switchRole(req: AuthenticatedRequest, res: Response, next:
       `salam_token=${token}`,
       'HttpOnly',
       'Path=/',
-      'Max-Age=604800',
+      'Max-Age=604800', // 7 hari
       'SameSite=Lax',
       ...(isProd ? ['Secure'] : [])
     ].join('; ');
@@ -287,8 +298,9 @@ export async function siakadSsoExchange(req: Request, res: Response, next: NextF
       const newId = `usr-${Date.now()}`;
       const defaultHash = await bcrypt.hash('salam123', 10);
       try {
+        // Coba skema tabel users SIAKAD (kolom: password)
         const insertRes = await db.query(`
-          INSERT INTO users (id, username, password_hash, name, identity_number, email, role, study_program)
+          INSERT INTO users (id, username, password, name, identity_number, email, role, study_program)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
           RETURNING id, username, name, identity_number, email, role, study_program
         `, [
@@ -300,7 +312,23 @@ export async function siakadSsoExchange(req: Request, res: Response, next: NextF
           siakadUser.email,
           mappedRole,
           siakadUser.study_program || null
-        ]);
+        ]).catch(async () => {
+          // Fallback jika menggunakan skema standalone LMS (kolom: password_hash)
+          return await db.query(`
+            INSERT INTO users (id, username, password_hash, name, identity_number, email, role, study_program)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, username, name, identity_number, email, role, study_program
+          `, [
+            newId,
+            siakadUser.username,
+            defaultHash,
+            siakadUser.name,
+            siakadUser.identity_number || null,
+            siakadUser.email,
+            mappedRole,
+            siakadUser.study_program || null
+          ]);
+        });
         localUser = insertRes.rows[0];
       } catch {
         // Fallback jika query gagal

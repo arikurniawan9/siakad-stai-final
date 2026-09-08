@@ -20,6 +20,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           icons: ['lucide-react'],
+          export_tools: ['xlsx', 'jspdf', 'jspdf-autotable', 'papaparse'],
         },
       },
     },

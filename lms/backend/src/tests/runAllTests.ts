@@ -167,7 +167,7 @@ function fsCheck(): boolean {
   return true;
 }
 
-if (process.argv[1] && process.argv[1].endsWith('runAllTests.ts')) {
+if (process.argv[1] && (process.argv[1].endsWith('runAllTests.ts') || process.argv[1].endsWith('runAllTests.js'))) {
   runBackendMasterTests()
     .then((res) => process.exit(res.allPassed ? 0 : 1))
     .catch((err) => {

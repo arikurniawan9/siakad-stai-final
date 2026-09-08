@@ -8,7 +8,7 @@ import {
     Activity, Database, Terminal, ShieldCheck, AlertOctagon, Server,
     Users, ChevronLeft, ChevronRight, HardDrive, Cpu, Radio, Award,
     Megaphone, FileCheck, Sparkles, BookMarked, ArrowRightLeft, Layers, Sliders,
-    KeyRound, Trophy, Zap
+    KeyRound, Trophy, Zap, TrendingUp
 } from 'lucide-react';
 
 export default function AppLayout({ title, children }) {
@@ -402,6 +402,7 @@ export default function AppLayout({ title, children }) {
         { label: 'Aktivitas Mahasiswa', href: '/admin/activities', icon: Trophy },
         { label: 'Status Kuliah Mahasiswa', href: '/admin/student-statuses', icon: Users },
         { label: 'Data Kuisioner', href: '/admin/edom', icon: Star },
+        { label: 'Analitik & Akreditasi', href: '/admin/analytics', icon: TrendingUp, highlight: true },
         { label: 'Pusat Pengumuman', href: '/admin/announcements', icon: Megaphone },
         { label: 'Surat Keterangan Aktif', href: '/admin/letters', icon: FileText },
     ];
@@ -438,6 +439,7 @@ export default function AppLayout({ title, children }) {
         { label: 'Aktivitas Mahasiswa', href: '/admin/activities', icon: Trophy },
         { label: 'Status Kuliah Mahasiswa', href: '/admin/student-statuses', icon: Users },
         { label: 'Data Kuisioner', href: '/admin/edom', icon: Star },
+        { label: 'Analitik & Akreditasi', href: '/admin/analytics', icon: TrendingUp, highlight: true },
         { label: 'Pusat Pengumuman', href: '/admin/announcements', icon: Megaphone },
         { label: 'Surat Keterangan Aktif', href: '/admin/letters', icon: FileText },
         { header: 'LAYANAN & KEUANGAN' },
@@ -480,6 +482,7 @@ export default function AppLayout({ title, children }) {
                 { label: 'Aktivitas Mahasiswa', href: '/admin/activities', icon: Trophy },
                 { label: 'Status Kuliah Mahasiswa', href: '/admin/student-statuses', icon: Users },
                 { label: 'Data Kuisioner', href: '/admin/edom', icon: Star },
+                { label: 'Analitik & Akreditasi', href: '/admin/analytics', icon: TrendingUp, highlight: true },
             ];
         }
         if (role === 'dosen') {
@@ -488,10 +491,6 @@ export default function AppLayout({ title, children }) {
                 { header: 'PERKULIAHAN & PENILAIAN' },
                 { label: 'Penilaian (DPNA)', href: '/admin/grades', icon: Award, highlight: true },
                 { label: 'Jadwal Kuliah', href: '/admin/schedules', icon: School },
-                { header: 'STRUKTUR KURIKULUM' },
-                { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
-                { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
-                { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
                 { header: 'EVALUASI MUTU' },
                 { label: 'Hasil Evaluasi EDOM', href: '/admin/edom', icon: Star },
             ];
@@ -506,10 +505,6 @@ export default function AppLayout({ title, children }) {
                 { header: 'PERKULIAHAN & PENILAIAN' },
                 { label: 'Penilaian (DPNA)', href: '/admin/grades', icon: Award, highlight: true },
                 { label: 'Jadwal Kuliah', href: '/admin/schedules', icon: School },
-                { header: 'STRUKTUR KURIKULUM' },
-                { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
-                { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
-                { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
                 { header: 'EVALUASI MUTU' },
                 { label: 'Hasil Evaluasi EDOM', href: '/admin/edom', icon: Star },
             ];

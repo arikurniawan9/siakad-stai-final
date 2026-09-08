@@ -86,7 +86,7 @@ services:
       APP_NAME: "SIAKAD STAI AL-ITTIHAD"
       APP_ENV: production
       APP_KEY: ${SIAKAD_APP_KEY:-base64:Q9N+LbbjGcTAd333RQdcpvkepou6XHx17/p5IvNS02Y=}
-      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_DEBUG: ${APP_DEBUG:-false}
       APP_URL: ${SIAKAD_APP_URL:-https://salam.stai-alittihad.ac.id}
       
       DB_CONNECTION: pgsql

@@ -52,7 +52,7 @@ export async function runMasterPhase15Validation() {
   return allPassed;
 }
 
-if (process.argv[1] && process.argv[1].endsWith('masterPhase15Test.ts')) {
+if (process.argv[1] && (process.argv[1].endsWith('masterPhase15Test.ts') || process.argv[1].endsWith('masterPhase15Test.js'))) {
   runMasterPhase15Validation()
     .then((passed) => process.exit(passed ? 0 : 1))
     .catch((err) => {

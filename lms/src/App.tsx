@@ -87,6 +87,9 @@ function MainAppContent() {
         window.history.replaceState(null, '', p);
       }
     }
+    if (p.startsWith('/video/')) {
+      return '/video';
+    }
     return p && p !== '/login' ? p : '/';
   });
 
@@ -102,6 +105,13 @@ function MainAppContent() {
         if (current === '/login') {
           window.history.replaceState(null, '', '/');
           handleNavigate('/');
+        } else if (current.startsWith('/video/')) {
+          const vidId = current.replace('/video/', '');
+          setActivePath('/video');
+          setSelectedVideoId(vidId || null);
+        } else if (current === '/video') {
+          setActivePath('/video');
+          setSelectedVideoId(null);
         } else {
           handleNavigate(current);
         }
@@ -127,7 +137,12 @@ function MainAppContent() {
   }, [isAuthenticated, activePath]);
 
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/video/')) {
+      return window.location.pathname.replace('/video/', '') || null;
+    }
+    return null;
+  });
   const [activeTakingQuizId, setActiveTakingQuizId] = useState<string | null>(null);
   const [viewingQuizAttemptId, setViewingQuizAttemptId] = useState<string | null>(null);
   const [quizSubView, setQuizSubView] = useState<'list' | 'bank_soal' | 'grading_queue' | 'proctoring'>('list');
@@ -1529,7 +1544,12 @@ function MainAppContent() {
       return (
         <VideoPlayerPage 
           videoId={selectedVideoId} 
-          onBack={() => setSelectedVideoId(null)} 
+          onBack={() => {
+            setSelectedVideoId(null);
+            if (typeof window !== 'undefined' && window.location.pathname !== '/video') {
+              window.history.pushState(null, '', '/video');
+            }
+          }} 
         />
       );
     }
@@ -1538,7 +1558,12 @@ function MainAppContent() {
     if (activePath === '/video') {
       return (
         <VideoListPage 
-          onSelectVideo={(vidId) => setSelectedVideoId(vidId)} 
+          onSelectVideo={(vidId) => {
+            setSelectedVideoId(vidId);
+            if (typeof window !== 'undefined') {
+              window.history.pushState(null, '', `/video/${vidId}`);
+            }
+          }} 
         />
       );
     }
@@ -1570,6 +1595,9 @@ function MainAppContent() {
           onNavigateToVideo={(vidId) => {
             setActivePath('/video');
             setSelectedVideoId(vidId);
+            if (typeof window !== 'undefined') {
+              window.history.pushState(null, '', `/video/${vidId}`);
+            }
           }}
           onNavigateToAttendance={() => {
             setActivePath('/presensi');
