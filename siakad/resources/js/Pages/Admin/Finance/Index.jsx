@@ -130,6 +130,43 @@ export default function FinanceIndex({
         });
     };
 
+    const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
+
+    const handleDeleteInvoice = (inv) => {
+        if (confirm(`Hapus tagihan ${inv.invoice_number} (${inv.fee_name}) sebesar ${formatRupiah(inv.final_amount)}? Transaksi VA BSI terkait akan ikut dihapus permanen.`)) {
+            router.delete(`/admin/finance/invoices/${inv.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSelectedInvoiceIds(prev => prev.filter(id => id !== inv.id));
+                }
+            });
+        }
+    };
+
+    const handleDeleteInvoiceBatch = () => {
+        if (selectedInvoiceIds.length === 0) return;
+        if (confirm(`Hapus ${selectedInvoiceIds.length} tagihan yang dipilih beserta seluruh transaksi VA BSI-nya?`)) {
+            router.post('/admin/finance/invoices/destroy-batch', {
+                ids: selectedInvoiceIds,
+            }, {
+                preserveScroll: true,
+                onSuccess: () => setSelectedInvoiceIds([]),
+            });
+        }
+    };
+
+    const handleSelectAllInvoices = (e) => {
+        if (e.target.checked) {
+            setSelectedInvoiceIds(invoices.data.map(i => i.id));
+        } else {
+            setSelectedInvoiceIds([]);
+        }
+    };
+
+    const handleSelectOneInvoice = (id) => {
+        setSelectedInvoiceIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+    };
+
     const formatRupiah = (num) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
     };
@@ -263,26 +300,60 @@ export default function FinanceIndex({
                             </form>
                         </div>
 
+                        {/* Bulk Action Bar */}
+                        {selectedInvoiceIds.length > 0 && (
+                            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-center justify-between animate-fadeIn">
+                                <span className="text-xs font-bold text-rose-900">
+                                    {selectedInvoiceIds.length} tagihan dipilih
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={handleDeleteInvoiceBatch}
+                                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-black transition flex items-center space-x-1.5 cursor-pointer shadow-xs"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Hapus Tagihan Terpilih ({selectedInvoiceIds.length})</span>
+                                </button>
+                            </div>
+                        )}
+
                         {/* Invoices Table */}
                         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse text-xs">
                                     <thead>
                                         <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[10px]">
+                                            <th className="py-3 px-3 w-10 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={invoices.data.length > 0 && selectedInvoiceIds.length === invoices.data.length}
+                                                    onChange={handleSelectAllInvoices}
+                                                    className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                                                />
+                                            </th>
                                             <th className="py-3 px-4">Nomor Invoice</th>
                                             <th className="py-3 px-4">Nama Mahasiswa / PMB</th>
                                             <th className="py-3 px-4">Jenis Tagihan</th>
                                             <th className="py-3 px-4">Nomor VA BSI (9928)</th>
                                             <th className="py-3 px-4 text-right">Nominal Tagihan</th>
                                             <th className="py-3 px-4 text-center">Status</th>
-                                            <th className="py-3 px-4 text-right">Simulasi H2H</th>
+                                            <th className="py-3 px-4 text-right">Aksi & H2H</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {invoices.data.map((inv) => {
                                             const isPaid = inv.status === 'LUNAS';
+                                            const isSelected = selectedInvoiceIds.includes(inv.id);
                                             return (
-                                                <tr key={inv.id} className="hover:bg-slate-50 transition">
+                                                <tr key={inv.id} className={`hover:bg-slate-50 transition ${isSelected ? 'bg-rose-50/40' : ''}`}>
+                                                    <td className="py-3 px-3 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => handleSelectOneInvoice(inv.id)}
+                                                            className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                                                        />
+                                                    </td>
                                                     <td className="py-3 px-4 font-mono font-bold text-slate-900">
                                                         {inv.invoice_number}
                                                         <span className="block text-[10px] text-slate-400 font-sans">Jatuh Tempo: {inv.due_date?.slice(0, 10)}</span>
@@ -310,19 +381,29 @@ export default function FinanceIndex({
                                                         </span>
                                                     </td>
                                                     <td className="py-3 px-4 text-right">
-                                                        {!isPaid && inv.va_number ? (
+                                                        <div className="flex items-center justify-end space-x-1.5">
+                                                            {!isPaid && inv.va_number ? (
+                                                                <button
+                                                                    onClick={() => handleSimulatePayment(inv.va_number, inv.final_amount)}
+                                                                    disabled={simulating}
+                                                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-black transition flex items-center space-x-1 shadow-2xs cursor-pointer"
+                                                                >
+                                                                    <span>⚡ Bayar via BSI</span>
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-[10px] font-mono text-emerald-700 font-bold">
+                                                                    ✓ {inv.payment_method || 'VA_BSI'}
+                                                                </span>
+                                                            )}
                                                             <button
-                                                                onClick={() => handleSimulatePayment(inv.va_number, inv.final_amount)}
-                                                                disabled={simulating}
-                                                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-black transition flex items-center space-x-1 ml-auto shadow-2xs cursor-pointer"
+                                                                type="button"
+                                                                onClick={() => handleDeleteInvoice(inv)}
+                                                                className="p-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded text-[10px] font-bold transition cursor-pointer border border-rose-200 hover:border-rose-600"
+                                                                title="Hapus Tagihan Percobaan"
                                                             >
-                                                                <span>⚡ Bayar via BSI</span>
+                                                                <Trash2 className="w-3.5 h-3.5" />
                                                             </button>
-                                                        ) : (
-                                                            <span className="text-[10px] font-mono text-emerald-700 font-bold">
-                                                                ✓ {inv.payment_method || 'VA_BSI'}
-                                                            </span>
-                                                        )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );

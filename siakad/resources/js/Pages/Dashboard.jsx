@@ -187,516 +187,394 @@ export default function Dashboard({
                 </div>
                 {role === 'superadmin' && (
                     <>
-                        {/* 1. Header Banner Developer */}
-                        <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-indigo-950 rounded-2xl p-4 sm:p-5 text-white shadow-md relative overflow-hidden border border-purple-800/40">
-                            <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                                <div>
-                                    <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-black mb-1">
-                                        <Activity className="w-3 h-3 text-purple-400 animate-pulse" />
-                                        <span>PUSAT KONTROL DEVELOPER & PEMELIHARAAN SISTEM</span>
+                        {/* 1. EXECUTIVE COMMAND HERO */}
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 border border-slate-800 text-white p-5 sm:p-6 shadow-sm">
+                            {/* Ambient Glow */}
+                            <div className="absolute -top-20 -right-20 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+                            <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                            <div className="relative z-10 space-y-4">
+                                {/* Top Operational Pill Row */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-semibold text-emerald-400">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                            <span>Sistem Operasional Optimal</span>
+                                        </div>
+                                        <div className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-[11px] font-medium text-slate-300">
+                                            <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                                            <span>{systemMetrics.is_maintenance ? 'Mode Pemeliharaan' : 'Produksi Aktif'}</span>
+                                        </div>
                                     </div>
-                                    <h2 className="text-base sm:text-lg font-black tracking-tight">
-                                        {greeting.text}, Tim Developer ({user.name}) {greeting.emoji}
-                                    </h2>
-                                    <p className="text-[11px] text-purple-200 mt-0.5 italic max-w-xl">
-                                        "{quote.text}" — <span className="font-semibold text-purple-300">{quote.author}</span>
-                                    </p>
+                                    <div className="text-[11px] font-mono text-slate-400">
+                                        {systemMetrics.db_engine || 'PostgreSQL 16'} • PHP {systemMetrics.php_version || '8.4'}
+                                    </div>
                                 </div>
 
-                                <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
-                                    <Link
-                                        href="/admin/bsi-gateway"
-                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1.5 cursor-pointer border border-emerald-400/40"
-                                    >
-                                        <Landmark className="w-3.5 h-3.5 text-emerald-300" />
-                                        <span>🏦 BSI Smart Billing H2H</span>
-                                    </Link>
-                                    <Link
-                                        href="/admin/database"
-                                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-black transition shadow flex items-center space-x-1"
-                                    >
-                                        <Database className="w-3 h-3" />
-                                        <span>Backup & Seeder DB</span>
-                                    </Link>
-                                    <Link
-                                        href="/admin/audit-logs"
-                                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1 border border-slate-700"
-                                    >
-                                        <ShieldAlert className="w-3 h-3 text-red-400" />
-                                        <span>Audit Log</span>
-                                    </Link>
-                                    <Link
-                                        href="/admin/settings"
-                                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1 border border-slate-700"
-                                    >
-                                        <Settings className="w-3 h-3 text-slate-300" />
-                                        <span>⚙️ Pengaturan</span>
-                                    </Link>
-                                    <button
-                                        type="button"
-                                        onClick={handleQuickClearCache}
-                                        disabled={clearingCache}
-                                        className="px-3 py-1.5 bg-purple-700/80 hover:bg-purple-600 text-white rounded-lg text-[11px] font-bold transition shadow flex items-center space-x-1.5 border border-purple-500/40 cursor-pointer disabled:opacity-50"
-                                        title="Bersihkan cache framework, views, rute, dan konfigurasi"
-                                    >
-                                        <RefreshCw className={`w-3 h-3 ${clearingCache ? 'animate-spin' : ''}`} />
-                                        <span>{clearingCache ? 'Membersihkan...' : 'Clear Cache'}</span>
-                                    </button>
-                                    <Link
-                                        href="/admin/users"
-                                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg text-[11px] font-black transition shadow flex items-center space-x-1"
-                                    >
-                                        <span>🎭 Menyamar</span>
-                                    </Link>
+                                {/* Main Welcome & Action Buttons */}
+                                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                                    <div>
+                                        <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                                            <span>{greeting.text}, {user.name}</span>
+                                            <span className="text-xl">{greeting.emoji}</span>
+                                        </h2>
+                                        <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                                            Pusat kendali arsitektur sistem, orkestrasi perbankan BSI, dan manajemen data SALAM SIAKAD.
+                                        </p>
+                                        <p className="text-[11px] text-indigo-200/80 mt-1.5 italic">
+                                            "{quote.text}" — <span className="font-medium text-indigo-300">{quote.author}</span>
+                                        </p>
+                                    </div>
+
+                                    {/* Action Shortcuts Bar */}
+                                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={handleQuickClearCache}
+                                            disabled={clearingCache}
+                                            className="px-3.5 py-2 bg-white/10 hover:bg-white/15 active:bg-white/20 text-white rounded-xl text-xs font-semibold transition border border-white/10 flex items-center space-x-2 shadow-2xs cursor-pointer disabled:opacity-50"
+                                            title="Bersihkan cache framework dan view"
+                                        >
+                                            <RefreshCw className={`w-3.5 h-3.5 ${clearingCache ? 'animate-spin text-amber-300' : 'text-slate-300'}`} />
+                                            <span>{clearingCache ? 'Membersihkan...' : 'Clear Cache'}</span>
+                                        </button>
+
+                                        <Link
+                                            href="/admin/database"
+                                            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center space-x-1.5 border border-indigo-500/40"
+                                        >
+                                            <Database className="w-3.5 h-3.5 text-indigo-200" />
+                                            <span>Database Manager</span>
+                                        </Link>
+
+                                        <Link
+                                            href="/admin/bsi-gateway"
+                                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center space-x-1.5 border border-emerald-500/40"
+                                        >
+                                            <Landmark className="w-3.5 h-3.5 text-emerald-200" />
+                                            <span>BSI Gateway</span>
+                                        </Link>
+
+                                        <Link
+                                            href="/admin/settings"
+                                            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-200 hover:text-white rounded-xl text-xs font-medium transition border border-slate-700 flex items-center space-x-1.5"
+                                        >
+                                            <Settings className="w-3.5 h-3.5 text-slate-400" />
+                                            <span>Pengaturan</span>
+                                        </Link>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 2. Statistik Utama Kampus & Perbankan (6 KPI Cards) */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                        {/* 2. STATISTIK UTAMA KAMPUS & FINANSIAL (6 KPI CARDS) */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-3.5">
+                            {/* Card 1: Mahasiswa */}
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:border-teal-300 hover:shadow-xs transition">
                                 <div className="flex items-center justify-between text-slate-500">
-                                    <span className="text-[10px] font-bold">Mahasiswa</span>
-                                    <span className="p-1 rounded-lg bg-teal-50 text-teal-700"><GraduationCap className="w-3.5 h-3.5" /></span>
+                                    <span className="text-[11px] font-bold text-slate-500">Mahasiswa</span>
+                                    <span className="p-1.5 rounded-xl bg-teal-50 text-teal-600 border border-teal-100"><GraduationCap className="w-4 h-4" /></span>
                                 </div>
-                                <p className="text-lg font-black text-slate-900 mt-1">{stats.total_students ?? 1248}</p>
-                                <p className="text-[9px] text-teal-600 font-semibold mt-0.5">Siswa Terdaftar</p>
+                                <p className="text-xl font-black text-slate-900 mt-2">{stats.total_students ?? 1248}</p>
+                                <p className="text-[10px] text-teal-600 font-semibold mt-0.5">Civitas Terdaftar</p>
                             </div>
 
-                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                            {/* Card 2: Dosen */}
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:border-indigo-300 hover:shadow-xs transition">
                                 <div className="flex items-center justify-between text-slate-500">
-                                    <span className="text-[10px] font-bold">Dosen Pengajar</span>
-                                    <span className="p-1 rounded-lg bg-indigo-50 text-indigo-700"><Users className="w-3.5 h-3.5" /></span>
+                                    <span className="text-[11px] font-bold text-slate-500">Dosen Pengajar</span>
+                                    <span className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100"><Users className="w-4 h-4" /></span>
                                 </div>
-                                <p className="text-lg font-black text-slate-900 mt-1">{stats.total_lecturers ?? 42}</p>
-                                <p className="text-[9px] text-indigo-600 font-semibold mt-0.5">Tenaga Pengajar</p>
+                                <p className="text-xl font-black text-slate-900 mt-2">{stats.total_lecturers ?? 42}</p>
+                                <p className="text-[10px] text-indigo-600 font-semibold mt-0.5">Tenaga Pendidik</p>
                             </div>
 
-                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                            {/* Card 3: Program Studi */}
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:border-purple-300 hover:shadow-xs transition">
                                 <div className="flex items-center justify-between text-slate-500">
-                                    <span className="text-[10px] font-bold">Program Studi</span>
-                                    <span className="p-1 rounded-lg bg-purple-50 text-purple-700"><School className="w-3.5 h-3.5" /></span>
+                                    <span className="text-[11px] font-bold text-slate-500">Program Studi</span>
+                                    <span className="p-1.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100"><School className="w-4 h-4" /></span>
                                 </div>
-                                <p className="text-lg font-black text-slate-900 mt-1">{stats.total_study_programs ?? 5}</p>
-                                <p className="text-[9px] text-purple-600 font-semibold mt-0.5">Jurusan S1 Aktif</p>
+                                <p className="text-xl font-black text-slate-900 mt-2">{stats.total_study_programs ?? 5}</p>
+                                <p className="text-[10px] text-purple-600 font-semibold mt-0.5">Jenjang S1 Terdaftar</p>
                             </div>
 
-                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                            {/* Card 4: VA BSI Lunas */}
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:border-emerald-300 hover:shadow-xs transition">
                                 <div className="flex items-center justify-between text-slate-500">
-                                    <span className="text-[10px] font-bold">Penerimaan VA BSI</span>
-                                    <span className="p-1 rounded-lg bg-emerald-50 text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" /></span>
+                                    <span className="text-[11px] font-bold text-slate-500">Setoran BSI Lunas</span>
+                                    <span className="p-1.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100"><CheckCircle2 className="w-4 h-4" /></span>
                                 </div>
-                                <p className="text-sm font-black text-emerald-600 mt-1 font-mono truncate">{formatRp(stats.total_va_paid_amount ?? 2500000)}</p>
-                                <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">{stats.total_va_paid_count ?? 1} Setoran Lunas</p>
+                                <p className="text-base font-black text-emerald-600 mt-2 font-mono truncate">{formatRp(stats.total_va_paid_amount ?? 2500000)}</p>
+                                <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">{stats.total_va_paid_count ?? 1} Transaksi Lunas</p>
                             </div>
 
-                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                            {/* Card 5: VA BSI Pending */}
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:border-amber-300 hover:shadow-xs transition">
                                 <div className="flex items-center justify-between text-slate-500">
-                                    <span className="text-[10px] font-bold">Tagihan Pending</span>
-                                    <span className="p-1 rounded-lg bg-amber-50 text-amber-700"><Clock className="w-3.5 h-3.5" /></span>
+                                    <span className="text-[11px] font-bold text-slate-500">Tagihan Pending</span>
+                                    <span className="p-1.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-100"><Clock className="w-4 h-4" /></span>
                                 </div>
-                                <p className="text-sm font-black text-amber-600 mt-1 font-mono truncate">{formatRp(stats.total_va_pending_amount ?? 0)}</p>
-                                <p className="text-[9px] text-amber-600 font-semibold mt-0.5">{stats.total_va_pending_count ?? 0} VA Menunggu</p>
+                                <p className="text-base font-black text-amber-600 mt-2 font-mono truncate">{formatRp(stats.total_va_pending_amount ?? 0)}</p>
+                                <p className="text-[10px] text-amber-600 font-semibold mt-0.5">{stats.total_va_pending_count ?? 0} VA Menunggu</p>
                             </div>
 
-                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+                            {/* Card 6: PMB */}
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:border-cyan-300 hover:shadow-xs transition">
                                 <div className="flex items-center justify-between text-slate-500">
-                                    <span className="text-[10px] font-bold">Pendaftar PMB</span>
-                                    <span className="p-1 rounded-lg bg-cyan-50 text-cyan-700"><UserCheck2 className="w-3.5 h-3.5" /></span>
+                                    <span className="text-[11px] font-bold text-slate-500">Pendaftar PMB</span>
+                                    <span className="p-1.5 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-100"><UserCheck2 className="w-4 h-4" /></span>
                                 </div>
-                                <p className="text-lg font-black text-slate-900 mt-1">{stats.total_pmb_applicants ?? 2}</p>
-                                <p className="text-[9px] text-cyan-600 font-semibold mt-0.5">PMB 2026/2027</p>
+                                <p className="text-xl font-black text-slate-900 mt-2">{stats.total_pmb_applicants ?? 2}</p>
+                                <p className="text-[10px] text-cyan-600 font-semibold mt-0.5">Gelombang 2026/2027</p>
                             </div>
                         </div>
 
-                        {/* 3. Telemetry Health Grid (Compact) */}
-                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                            {/* DB Health */}
-                            <Link 
-                                href="/admin/database"
-                                className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs hover:border-indigo-400 hover:bg-indigo-50/30 transition group block"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-indigo-900">Database Engine</span>
-                                    <span className="p-1 bg-emerald-100 text-emerald-800 rounded-md group-hover:bg-indigo-100 group-hover:text-indigo-800"><Database className="w-3.5 h-3.5" /></span>
-                                </div>
-                                <p className="text-sm font-black text-slate-900 mt-1 group-hover:text-indigo-950">{systemMetrics.db_engine || 'PostgreSQL 16'}</p>
-                                <p className="text-[10px] font-semibold text-emerald-600 flex items-center space-x-1 mt-0.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span>Kapasitas: {systemMetrics.db_size || '14.2 MB'} ⚙️</span>
-                                </p>
-                            </Link>
-
-                            {/* BSI Smart Billing Gateway Health */}
-                            <Link 
-                                href="/admin/bsi-gateway"
-                                className="bg-white p-3.5 rounded-2xl border border-emerald-200 shadow-2xs hover:border-emerald-400 hover:bg-emerald-50/40 transition group block"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-emerald-900">BSI Smart Billing</span>
-                                    <span className="p-1 bg-emerald-100 text-emerald-800 rounded-md group-hover:bg-emerald-200"><Landmark className="w-3.5 h-3.5" /></span>
-                                </div>
-                                <p className="text-sm font-black text-slate-900 mt-1 group-hover:text-emerald-950">BI-SNAP (H2H Direct)</p>
-                                <p className="text-[10px] font-semibold text-emerald-600 flex items-center space-x-1 mt-0.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span>{systemMetrics.bsi_biller_code || 'Biller 8891 Sandbox Active'}</span>
-                                </p>
-                            </Link>
-
-                            {/* LMS Health */}
-                            <Link
-                                href="/admin/lms-sync"
-                                className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs hover:border-purple-300 hover:bg-purple-50/30 transition group block"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-purple-900">SALAM LMS Gateway</span>
-                                    <span className="p-1 bg-purple-100 text-purple-800 rounded-md group-hover:bg-purple-200"><RefreshCw className="w-3.5 h-3.5" /></span>
-                                </div>
-                                <p className="text-sm font-black text-slate-900 mt-1 group-hover:text-purple-950">Node.js Express Bridge</p>
-                                <p className="text-[10px] font-semibold text-purple-600 flex items-center space-x-1 mt-0.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
-                                    <span>Port 5000 Sync Active</span>
-                                </p>
-                            </Link>
-
-                            {/* Runtime Engine */}
-                            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500">Framework Runtime</span>
-                                    <span className="p-1 bg-amber-100 text-amber-800 rounded-md"><Cpu className="w-3.5 h-3.5" /></span>
-                                </div>
-                                <p className="text-sm font-black text-slate-900 mt-1">Laravel 13 • PHP {systemMetrics.php_version || '8.4'}</p>
-                                <p className="text-[10px] font-semibold text-slate-500 mt-0.5">Memori: {systemMetrics.server_memory || '24.5 MB'}</p>
-                            </div>
-
-                            {/* Mode Pemeliharaan & Status Sistem */}
-                            <Link
-                                href="/admin/settings"
-                                className={`p-3.5 rounded-2xl border shadow-2xs transition group block ${
-                                    systemMetrics.is_maintenance 
-                                        ? 'bg-rose-50/60 border-rose-300 hover:bg-rose-100/50' 
-                                        : 'bg-white border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30'
-                                }`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-slate-900">Mode Sistem</span>
-                                    <span className={`p-1 rounded-md ${systemMetrics.is_maintenance ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                                        <ShieldAlert className="w-3.5 h-3.5" />
-                                    </span>
-                                </div>
-                                <p className={`text-sm font-black mt-1 ${systemMetrics.is_maintenance ? 'text-rose-700' : 'text-slate-900'}`}>
-                                    {systemMetrics.is_maintenance ? 'Maintenance' : 'Online Normal'}
-                                </p>
-                                <p className={`text-[10px] font-semibold flex items-center space-x-1 mt-0.5 ${systemMetrics.is_maintenance ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${systemMetrics.is_maintenance ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
-                                    <span>{systemMetrics.is_maintenance ? 'Akses Terkunci' : 'Civitas Aktif'} ⚙️</span>
-                                </p>
-                            </Link>
-                        </div>
-
-                        {/* 4. BSI SMART BILLING & BI-SNAP H2H GATEWAY CONTROL CARD */}
-                        <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 p-4 sm:p-5 rounded-2xl border border-emerald-800/50 shadow-sm text-white space-y-3">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-900/60 pb-2.5">
-                                <div className="flex items-center space-x-2">
-                                    <div className="p-2 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-500/30">
-                                        <Landmark className="w-4 h-4 text-emerald-400" />
+                        {/* 3. TELEMETRI SISTEM & GATEWAY TERPADU (PREMIUM 4-GRID CARD) */}
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4 sm:p-5 space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                                <div className="flex items-center space-x-2.5">
+                                    <div className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                        <Activity className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <div className="flex items-center space-x-2">
-                                            <h3 className="text-xs font-black text-white uppercase tracking-wider">
-                                                Pusat Integrasi Bank Syariah Indonesia (BSI) Smart Billing
-                                            </h3>
-                                            <span className="px-2 py-0.2 bg-amber-400 text-slate-950 rounded text-[9px] font-black">
-                                                BI-SNAP Direct H2H
-                                            </span>
-                                        </div>
-                                        <p className="text-[10px] text-emerald-200 mt-0.5">
-                                            Koneksi langsung Host-to-Host (H2H) dengan core banking BSI. Otentikasi Service Code 73, inquiry otomatis Code 24, push callback pelunasan Code 25, dan rekening giro penampung.
+                                        <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                                            Status Infrastruktur & Gateway Terintegrasi
+                                        </h3>
+                                        <p className="text-[11px] text-slate-500">
+                                            Kondisi waktu nyata konektivitas database, gateway core banking, LMS bridge, dan background queue.
                                         </p>
                                     </div>
                                 </div>
-
                                 <div className="flex items-center space-x-2 shrink-0">
                                     <button
                                         type="button"
                                         onClick={handleQuickTestBsi}
                                         disabled={testingBsi}
-                                        className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-emerald-200 hover:text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer"
+                                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
                                     >
-                                        <Radio className={`w-3 h-3 ${testingBsi ? 'animate-spin' : ''}`} />
+                                        <Radio className={`w-3.5 h-3.5 ${testingBsi ? 'animate-spin text-emerald-600' : 'text-emerald-700'}`} />
                                         <span>{testingBsi ? 'Menguji...' : 'Uji Ping H2H'}</span>
                                     </button>
-                                    <Link
-                                        href="/admin/bsi-gateway"
-                                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold transition shadow flex items-center space-x-1 cursor-pointer"
-                                    >
-                                        <Sliders className="w-3 h-3" />
-                                        <span>Pusat Kontrol BSI →</span>
-                                    </Link>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
-                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                                    <span className="text-slate-400">Institusi Biller:</span>
-                                    <p className="font-mono font-bold text-amber-300 mt-0.5">8891 - BI-SNAP-DEV</p>
-                                </div>
-                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                                    <span className="text-slate-400">Mode Server:</span>
-                                    <p className="font-bold text-emerald-400 mt-0.5">🟡 BSI Sandbox (Dev Ready)</p>
-                                </div>
-                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                                    <span className="text-slate-400">Routing Network:</span>
-                                    <p className="font-bold text-white mt-0.5 truncate">Zone-A (NTT / Telkom)</p>
-                                </div>
-                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                                    <span className="text-slate-400">Inbound Endpoints:</span>
-                                    <p className="font-mono text-[9px] text-emerald-300 mt-0.5 truncate">/api/v1/bsi/va/inquiry & payment</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 4b. LIVE QUEUE & BACKGROUND WORKER MONITOR */}
-                        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 sm:p-5 rounded-2xl border border-indigo-800/40 shadow-sm text-white space-y-3">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-900/60 pb-2.5">
-                                <div className="flex items-center space-x-2">
-                                    <div className="p-2 bg-indigo-500/20 text-indigo-300 rounded-xl border border-indigo-500/30">
-                                        <Cpu className="w-4 h-4 text-indigo-400" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                {/* Card A: PostgreSQL Engine */}
+                                <Link
+                                    href="/admin/database"
+                                    className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50 hover:bg-indigo-50/40 hover:border-indigo-300 transition group block"
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[11px] font-bold text-slate-600 group-hover:text-indigo-950 flex items-center gap-1.5">
+                                            <Database className="w-3.5 h-3.5 text-indigo-600" />
+                                            <span>Database Engine</span>
+                                        </span>
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                            Online
+                                        </span>
                                     </div>
-                                    <div>
-                                        <div className="flex items-center space-x-2">
-                                            <h3 className="text-xs font-black text-white uppercase tracking-wider">
-                                                Telemetri Antrean Background Worker & Layanan Notifikasi
-                                            </h3>
-                                            <span className="px-2 py-0.2 bg-indigo-500 text-white rounded text-[9px] font-black font-mono">
-                                                Driver: {systemMetrics.queue_driver || 'database'}
-                                            </span>
-                                        </div>
-                                        <p className="text-[10px] text-indigo-200 mt-0.5">
-                                            Pemantauan status antrean sinkronisasi LMS, pengiriman webhook perbankan, notifikasi WhatsApp civitas, dan proses asinkron SIAKAD.
-                                        </p>
+                                    <p className="text-base font-black text-slate-900 group-hover:text-indigo-950">
+                                        {systemMetrics.db_engine || 'PostgreSQL 16'}
+                                    </p>
+                                    <div className="flex items-center justify-between text-[10px] font-medium text-slate-500 mt-1">
+                                        <span>Kapasitas: <strong className="text-slate-800 font-mono">{systemMetrics.db_size || '14.2 MB'}</strong></span>
+                                        <span className="text-indigo-600 font-bold group-hover:translate-x-0.5 transition">Kelola →</span>
                                     </div>
-                                </div>
+                                </Link>
 
-                                <div className="flex items-center space-x-2 shrink-0">
-                                    {Number(systemMetrics.failed_jobs) > 0 && (
-                                        <>
-                                            <button
-                                                type="button"
+                                {/* Card B: BSI Gateway */}
+                                <Link
+                                    href="/admin/bsi-gateway"
+                                    className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50 hover:bg-emerald-50/40 hover:border-emerald-300 transition group block"
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[11px] font-bold text-slate-600 group-hover:text-emerald-950 flex items-center gap-1.5">
+                                            <Landmark className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>BSI Smart Billing</span>
+                                        </span>
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                            BI-SNAP H2H
+                                        </span>
+                                    </div>
+                                    <p className="text-base font-black text-slate-900 group-hover:text-emerald-950">
+                                        Biller 8891
+                                    </p>
+                                    <div className="flex items-center justify-between text-[10px] font-medium text-slate-500 mt-1">
+                                        <span>Inquiry (24) & Bayar (25)</span>
+                                        <span className="text-emerald-600 font-bold group-hover:translate-x-0.5 transition">Gateway →</span>
+                                    </div>
+                                </Link>
+
+                                {/* Card C: LMS Sync Bridge */}
+                                <Link
+                                    href="/admin/lms-sync"
+                                    className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50 hover:bg-purple-50/40 hover:border-purple-300 transition group block"
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[11px] font-bold text-slate-600 group-hover:text-purple-950 flex items-center gap-1.5">
+                                            <RefreshCw className="w-3.5 h-3.5 text-purple-600" />
+                                            <span>LMS Sync Bridge</span>
+                                        </span>
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">
+                                            Port 5000
+                                        </span>
+                                    </div>
+                                    <p className="text-base font-black text-slate-900 group-hover:text-purple-950">
+                                        REST Express API
+                                    </p>
+                                    <div className="flex items-center justify-between text-[10px] font-medium text-slate-500 mt-1">
+                                        <span>SSO & Kelas Sinkron</span>
+                                        <span className="text-purple-600 font-bold group-hover:translate-x-0.5 transition">Sync →</span>
+                                    </div>
+                                </Link>
+
+                                {/* Card D: Queue Workers & Background */}
+                                <div className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
+                                            <Cpu className="w-3.5 h-3.5 text-amber-600" />
+                                            <span>Queue & Worker</span>
+                                        </span>
+                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                            Number(systemMetrics.failed_jobs) > 0 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                                        }`}>
+                                            {Number(systemMetrics.failed_jobs) > 0 ? `${systemMetrics.failed_jobs} Gagal` : 'Normal'}
+                                        </span>
+                                    </div>
+                                    <p className="text-base font-black text-slate-900">
+                                        {systemMetrics.pending_jobs || 0} Antrean
+                                    </p>
+                                    <div className="flex items-center justify-between text-[10px] font-medium text-slate-500 mt-1">
+                                        <span>Driver: <strong className="text-slate-800 font-mono">{systemMetrics.queue_driver || 'database'}</strong></span>
+                                        {Number(systemMetrics.failed_jobs) > 0 ? (
+                                            <button 
+                                                type="button" 
                                                 onClick={handleRetryJobs}
                                                 disabled={retryingJobs}
-                                                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer disabled:opacity-50"
+                                                className="text-amber-600 font-bold hover:underline cursor-pointer"
                                             >
-                                                <RefreshCw className={`w-3 h-3 ${retryingJobs ? 'animate-spin' : ''}`} />
-                                                <span>{retryingJobs ? 'Memproses...' : 'Ulangi Jobs Gagal'}</span>
+                                                {retryingJobs ? '...' : 'Ulangi Jobs'}
                                             </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleFlushJobs}
-                                                disabled={flushingJobs}
-                                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer disabled:opacity-50"
-                                            >
-                                                <span>Bersihkan Gagal</span>
-                                            </button>
-                                        </>
-                                    )}
-                                    <Link
-                                        href="/admin/settings"
-                                        className="px-3.5 py-1.5 bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer"
-                                    >
-                                        <Settings className="w-3 h-3" />
-                                        <span>Konfigurasi Worker →</span>
-                                    </Link>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
-                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                                    <span className="text-slate-400">Antrean Pending:</span>
-                                    <p className="font-mono font-bold text-white mt-0.5 flex items-center space-x-1.5">
-                                        <span className={`w-2 h-2 rounded-full ${Number(systemMetrics.pending_jobs) > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`}></span>
-                                        <span>{systemMetrics.pending_jobs || 0} Tugas Menunggu</span>
-                                    </p>
-                                </div>
-                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                                    <span className="text-slate-400">Status Kegagalan:</span>
-                                    <p className="font-mono font-bold mt-0.5 flex items-center space-x-1.5">
-                                        <span className={`w-2 h-2 rounded-full ${Number(systemMetrics.failed_jobs) > 0 ? 'bg-rose-500 animate-ping' : 'bg-emerald-400'}`}></span>
-                                        <span className={Number(systemMetrics.failed_jobs) > 0 ? 'text-rose-400' : 'text-emerald-400'}>
-                                            {systemMetrics.failed_jobs || 0} Jobs Gagal
-                                        </span>
-                                    </p>
-                                </div>
-                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                                    <span className="text-slate-400">WhatsApp Gateway:</span>
-                                    <p className="font-bold text-emerald-400 mt-0.5 truncate">
-                                        🟢 {systemMetrics.wa_status || 'ACTIVE'}
-                                    </p>
-                                </div>
-                                <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                                    <span className="text-slate-400">Cache Engine:</span>
-                                    <p className="font-mono font-bold text-indigo-300 mt-0.5 truncate">
-                                        Driver: {systemMetrics.cache_driver || 'file'}
-                                    </p>
+                                        ) : (
+                                            <span className="text-emerald-600 font-bold">WA Active</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 5. DUA KOLOM UTAMA SUPERADMIN: NAVIGASI MODUL & AUDIT TRAIL */}
+                        {/* 4. DUA KOLOM UTAMA: MODUL & TRANSAKSI (KIRI-8) + MENYAMAR & AUDIT (KANAN-4) */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                            {/* KOLOM KIRI (LEBAR 8): MODUL AKSES CEPAT & TRANSAKSI VA TERKINI */}
+                            {/* KOLOM KIRI (LEBAR 8) */}
                             <div className="lg:col-span-8 space-y-4">
-                                {/* Grid Akses Cepat Modul Superadmin */}
+                                {/* Modul Akses Cepat Superadmin */}
                                 <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3.5">
                                     <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center space-x-1.5">
-                                            <Sliders className="w-3.5 h-3.5 text-emerald-600" />
-                                            <span>Pusat Manajemen & Modul Superadmin</span>
-                                        </h3>
-                                        <span className="text-[10px] text-slate-400 font-semibold">Tersusun Berdasarkan Kategori</span>
+                                        <div className="flex items-center space-x-2">
+                                            <div className="p-1 rounded-lg bg-indigo-50 text-indigo-600">
+                                                <Sliders className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                                Modul & Navigasi Cepat
+                                            </h3>
+                                        </div>
+                                        <span className="text-[10px] font-semibold text-slate-400">4 Kategori Utama</span>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {/* Kategori 1: Perbankan & Kas */}
-                                        <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200/80 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold text-emerald-950 flex items-center space-x-1.5">
-                                                    <Landmark className="w-3.5 h-3.5 text-emerald-600" />
-                                                    <span>Perbankan & Kas Kampus</span>
-                                                </span>
+                                        <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/40 space-y-2">
+                                            <div className="flex items-center space-x-2 text-slate-900">
+                                                <div className="p-1 bg-emerald-100/70 text-emerald-700 rounded-lg">
+                                                    <Landmark className="w-3.5 h-3.5" />
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-900">Perbankan & Kas</span>
                                             </div>
-                                            <div className="space-y-1 text-xs">
-                                                <Link href="/admin/bsi-gateway" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-emerald-100/70 text-emerald-900 font-medium transition">
-                                                    <span>🏦 Pusat BSI Smart Billing H2H</span>
-                                                    <ChevronRight className="w-3 h-3 text-emerald-600" />
+                                            <div className="space-y-1">
+                                                <Link href="/admin/bsi-gateway" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
+                                                    <span>🏦 BSI Smart Billing H2H Direct</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
-                                                <Link href="/admin/finance" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-emerald-100/70 text-emerald-900 font-medium transition">
-                                                    <span>💳 Setup Tarif SPP, UKT & VA</span>
-                                                    <ChevronRight className="w-3 h-3 text-emerald-600" />
+                                                <Link href="/admin/finance" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
+                                                    <span>💳 Setup Tarif SPP, UKT & Generate VA</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
-                                                <Link href="/admin/pmb" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-emerald-100/70 text-emerald-900 font-medium transition">
+                                                <Link href="/admin/pmb" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
                                                     <span>📝 Verifikasi Keuangan PMB</span>
-                                                    <ChevronRight className="w-3 h-3 text-emerald-600" />
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
                                             </div>
                                         </div>
 
-                                        {/* Kategori 2: Kesehatan, Pemeliharaan & Database */}
-                                        <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200/80 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold text-indigo-950 flex items-center space-x-1.5">
-                                                    <Database className="w-3.5 h-3.5 text-indigo-600" />
-                                                    <span>Pemeliharaan & Keamanan</span>
-                                                </span>
+                                        {/* Kategori 2: Akademik & Kurikulum */}
+                                        <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/40 space-y-2">
+                                            <div className="flex items-center space-x-2 text-slate-900">
+                                                <div className="p-1 bg-teal-100/70 text-teal-700 rounded-lg">
+                                                    <BookOpen className="w-3.5 h-3.5" />
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-900">Akademik & Kurikulum</span>
                                             </div>
-                                            <div className="space-y-1 text-xs">
-                                                <Link href="/admin/settings" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
-                                                    <span>⚙️ Pengaturan & Maintenance</span>
-                                                    <ChevronRight className="w-3 h-3 text-indigo-600" />
+                                            <div className="space-y-1">
+                                                <Link href="/admin/curricula" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
+                                                    <span>📚 Master Kurikulum & Mata Kuliah</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
-                                                <Link href="/admin/database" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
-                                                    <span>💾 Backup, Restore & Seeder</span>
-                                                    <ChevronRight className="w-3 h-3 text-indigo-600" />
+                                                <Link href="/admin/schedules" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
+                                                    <span>📅 Plotting Jadwal & Ruang Kuliah</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
-                                                <Link href="/admin/audit-logs" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-indigo-100/70 text-indigo-900 font-medium transition">
-                                                    <span>🛡️ Visual Audit Log Tracker</span>
-                                                    <ChevronRight className="w-3 h-3 text-indigo-600" />
+                                                <Link href="/admin/grades" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
+                                                    <span>📝 Penilaian DPNA & Kunci Nilai</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
                                             </div>
                                         </div>
 
-                                        {/* Kategori 3: Integrasi Eksternal & Feeder */}
-                                        <div className="p-3.5 rounded-xl bg-purple-50/60 border border-purple-200/80 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold text-purple-950 flex items-center space-x-1.5">
-                                                    <RefreshCw className="w-3.5 h-3.5 text-purple-600" />
-                                                    <span>Integrasi Eksternal & Feeder</span>
-                                                </span>
+                                        {/* Kategori 3: Integrasi & Feeder */}
+                                        <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/40 space-y-2">
+                                            <div className="flex items-center space-x-2 text-slate-900">
+                                                <div className="p-1 bg-purple-100/70 text-purple-700 rounded-lg">
+                                                    <RefreshCw className="w-3.5 h-3.5" />
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-900">Integrasi Eksternal</span>
                                             </div>
-                                            <div className="space-y-1 text-xs">
-                                                <Link href="/admin/lms-sync" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-purple-100/70 text-purple-900 font-medium transition">
+                                            <div className="space-y-1">
+                                                <Link href="/admin/lms-sync" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
                                                     <span>💻 Bridge Sinkronisasi LMS</span>
-                                                    <ChevronRight className="w-3 h-3 text-purple-600" />
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
-                                                <Link href="/admin/pddikti" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-purple-100/70 text-purple-900 font-medium transition">
+                                                <Link href="/admin/pddikti" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
                                                     <span>🏛️ Integrasi Neo Feeder PDDIKTI</span>
-                                                    <ChevronRight className="w-3 h-3 text-purple-600" />
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
-                                                <a href="/sso/lms" target="_blank" rel="noreferrer" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-purple-100/70 text-purple-900 font-medium transition">
-                                                    <span>🔑 Launch SSO Portal LMS</span>
-                                                    <ChevronRight className="w-3 h-3 text-purple-600" />
+                                                <a href="/sso/lms" target="_blank" rel="noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
+                                                    <span>🔑 Portal Launch SSO LMS</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </a>
                                             </div>
                                         </div>
 
-                                        {/* Kategori 4: Civitas & Kurikulum */}
-                                        <div className="p-3.5 rounded-xl bg-teal-50/60 border border-teal-200/80 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold text-teal-950 flex items-center space-x-1.5">
-                                                    <GraduationCap className="w-3.5 h-3.5 text-teal-600" />
-                                                    <span>Civitas & Manajemen Studi</span>
-                                                </span>
+                                        {/* Kategori 4: Pemeliharaan, Database & Pengawasan */}
+                                        <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/40 space-y-2">
+                                            <div className="flex items-center space-x-2 text-slate-900">
+                                                <div className="p-1 bg-indigo-100/70 text-indigo-700 rounded-lg">
+                                                    <Database className="w-3.5 h-3.5" />
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-900">Database & Pemeliharaan</span>
                                             </div>
-                                            <div className="space-y-1 text-xs">
-                                                <Link href="/admin/users" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-teal-100/70 text-teal-900 font-medium transition">
-                                                    <span>👥 Semua Akun Pengguna Civitas</span>
-                                                    <ChevronRight className="w-3 h-3 text-teal-600" />
+                                            <div className="space-y-1">
+                                                <Link href="/admin/database" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
+                                                    <span>💾 Kelola Tabel & Hapus Data Percobaan</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
-                                                <Link href="/admin/curricula" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-teal-100/70 text-teal-900 font-medium transition">
-                                                    <span>📚 Master Kurikulum & Mata Kuliah</span>
-                                                    <ChevronRight className="w-3 h-3 text-teal-600" />
+                                                <Link href="/admin/audit-logs" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
+                                                    <span>🛡️ Visual Audit Log Tracker</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
-                                                <Link href="/admin/schedules" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-teal-100/70 text-teal-900 font-medium transition">
-                                                    <span>📅 Plotting Jadwal Perkuliahan</span>
-                                                    <ChevronRight className="w-3 h-3 text-teal-600" />
-                                                </Link>
-                                            </div>
-                                        </div>
-
-                                        {/* Kategori 5: Kebijakan Akademik & Pejabat */}
-                                        <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/80 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold text-amber-950 flex items-center space-x-1.5">
-                                                    <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-                                                    <span>Kebijakan & Legalitas Kampus</span>
-                                                </span>
-                                            </div>
-                                            <div className="space-y-1 text-xs">
-                                                <Link href="/admin/academic-settings" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-amber-100/70 text-amber-900 font-medium transition">
-                                                    <span>⚖️ Kebijakan Bobot & Batas SKS</span>
-                                                    <ChevronRight className="w-3 h-3 text-amber-600" />
-                                                </Link>
-                                                <Link href="/admin/officials" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-amber-100/70 text-amber-900 font-medium transition">
-                                                    <span>🏛️ Pejabat Kampus & Tanda Tangan</span>
-                                                    <ChevronRight className="w-3 h-3 text-amber-600" />
-                                                </Link>
-                                                <Link href="/admin/yudisium" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-amber-100/70 text-amber-900 font-medium transition">
-                                                    <span>🎓 Skrining Yudisium & Wisuda</span>
-                                                    <ChevronRight className="w-3 h-3 text-amber-600" />
-                                                </Link>
-                                            </div>
-                                        </div>
-
-                                        {/* Kategori 6: Operasional Akademik & Nilai */}
-                                        <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200/80 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold text-blue-950 flex items-center space-x-1.5">
-                                                    <FileCheck className="w-3.5 h-3.5 text-blue-600" />
-                                                    <span>Operasional Nilai & KHS</span>
-                                                </span>
-                                            </div>
-                                            <div className="space-y-1 text-xs">
-                                                <Link href="/admin/grades" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-blue-100/70 text-blue-900 font-medium transition">
-                                                    <span>📝 Penilaian DPNA & Kunci Nilai</span>
-                                                    <ChevronRight className="w-3 h-3 text-blue-600" />
-                                                </Link>
-                                                <Link href="/admin/khs" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-blue-100/70 text-blue-900 font-medium transition">
-                                                    <span>📜 Hasil Studi & Cetak KHS</span>
-                                                    <ChevronRight className="w-3 h-3 text-blue-600" />
-                                                </Link>
-                                                <Link href="/admin/transcripts" className="flex items-center justify-between p-1.5 rounded-lg hover:bg-blue-100/70 text-blue-900 font-medium transition">
-                                                    <span>🎓 Transkrip Akademik Lengkap</span>
-                                                    <ChevronRight className="w-3 h-3 text-blue-600" />
+                                                <Link href="/admin/settings" className="flex items-center justify-between p-2 rounded-lg hover:bg-white text-xs text-slate-700 font-medium transition hover:shadow-2xs border border-transparent hover:border-slate-200">
+                                                    <span>⚙️ Pengaturan Global & Maintenance</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                                 </Link>
                                             </div>
                                         </div>
@@ -705,14 +583,18 @@ export default function Dashboard({
 
                                 {/* Transaksi Virtual Account BSI Terkini */}
                                 <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
-                                    <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center space-x-1.5">
-                                            <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
-                                            <span>Transaksi Virtual Account BSI Terkini</span>
-                                        </h3>
-                                        <Link href="/admin/bsi-gateway" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center space-x-1">
+                                    <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                                        <div className="flex items-center space-x-2">
+                                            <div className="p-1 rounded-lg bg-emerald-50 text-emerald-600">
+                                                <CreditCard className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                                Transaksi Virtual Account BSI Terkini
+                                            </h3>
+                                        </div>
+                                        <Link href="/admin/bsi-gateway" className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center space-x-1">
                                             <span>Lihat Semua Transaksi</span>
-                                            <ChevronRight className="w-3 h-3" />
+                                            <ChevronRight className="w-3.5 h-3.5" />
                                         </Link>
                                     </div>
 
@@ -720,36 +602,38 @@ export default function Dashboard({
                                         <table className="w-full text-left text-xs">
                                             <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 uppercase text-[10px]">
                                                 <tr>
-                                                    <th className="px-4 py-2.5">No. VA BSI</th>
-                                                    <th className="px-4 py-2.5">Mahasiswa / Pendaftar</th>
-                                                    <th className="px-4 py-2.5">Pos Tagihan</th>
-                                                    <th className="px-4 py-2.5">Nominal</th>
-                                                    <th className="px-4 py-2.5">Status</th>
+                                                    <th className="px-4 py-3">No. VA BSI</th>
+                                                    <th className="px-4 py-3">Mahasiswa / Pendaftar</th>
+                                                    <th className="px-4 py-3">Pos Tagihan</th>
+                                                    <th className="px-4 py-3">Nominal</th>
+                                                    <th className="px-4 py-3 text-right">Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
                                                 {recentBsiTransactions && recentBsiTransactions.length > 0 ? (
                                                     recentBsiTransactions.map((tx) => (
                                                         <tr key={tx.id} className="hover:bg-slate-50/70 transition">
-                                                            <td className="px-4 py-2.5 font-mono font-bold text-slate-900">
+                                                            <td className="px-4 py-3 font-mono font-bold text-slate-900">
                                                                 {tx.va_number}
                                                             </td>
-                                                            <td className="px-4 py-2.5">
+                                                            <td className="px-4 py-3">
                                                                 <p className="font-bold text-slate-900">{tx.customer_name}</p>
                                                             </td>
-                                                            <td className="px-4 py-2.5 text-slate-600">
-                                                                {tx.fee_name}
+                                                            <td className="px-4 py-3 text-slate-600">
+                                                                <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium">
+                                                                    {tx.fee_name}
+                                                                </span>
                                                             </td>
-                                                            <td className="px-4 py-2.5 font-mono font-bold text-slate-900">
+                                                            <td className="px-4 py-3 font-mono font-bold text-slate-900">
                                                                 {formatRp(tx.amount)}
                                                             </td>
-                                                            <td className="px-4 py-2.5">
+                                                            <td className="px-4 py-3 text-right">
                                                                 {tx.status === 'PAID' ? (
-                                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                                                                    <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                                                                         LUNAS
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                                                                    <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
                                                                         PENDING
                                                                     </span>
                                                                 )}
@@ -758,7 +642,7 @@ export default function Dashboard({
                                                     ))
                                                 ) : (
                                                     <tr>
-                                                        <td colSpan={5} className="px-4 py-6 text-center text-slate-400 italic">
+                                                        <td colSpan={5} className="px-4 py-8 text-center text-slate-400 italic">
                                                             Belum ada data transaksi VA BSI tercatat.
                                                         </td>
                                                     </tr>
@@ -772,20 +656,26 @@ export default function Dashboard({
                             {/* KOLOM KANAN (LEBAR 4): PORTAL MENYAMAR & AUDIT LOG FEED */}
                             <div className="lg:col-span-4 space-y-4">
                                 {/* 1-Click Role Impersonation Hub */}
-                                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-purple-200 shadow-2xs space-y-3">
-                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                                        <div className="flex items-center space-x-1.5">
-                                            <span className="text-base">🎭</span>
+                                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3.5">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                        <div className="flex items-center space-x-2">
+                                            <div className="p-1 rounded-lg bg-purple-50 text-purple-600">
+                                                <Key className="w-3.5 h-3.5" />
+                                            </div>
                                             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                                Mode Menyamar (Impersonate)
+                                                Mode Menyamar
                                             </h3>
                                         </div>
-                                        <Link href="/admin/users" className="text-[10px] font-bold text-purple-700 hover:underline">
+                                        <Link href="/admin/users" className="text-xs font-bold text-purple-700 hover:underline">
                                             Semua Akun →
                                         </Link>
                                     </div>
 
-                                    <div className="space-y-1.5">
+                                    <p className="text-[11px] text-slate-500">
+                                        Masuk instan sebagai civitas untuk memeriksa tampilan & izin akses tanpa kata sandi.
+                                    </p>
+
+                                    <div className="space-y-2">
                                         <button
                                             type="button"
                                             onClick={() => openImpersonateModal({
@@ -797,13 +687,20 @@ export default function Dashboard({
                                                 email: 'budi.santoso@staialittihad.ac.id',
                                                 study_program: 'Biro Administrasi Akademik (BAAK)',
                                             })}
-                                            className="w-full p-2 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
+                                            className="w-full p-2.5 bg-slate-50 hover:bg-blue-50/60 hover:border-blue-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
                                         >
-                                            <div>
-                                                <p className="font-bold text-[11px] text-slate-900 group-hover:text-blue-900">🏛️ Admin BAAK</p>
-                                                <p className="text-[9px] text-slate-500 font-mono">adminakademik</p>
+                                            <div className="flex items-center space-x-2.5 min-w-0">
+                                                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition">
+                                                    BA
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-xs text-slate-900 group-hover:text-blue-900 truncate">Biro BAAK</p>
+                                                    <p className="text-[10px] text-slate-500 font-mono truncate">adminakademik</p>
+                                                </div>
                                             </div>
-                                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px] font-bold">Masuk</span>
+                                            <span className="px-2.5 py-1 bg-white group-hover:bg-blue-600 group-hover:text-white text-slate-700 border border-slate-200 group-hover:border-blue-600 rounded-lg text-[10px] font-bold transition shrink-0">
+                                                Masuk
+                                            </span>
                                         </button>
 
                                         <button
@@ -817,13 +714,20 @@ export default function Dashboard({
                                                 email: 'keuangan@staialittihad.ac.id',
                                                 study_program: 'Biro Keuangan & Perbankan BSI',
                                             })}
-                                            className="w-full p-2 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
+                                            className="w-full p-2.5 bg-slate-50 hover:bg-emerald-50/60 hover:border-emerald-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
                                         >
-                                            <div>
-                                                <p className="font-bold text-[11px] text-slate-900 group-hover:text-emerald-900">💳 Biro Keuangan</p>
-                                                <p className="text-[9px] text-slate-500 font-mono">keuangan</p>
+                                            <div className="flex items-center space-x-2.5 min-w-0">
+                                                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 font-black text-xs flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition">
+                                                    KU
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-xs text-slate-900 group-hover:text-emerald-900 truncate">Biro Keuangan</p>
+                                                    <p className="text-[10px] text-slate-500 font-mono truncate">keuangan</p>
+                                                </div>
                                             </div>
-                                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[9px] font-bold">Masuk</span>
+                                            <span className="px-2.5 py-1 bg-white group-hover:bg-emerald-600 group-hover:text-white text-slate-700 border border-slate-200 group-hover:border-emerald-600 rounded-lg text-[10px] font-bold transition shrink-0">
+                                                Masuk
+                                            </span>
                                         </button>
 
                                         <button
@@ -837,13 +741,20 @@ export default function Dashboard({
                                                 email: 'kaprodi.pai@staialittihad.ac.id',
                                                 study_program: 'Program Studi S1 PAI',
                                             })}
-                                            className="w-full p-2 bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
+                                            className="w-full p-2.5 bg-slate-50 hover:bg-purple-50/60 hover:border-purple-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
                                         >
-                                            <div>
-                                                <p className="font-bold text-[11px] text-slate-900 group-hover:text-purple-900">🎓 Kaprodi PAI</p>
-                                                <p className="text-[9px] text-slate-500 font-mono">2118097201</p>
+                                            <div className="flex items-center space-x-2.5 min-w-0">
+                                                <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 font-black text-xs flex items-center justify-center shrink-0 group-hover:bg-purple-600 group-hover:text-white transition">
+                                                    KP
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-xs text-slate-900 group-hover:text-purple-900 truncate">Kaprodi PAI</p>
+                                                    <p className="text-[10px] text-slate-500 font-mono truncate">2118097201</p>
+                                                </div>
                                             </div>
-                                            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded text-[9px] font-bold">Masuk</span>
+                                            <span className="px-2.5 py-1 bg-white group-hover:bg-purple-600 group-hover:text-white text-slate-700 border border-slate-200 group-hover:border-purple-600 rounded-lg text-[10px] font-bold transition shrink-0">
+                                                Masuk
+                                            </span>
                                         </button>
 
                                         <button
@@ -857,13 +768,20 @@ export default function Dashboard({
                                                 email: 'siti.maryam.pa@staialittihad.ac.id',
                                                 study_program: 'Fakultas Tarbiyah (Dosen PA)',
                                             })}
-                                            className="w-full p-2 bg-slate-50 hover:bg-amber-50 hover:border-amber-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
+                                            className="w-full p-2.5 bg-slate-50 hover:bg-amber-50/60 hover:border-amber-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
                                         >
-                                            <div>
-                                                <p className="font-bold text-[11px] text-slate-900 group-hover:text-amber-900">📋 Dosen PA</p>
-                                                <p className="text-[9px] text-slate-500 font-mono">2115047802</p>
+                                            <div className="flex items-center space-x-2.5 min-w-0">
+                                                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 font-black text-xs flex items-center justify-center shrink-0 group-hover:bg-amber-600 group-hover:text-white transition">
+                                                    PA
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-xs text-slate-900 group-hover:text-amber-900 truncate">Dosen PA</p>
+                                                    <p className="text-[10px] text-slate-500 font-mono truncate">2115047802</p>
+                                                </div>
                                             </div>
-                                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-bold">Masuk</span>
+                                            <span className="px-2.5 py-1 bg-white group-hover:bg-amber-600 group-hover:text-white text-slate-700 border border-slate-200 group-hover:border-amber-600 rounded-lg text-[10px] font-bold transition shrink-0">
+                                                Masuk
+                                            </span>
                                         </button>
 
                                         <button
@@ -877,25 +795,36 @@ export default function Dashboard({
                                                 email: 'ahmad.fauzi@staialittihad.ac.id',
                                                 study_program: 'Pendidikan Agama Islam (S1)',
                                             })}
-                                            className="w-full p-2 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
+                                            className="w-full p-2.5 bg-slate-50 hover:bg-indigo-50/60 hover:border-indigo-300 border border-slate-200 rounded-xl text-left transition flex items-center justify-between group cursor-pointer"
                                         >
-                                            <div>
-                                                <p className="font-bold text-[11px] text-slate-900 group-hover:text-indigo-900">👨‍🎓 Mahasiswa (S1 PAI)</p>
-                                                <p className="text-[9px] text-slate-500 font-mono">21010042</p>
+                                            <div className="flex items-center space-x-2.5 min-w-0">
+                                                <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition">
+                                                    M
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-xs text-slate-900 group-hover:text-indigo-900 truncate">Mahasiswa (PAI)</p>
+                                                    <p className="text-[10px] text-slate-500 font-mono truncate">21010042</p>
+                                                </div>
                                             </div>
-                                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[9px] font-bold">Masuk</span>
+                                            <span className="px-2.5 py-1 bg-white group-hover:bg-indigo-600 group-hover:text-white text-slate-700 border border-slate-200 group-hover:border-indigo-600 rounded-lg text-[10px] font-bold transition shrink-0">
+                                                Masuk
+                                            </span>
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Live Activity & Audit Trail */}
-                                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2.5">
-                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                                        <h3 className="text-xs font-black text-slate-900 uppercase flex items-center space-x-1.5">
-                                            <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
-                                            <span>Aktivitas Sistem & Audit Trail</span>
-                                        </h3>
-                                        <Link href="/admin/audit-logs" className="text-[10px] font-bold text-slate-500 hover:text-slate-800">
+                                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                        <div className="flex items-center space-x-2">
+                                            <div className="p-1 rounded-lg bg-rose-50 text-rose-600">
+                                                <ShieldAlert className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                                Aktivitas & Audit Trail
+                                            </h3>
+                                        </div>
+                                        <Link href="/admin/audit-logs" className="text-xs font-bold text-slate-500 hover:text-slate-800">
                                             Semua Log →
                                         </Link>
                                     </div>
@@ -903,26 +832,26 @@ export default function Dashboard({
                                     <div className="space-y-2">
                                         {auditFeed && auditFeed.length > 0 ? (
                                             auditFeed.map((item) => (
-                                                <div key={item.id} className="p-2 rounded-xl bg-slate-50 border border-slate-100 text-[10px] space-y-0.5">
+                                                <div key={item.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs space-y-1">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="font-bold text-slate-800 truncate max-w-[120px]">
+                                                        <span className="font-bold text-slate-900 truncate max-w-[130px]">
                                                             {item.user_name || 'System / Guest'}
                                                         </span>
-                                                        <span className="text-[9px] font-mono text-slate-400">
+                                                        <span className="text-[10px] font-mono text-slate-400">
                                                             {item.created_at}
                                                         </span>
                                                     </div>
-                                                    <p className="font-mono text-emerald-700 font-semibold truncate">
+                                                    <p className="font-mono text-indigo-700 font-semibold text-[11px] truncate">
                                                         {item.action}
                                                     </p>
-                                                    <p className="text-slate-400 text-[9px]">
+                                                    <p className="text-slate-400 text-[10px]">
                                                         IP: {item.ip_address || '127.0.0.1'} • {item.target_entity || 'System'}
                                                     </p>
                                                 </div>
                                             ))
                                         ) : (
-                                            <div className="p-3 bg-slate-50 rounded-lg text-center text-slate-400 text-[10px]">
-                                                Belum ada rekam audit baru.
+                                            <div className="p-4 bg-slate-50 rounded-xl text-center text-slate-400 text-xs italic">
+                                                Belum ada rekaman log audit terbaru.
                                             </div>
                                         )}
                                     </div>

@@ -275,4 +275,74 @@ class FinanceController extends Controller
 
         return back()->with('success', "Sukses! {$generatedCount} Tagihan {$feeType->name} & Virtual Account BSI (9928) berhasil diterbitkan.");
     }
+
+    /**
+     * Hapus Tagihan Spesifik (Cascade VA & Dispensasi)
+     */
+    public function destroyInvoice(int $id): RedirectResponse
+    {
+        DB::transaction(function () use ($id) {
+            $invoice = DB::table('student_invoices')->where('id', $id)->first();
+            if (!$invoice) return;
+
+            DB::table('va_bsi_transactions')->where('student_invoice_id', $id)->delete();
+            if (DB::getSchemaBuilder()->hasTable('winpay_transactions')) {
+                DB::table('winpay_transactions')->where('student_invoice_id', $id)->delete();
+            }
+            if (DB::getSchemaBuilder()->hasTable('fee_dispensations')) {
+                DB::table('fee_dispensations')->where('student_invoice_id', $id)->delete();
+            }
+            DB::table('student_invoices')->where('id', $id)->delete();
+
+            DB::table('audit_logs')->insert([
+                'user_id' => auth()->id(),
+                'action' => 'FINANCE_INVOICE_DELETE',
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'target_entity' => 'StudentInvoice',
+                'target_id' => (string) $id,
+                'details' => json_encode(['invoice_number' => $invoice->invoice_number, 'amount' => $invoice->final_amount]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        return back()->with('success', 'Tagihan & data VA BSI terkait berhasil dihapus.');
+    }
+
+    /**
+     * Hapus Masal Tagihan (Batch Delete)
+     */
+    public function destroyInvoiceBatch(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        if (empty($ids)) {
+            return back()->with('error', 'Tidak ada tagihan yang dipilih.');
+        }
+
+        DB::transaction(function () use ($ids) {
+            DB::table('va_bsi_transactions')->whereIn('student_invoice_id', $ids)->delete();
+            if (DB::getSchemaBuilder()->hasTable('winpay_transactions')) {
+                DB::table('winpay_transactions')->whereIn('student_invoice_id', $ids)->delete();
+            }
+            if (DB::getSchemaBuilder()->hasTable('fee_dispensations')) {
+                DB::table('fee_dispensations')->whereIn('student_invoice_id', $ids)->delete();
+            }
+            DB::table('student_invoices')->whereIn('id', $ids)->delete();
+
+            DB::table('audit_logs')->insert([
+                'user_id' => auth()->id(),
+                'action' => 'FINANCE_INVOICE_BATCH_DELETE',
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'target_entity' => 'StudentInvoice',
+                'target_id' => count($ids) . ' records',
+                'details' => json_encode(['ids' => $ids]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        return back()->with('success', count($ids) . ' data tagihan berhasil dihapus.');
+    }
 }

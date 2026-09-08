@@ -5,7 +5,7 @@ import {
     UserCheck, Users, Search, Filter, Plus, 
     Calendar, CheckCircle2, Clock, XCircle, Award, 
     GraduationCap, Phone, Mail, Building2, ChevronRight, 
-    Sparkles, RefreshCw, CreditCard, ShieldCheck, Eye
+    Sparkles, RefreshCw, CreditCard, ShieldCheck, Eye, Trash2
 } from 'lucide-react';
 
 export default function PmbIndex({ 
@@ -79,10 +79,47 @@ export default function PmbIndex({
         });
     };
 
+    const [selectedIds, setSelectedIds] = useState([]);
+
     const handleEnrollStudent = (app) => {
         if (confirm(`Daftarkan ${app.full_name} sebagai Mahasiswa Resmi STAI Al-Ittihad? Sistem akan otomatis mengenerate NIM baru dan akun login SIAKAD.`)) {
             router.post(`/admin/pmb/applicants/${app.id}/enroll`);
         }
+    };
+
+    const handleDeleteApplicant = (app) => {
+        if (confirm(`Hapus data pendaftar "${app.full_name}" (${app.registration_number})? Seluruh berkas lampiran, invoice pendaftaran, dan VA BSI terkait akan dihapus secara permanen.`)) {
+            router.delete(`/admin/pmb/applicants/${app.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSelectedIds(prev => prev.filter(id => id !== app.id));
+                }
+            });
+        }
+    };
+
+    const handleDeleteBatch = () => {
+        if (selectedIds.length === 0) return;
+        if (confirm(`Hapus ${selectedIds.length} data calon pendaftar PMB yang dipilih beserta invoice & VA BSI-nya?`)) {
+            router.post('/admin/pmb/applicants/destroy-batch', {
+                ids: selectedIds,
+            }, {
+                preserveScroll: true,
+                onSuccess: () => setSelectedIds([]),
+            });
+        }
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedIds(applicants.data.map(a => a.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
     };
 
     const formatRupiah = (num) => {
@@ -220,12 +257,37 @@ export default function PmbIndex({
                             </form>
                         </div>
 
+                        {/* Bulk Action Bar */}
+                        {selectedIds.length > 0 && (
+                            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-center justify-between animate-fadeIn">
+                                <span className="text-xs font-bold text-rose-900">
+                                    {selectedIds.length} calon mahasiswa dipilih
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={handleDeleteBatch}
+                                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-black transition flex items-center space-x-1.5 cursor-pointer shadow-xs"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Hapus Data Terpilih ({selectedIds.length})</span>
+                                </button>
+                            </div>
+                        )}
+
                         {/* Applicants Table */}
                         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse text-xs">
                                     <thead>
                                         <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[10px]">
+                                            <th className="py-3 px-3 w-10 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={applicants.data.length > 0 && selectedIds.length === applicants.data.length}
+                                                    onChange={handleSelectAll}
+                                                    className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                                                />
+                                            </th>
                                             <th className="py-3 px-4">No. Pendaftaran</th>
                                             <th className="py-3 px-4">Nama Calon Mahasiswa</th>
                                             <th className="py-3 px-4">Pilihan Prodi & Jalur</th>
@@ -238,7 +300,7 @@ export default function PmbIndex({
                                     <tbody className="divide-y divide-slate-100">
                                         {applicants.data.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
+                                                <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
                                                     Tidak ada data calon mahasiswa yang sesuai dengan filter pencarian.
                                                 </td>
                                             </tr>
@@ -247,8 +309,18 @@ export default function PmbIndex({
                                                 const isPaid = app.invoice_status === 'LUNAS';
                                                 const isPassed = app.status === 'LULUS_SELEKSI';
                                                 const isEnrolled = app.status === 'SUDAH_DAFTAR_ULANG';
+                                                const isSelected = selectedIds.includes(app.id);
+
                                                 return (
-                                                    <tr key={app.id} className="hover:bg-slate-50 transition">
+                                                    <tr key={app.id} className={`hover:bg-slate-50 transition ${isSelected ? 'bg-rose-50/40' : ''}`}>
+                                                        <td className="py-3 px-3 text-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => handleSelectOne(app.id)}
+                                                                className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                                                            />
+                                                        </td>
                                                         <td className="py-3 px-4 font-mono font-black text-emerald-800">
                                                             {app.registration_number}
                                                             <span className="block text-[10px] text-slate-400 font-sans font-normal">{app.period_name}</span>
@@ -292,7 +364,7 @@ export default function PmbIndex({
                                                                 {isPassed && !isEnrolled && (
                                                                     <button
                                                                         onClick={() => handleEnrollStudent(app)}
-                                                                        className="px-2.5 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded text-[10px] font-black transition flex items-center space-x-1 shadow-2xs"
+                                                                        className="px-2.5 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded text-[10px] font-black transition flex items-center space-x-1 shadow-2xs cursor-pointer"
                                                                         title="Otomasi Terbitkan NIM & Akun Mahasiswa"
                                                                     >
                                                                         <GraduationCap className="w-3.5 h-3.5" />
@@ -301,9 +373,17 @@ export default function PmbIndex({
                                                                 )}
                                                                 <button
                                                                     onClick={() => handleOpenStatusModal(app)}
-                                                                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded text-[10px] font-bold transition"
+                                                                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded text-[10px] font-bold transition cursor-pointer"
                                                                 >
                                                                     Ubah Status
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteApplicant(app)}
+                                                                    className="p-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded text-[10px] font-bold transition cursor-pointer border border-rose-200 hover:border-rose-600"
+                                                                    title="Hapus Calon Mahasiswa Percobaan"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
                                                                 </button>
                                                             </div>
                                                         </td>

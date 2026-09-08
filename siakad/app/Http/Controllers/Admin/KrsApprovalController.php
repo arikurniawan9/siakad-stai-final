@@ -1586,4 +1586,42 @@ class KrsApprovalController extends Controller
             'courses_count' => count($courseClassIds),
         ]);
     }
+
+    /**
+     * Reset / Hapus Rencana Studi (KRS) Mahasiswa (Pengujian & Pembersihan)
+     */
+    public function resetKrs(int $id): RedirectResponse
+    {
+        DB::transaction(function () use ($id) {
+            $submission = DB::table('krs_submissions')->where('id', $id)->first();
+            if (!$submission) return;
+
+            $items = DB::table('krs_items')->where('krs_submission_id', $id)->get();
+            $classIds = $items->pluck('course_class_id')->filter()->toArray();
+
+            if (!empty($classIds)) {
+                DB::table('class_enrollments')
+                    ->where('student_id', $submission->student_id)
+                    ->whereIn('course_class_id', $classIds)
+                    ->delete();
+            }
+
+            DB::table('krs_items')->where('krs_submission_id', $id)->delete();
+            DB::table('krs_submissions')->where('id', $id)->delete();
+
+            DB::table('audit_logs')->insert([
+                'user_id' => auth()->id(),
+                'action' => 'KRS_RESET',
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'target_entity' => 'KrsSubmission',
+                'target_id' => (string) $id,
+                'details' => json_encode(['student_id' => $submission->student_id, 'period_id' => $submission->academic_period_id]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        return back()->with('success', 'Rencana studi (KRS) mahasiswa berhasil di-reset / dihapus.');
+    }
 }

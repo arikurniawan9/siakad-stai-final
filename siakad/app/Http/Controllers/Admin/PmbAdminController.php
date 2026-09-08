@@ -203,4 +203,94 @@ class PmbAdminController extends Controller
 
         return back()->with('success', "Sukses! {$applicant->full_name} resmi terdaftar sebagai Mahasiswa Baru dengan NIM: {$newNim} (Password: salam123).");
     }
+
+    /**
+     * Hapus Data Calon Mahasiswa PMB (Cascade Invoices & VA)
+     */
+    public function destroy(int $id): RedirectResponse
+    {
+        DB::transaction(function () use ($id) {
+            $applicant = DB::table('pmb_applicants')->where('id', $id)->first();
+            if (!$applicant) {
+                return;
+            }
+
+            // 1. Hapus invoices & VA terkait pmb_applicant_id
+            $invoiceIds = DB::table('student_invoices')
+                ->where('pmb_applicant_id', $id)
+                ->pluck('id')
+                ->toArray();
+
+            if (!empty($invoiceIds)) {
+                DB::table('va_bsi_transactions')->whereIn('student_invoice_id', $invoiceIds)->delete();
+                DB::table('student_invoices')->whereIn('id', $invoiceIds)->delete();
+            }
+
+            // 2. Hapus berkas pmb
+            if (DB::getSchemaBuilder()->hasTable('pmb_documents')) {
+                DB::table('pmb_documents')->where('pmb_applicant_id', $id)->delete();
+            }
+
+            // 3. Hapus pendaftar
+            DB::table('pmb_applicants')->where('id', $id)->delete();
+
+            // Audit log
+            DB::table('audit_logs')->insert([
+                'user_id' => auth()->id(),
+                'action' => 'PMB_APPLICANT_DELETE',
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'target_entity' => 'PmbApplicant',
+                'target_id' => (string) $id,
+                'details' => json_encode(['full_name' => $applicant->full_name, 'reg_number' => $applicant->registration_number]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        return back()->with('success', 'Data calon pendaftar PMB beserta invoice & VA terkait berhasil dihapus.');
+    }
+
+    /**
+     * Hapus Masal Pendaftar PMB
+     */
+    public function destroyBatch(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        if (empty($ids)) {
+            return back()->with('error', 'Tidak ada data pendaftar yang dipilih.');
+        }
+
+        DB::transaction(function () use ($ids) {
+            $invoiceIds = DB::table('student_invoices')
+                ->whereIn('pmb_applicant_id', $ids)
+                ->pluck('id')
+                ->toArray();
+
+            if (!empty($invoiceIds)) {
+                DB::table('va_bsi_transactions')->whereIn('student_invoice_id', $invoiceIds)->delete();
+                DB::table('student_invoices')->whereIn('id', $invoiceIds)->delete();
+            }
+
+            if (DB::getSchemaBuilder()->hasTable('pmb_documents')) {
+                DB::table('pmb_documents')->whereIn('pmb_applicant_id', $ids)->delete();
+            }
+
+            DB::table('pmb_applicants')->whereIn('id', $ids)->delete();
+
+            DB::table('audit_logs')->insert([
+                'user_id' => auth()->id(),
+                'action' => 'PMB_APPLICANT_BATCH_DELETE',
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'target_entity' => 'PmbApplicant',
+                'target_id' => count($ids) . ' records',
+                'details' => json_encode(['ids' => $ids]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        return back()->with('success', count($ids) . ' data calon pendaftar PMB berhasil dihapus.');
+    }
 }

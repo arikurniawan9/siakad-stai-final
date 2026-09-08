@@ -131,13 +131,17 @@ Route::middleware('auth')->group(function () {
             Route::post('/bsi-gateway/simulate-payment', [BsiGatewayController::class, 'simulatePayment'])->name('bsi_gateway.simulate_payment');
             Route::get('/bsi-gateway/export-reconciliation', [BsiGatewayController::class, 'exportReconciliation'])->name('bsi_gateway.export_reconciliation');
 
-            // Manajemen Database, Backup, Restore & Seeder (Khusus Superadmin)
+            // Manajemen Database, Backup, Restore, Purge & Seeder (Khusus Superadmin)
             Route::get('/database', [DatabaseController::class, 'index'])->name('database.index');
             Route::post('/database/backup', [DatabaseController::class, 'createBackup'])->name('database.backup.create');
             Route::get('/database/download/{filename}', [DatabaseController::class, 'downloadBackup'])->name('database.backup.download');
             Route::delete('/database/backup/{filename}', [DatabaseController::class, 'deleteBackup'])->name('database.backup.delete');
             Route::post('/database/restore', [DatabaseController::class, 'restoreBackup'])->name('database.restore');
             Route::post('/database/seeder', [DatabaseController::class, 'runSeeder'])->name('database.seeder');
+            Route::post('/database/purge-module', [DatabaseController::class, 'purgeModule'])->name('database.purge_module');
+            Route::post('/database/truncate-table', [DatabaseController::class, 'truncateTable'])->name('database.truncate_table');
+            Route::get('/database/table-data', [DatabaseController::class, 'getTableData'])->name('database.table_data');
+            Route::post('/database/table-data/delete-rows', [DatabaseController::class, 'deleteTableRows'])->name('database.delete_rows');
 
             // Gateway Sinkronisasi SALAM LMS
             Route::get('/lms-sync', [LmsSyncController::class, 'index'])->name('lms_sync.index');
@@ -163,6 +167,8 @@ Route::middleware('auth')->group(function () {
             Route::post('/finance/tariffs', [FinanceController::class, 'storeTariff'])->name('finance.tariffs.store');
             Route::delete('/finance/tariffs/{id}', [FinanceController::class, 'destroyTariff'])->name('finance.tariffs.destroy');
             Route::post('/finance/mass-generate', [FinanceController::class, 'generateMassInvoices'])->name('finance.mass_generate');
+            Route::delete('/finance/invoices/{id}', [FinanceController::class, 'destroyInvoice'])->name('finance.invoices.destroy');
+            Route::post('/finance/invoices/destroy-batch', [FinanceController::class, 'destroyInvoiceBatch'])->name('finance.invoices.destroy_batch');
         });
 
         // -----------------------------------------------------------------
@@ -173,6 +179,8 @@ Route::middleware('auth')->group(function () {
             Route::post('/pmb/periods', [PmbAdminController::class, 'storePeriod'])->name('pmb.periods.store');
             Route::put('/pmb/applicants/{id}/status', [PmbAdminController::class, 'updateStatus'])->name('pmb.applicants.status.update');
             Route::post('/pmb/applicants/{id}/enroll', [PmbAdminController::class, 'enrollStudent'])->name('pmb.applicants.enroll');
+            Route::delete('/pmb/applicants/{id}', [PmbAdminController::class, 'destroy'])->name('pmb.applicants.destroy');
+            Route::post('/pmb/applicants/destroy-batch', [PmbAdminController::class, 'destroyBatch'])->name('pmb.applicants.destroy_batch');
         });
 
         // -----------------------------------------------------------------
@@ -368,6 +376,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/krs-approval/package', [KrsApprovalController::class, 'packageView'])->name('krs_approval.package');
             Route::post('/krs-approval/{id}/approve', [KrsApprovalController::class, 'approve'])->name('krs_approval.approve');
             Route::post('/krs-approval/{id}/reject', [KrsApprovalController::class, 'reject'])->name('krs_approval.reject');
+            Route::post('/krs-approval/{id}/reset', [KrsApprovalController::class, 'resetKrs'])->name('krs_approval.reset');
             Route::post('/krs-approval/bulk-approve', [KrsApprovalController::class, 'bulkApprove'])->name('krs_approval.bulk_approve');
             Route::get('/krs-approval/{id}/print-pdf', [KrsApprovalController::class, 'printPdf'])->name('krs_approval.print_pdf');
             Route::get('/krs-approval/{student_id}/courses', [KrsApprovalController::class, 'getStudentKrsDetails'])->name('krs_approval.courses');

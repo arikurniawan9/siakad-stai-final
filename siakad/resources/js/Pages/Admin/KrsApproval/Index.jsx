@@ -246,6 +246,20 @@ export default function KrsApprovalIndex({
         }
     };
 
+    const handleResetKrs = (stu) => {
+        if (!stu.krs_submission_id) return;
+        if (confirm(`Reset / hapus rencana studi (KRS) mahasiswa "${stu.name}" (${stu.nim})? Status mahasiswa akan kembali menjadi BELUM KRS dan seluruh matakuliah yang diambil akan dihapus.`)) {
+            router.post(`/admin/krs-approval/${stu.krs_submission_id}/reset`, {}, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setActionSuccessMsg(`Rencana studi (KRS) ${stu.name} berhasil di-reset.`);
+                    setTimeout(() => setActionSuccessMsg(''), 4000);
+                    fetchKrsData();
+                }
+            });
+        }
+    };
+
     const handleBulkApprove = async () => {
         if (!confirm(`Setujui seluruh ${currentStats.pending || 0} pengajuan KRS yang berstatus menunggu approval?`)) return;
         setIsActionLoading(true);
@@ -1154,6 +1168,18 @@ export default function KrsApprovalIndex({
                                                             >
                                                                 <Printer className="w-3.5 h-3.5" />
                                                             </a>
+                                                        )}
+
+                                                        {/* 6. Reset KRS (Hapus KRS Percobaan) */}
+                                                        {stu.krs_submission_id && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleResetKrs(stu)}
+                                                                className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition cursor-pointer"
+                                                                title="Reset / Hapus KRS Percobaan"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
                                                         )}
                                                     </div>
                                                 </td>

@@ -1,24 +1,274 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { 
     Database, HardDrive, Download, Trash2, RefreshCw, 
     Upload, Play, ShieldAlert, CheckCircle2, AlertTriangle, 
-    Layers, Sparkles, FileText, Calendar, Server, Clock, 
-    Users, CreditCard, School, ChevronRight, X
+    Layers, FileText, Server, Users, Search, Flame, 
+    ShieldCheck, Lock, AlertOctagon, Info, Eye, CheckSquare, 
+    Square, Check, X, ChevronLeft, ChevronRight, Building2,
+    Calendar, Sparkles
 } from 'lucide-react';
 
-export default function DatabaseIndex({ backups, tableStats, dbInfo }) {
-    const [activeTab, setActiveTab] = useState('backups'); // backups | upload | seeders | tables
+export default function DatabaseIndex({ 
+    tableCatalog = [], 
+    totalTestRows = 0, 
+    backups = [], 
+    purgeStats = {}, 
+    dbInfo = {} 
+}) {
+    // 1. Navigation Tab: tables | purge | backups | upload | seeders
+    const [activeTab, setActiveTab] = useState('tables');
+
+    // 2. Search & Category Filters for Table Catalog
+    const [tableSearch, setTableSearch] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('all'); // all | transactional | master | log | system
+    const [onlyWithRows, setOnlyWithRows] = useState(false);
+
+    // 3. Truncate & Purge Modals
+    const [truncateModal, setTruncateModal] = useState({ isOpen: false, table: null });
+    const [purgeModal, setPurgeModal] = useState({ isOpen: false, module: null, title: '', description: '', affectedRows: '' });
+    const [totalResetModal, setTotalResetModal] = useState({ isOpen: false, inputConfirm: '' });
+    const [isPurging, setIsPurging] = useState(false);
+
+    // 4. Data Viewer Modal (View Data in Table + Delete 1-1 or Multi)
+    const [viewerModal, setViewerModal] = useState({
+        isOpen: false,
+        tableName: null,
+        tableLabel: '',
+        isLoading: false,
+        data: null,
+        selectedIds: [],
+        searchQuery: '',
+        page: 1,
+    });
+
+    // 5. Utility States (Backup & Seeder)
     const [creatingBackup, setCreatingBackup] = useState(false);
     const [runningSeeder, setRunningSeeder] = useState(null);
     const [restoringFile, setRestoringFile] = useState(null);
-    const [confirmModal, setConfirmModal] = useState({ isOpen: false, filename: null });
+    const [confirmRestoreModal, setConfirmRestoreModal] = useState({ isOpen: false, filename: null });
 
     const uploadForm = useForm({
         backup_file: null,
     });
 
+    // Counts per category
+    const categoryCounts = useMemo(() => {
+        const counts = { all: tableCatalog.length, transactional: 0, master: 0, log: 0, system: 0 };
+        tableCatalog.forEach(t => {
+            if (counts[t.category] !== undefined) {
+                counts[t.category]++;
+            }
+        });
+        return counts;
+    }, [tableCatalog]);
+
+    // Filtered Table Catalog
+    const filteredTables = useMemo(() => {
+        return tableCatalog.filter(item => {
+            if (categoryFilter !== 'all' && item.category !== categoryFilter) {
+                return false;
+            }
+            if (onlyWithRows && item.rows === 0) {
+                return false;
+            }
+            if (tableSearch.trim()) {
+                const query = tableSearch.toLowerCase();
+                const matchName = item.name.toLowerCase().includes(query);
+                const matchLabel = item.label?.toLowerCase().includes(query);
+                const matchDesc = item.description?.toLowerCase().includes(query);
+                const matchCascade = item.cascade_detail?.toLowerCase().includes(query);
+                return matchName || matchLabel || matchDesc || matchCascade;
+            }
+            return true;
+        });
+    }, [tableCatalog, categoryFilter, onlyWithRows, tableSearch]);
+
+    // --- DATA VIEWER MODAL HANDLERS ---
+    const handleOpenViewer = async (table, page = 1, search = '') => {
+        setViewerModal({
+            isOpen: true,
+            tableName: table.name,
+            tableLabel: table.label || table.name,
+            isLoading: true,
+            data: null,
+            selectedIds: [],
+            searchQuery: search,
+            page: page,
+        });
+
+        try {
+            const res = await fetch(`/admin/database/table-data?table=${encodeURIComponent(table.name)}&page=${page}&search=${encodeURIComponent(search)}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            });
+            const json = await res.json();
+            if (json.success) {
+                setViewerModal(prev => ({
+                    ...prev,
+                    isLoading: false,
+                    data: json,
+                    selectedIds: [],
+                }));
+            } else {
+                alert(json.message || 'Gagal memuat data tabel.');
+                setViewerModal(prev => ({ ...prev, isLoading: false }));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Terjadi kesalahan jaringan.');
+            setViewerModal(prev => ({ ...prev, isLoading: false }));
+        }
+    };
+
+    const handleSelectAllRows = () => {
+        if (!viewerModal.data?.records) return;
+        const pk = viewerModal.data.primary_key;
+        if (!pk) return;
+
+        const currentIds = viewerModal.data.records.map(r => r._pk || r[pk]).filter(Boolean);
+        if (viewerModal.selectedIds.length === currentIds.length) {
+            setViewerModal(prev => ({ ...prev, selectedIds: [] }));
+        } else {
+            setViewerModal(prev => ({ ...prev, selectedIds: currentIds }));
+        }
+    };
+
+    const handleToggleRowSelection = (id) => {
+        setViewerModal(prev => {
+            const exists = prev.selectedIds.includes(id);
+            return {
+                ...prev,
+                selectedIds: exists 
+                    ? prev.selectedIds.filter(item => item !== id)
+                    : [...prev.selectedIds, id]
+            };
+        });
+    };
+
+    const handleDeleteSingleRow = async (id) => {
+        if (!confirm(`Apakah Anda yakin ingin menghapus baris data ID #${id} dari tabel "${viewerModal.tableName}"?`)) return;
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const res = await fetch('/admin/database/table-data/delete-rows', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                },
+                body: JSON.stringify({
+                    table: viewerModal.tableName,
+                    ids: [id],
+                })
+            });
+            const json = await res.json();
+            if (json.success) {
+                handleOpenViewer({ name: viewerModal.tableName, label: viewerModal.tableLabel }, viewerModal.page, viewerModal.searchQuery);
+                router.reload({ only: ['tableCatalog', 'totalTestRows', 'purgeStats', 'dbInfo'] });
+            } else {
+                alert(json.message || 'Gagal menghapus data.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Terjadi kesalahan saat menghapus data.');
+        }
+    };
+
+    const handleDeleteMultiRows = async () => {
+        const count = viewerModal.selectedIds.length;
+        if (count === 0) return;
+        if (!confirm(`Hapus ${count} baris data terpilih dari tabel "${viewerModal.tableName}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const res = await fetch('/admin/database/table-data/delete-rows', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                },
+                body: JSON.stringify({
+                    table: viewerModal.tableName,
+                    ids: viewerModal.selectedIds,
+                })
+            });
+            const json = await res.json();
+            if (json.success) {
+                handleOpenViewer({ name: viewerModal.tableName, label: viewerModal.tableLabel }, viewerModal.page, viewerModal.searchQuery);
+                router.reload({ only: ['tableCatalog', 'totalTestRows', 'purgeStats', 'dbInfo'] });
+            } else {
+                alert(json.message || 'Gagal menghapus data terpilih.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Terjadi kesalahan saat menghapus data terpilih.');
+        }
+    };
+
+    // --- TRUNCATE ACTIONS ---
+    const handleOpenTruncate = (table) => {
+        if (table.is_protected) return;
+        setTruncateModal({ isOpen: true, table });
+    };
+
+    const handleExecuteTruncate = () => {
+        if (!truncateModal.table) return;
+        setIsPurging(true);
+        router.post('/admin/database/truncate-table', {
+            table: truncateModal.table.name
+        }, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsPurging(false);
+                setTruncateModal({ isOpen: false, table: null });
+            }
+        });
+    };
+
+    // --- PURGE ACTIONS ---
+    const handleOpenPurgeModal = (moduleKey, title, description, affectedRows) => {
+        setPurgeModal({
+            isOpen: true,
+            module: moduleKey,
+            title,
+            description,
+            affectedRows,
+        });
+    };
+
+    const handleExecutePurge = () => {
+        if (!purgeModal.module) return;
+        setIsPurging(true);
+        router.post('/admin/database/purge-module', {
+            module: purgeModal.module,
+        }, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsPurging(false);
+                setPurgeModal({ isOpen: false, module: null, title: '', description: '', affectedRows: '' });
+            },
+        });
+    };
+
+    const handleExecuteTotalReset = () => {
+        if (totalResetModal.inputConfirm !== 'RESET DATA PERCOBAAN') return;
+        setIsPurging(true);
+        router.post('/admin/database/purge-module', {
+            module: 'all_test_data'
+        }, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsPurging(false);
+                setTotalResetModal({ isOpen: false, inputConfirm: '' });
+            }
+        });
+    };
+
+    // --- BACKUP & RESTORE ACTIONS ---
     const handleCreateBackup = () => {
         setCreatingBackup(true);
         router.post('/admin/database/backup', {}, {
@@ -36,12 +286,12 @@ export default function DatabaseIndex({ backups, tableStats, dbInfo }) {
     };
 
     const handleRestoreConfirm = () => {
-        if (!confirmModal.filename) return;
-        setRestoringFile(confirmModal.filename);
-        setConfirmModal({ isOpen: false, filename: null });
+        if (!confirmRestoreModal.filename) return;
+        setRestoringFile(confirmRestoreModal.filename);
+        setConfirmRestoreModal({ isOpen: false, filename: null });
 
         router.post('/admin/database/restore', {
-            filename: confirmModal.filename
+            filename: confirmRestoreModal.filename
         }, {
             preserveScroll: true,
             onFinish: () => setRestoringFile(null),
@@ -55,7 +305,7 @@ export default function DatabaseIndex({ backups, tableStats, dbInfo }) {
             return;
         }
 
-        if (confirm('PERINGATAN: Memulihkan database dari file upload akan menimpa seluruh data saat ini. Lanjutkan?')) {
+        if (confirm('PERINGATAN: Memulihkan database dari file upload akan menimpa data yang ada. Lanjutkan?')) {
             uploadForm.post('/admin/database/restore', {
                 preserveScroll: true,
                 onSuccess: () => uploadForm.reset(),
@@ -65,7 +315,7 @@ export default function DatabaseIndex({ backups, tableStats, dbInfo }) {
 
     const handleRunSeeder = (type) => {
         const confirmMsg = type === 'full' 
-            ? 'PERINGATAN: Menjalankan Full Master Seeder akan memperbarui data master dan akun default. Lanjutkan?'
+            ? 'PERINGATAN: Menjalankan Full Master Seeder akan memperbarui data master institusi dan akun default. Lanjutkan?'
             : `Jalankan seeder untuk '${type}'?`;
 
         if (confirm(confirmMsg)) {
@@ -77,480 +327,1099 @@ export default function DatabaseIndex({ backups, tableStats, dbInfo }) {
         }
     };
 
-    const seederModules = [
-        {
-            type: 'full',
-            title: 'Full Master & Dummy Seeder',
-            description: 'Memperbarui data 7 Role User, Fakultas, 7 Program Studi, Kurikulum OBE, Gedung, Ruang, dan Pengaturan Sistem.',
-            icon: Sparkles,
-            color: 'emerald',
-            badge: 'Rekomendasi Awal',
-        },
-        {
-            type: 'pmb',
-            title: 'PMB & Virtual Account Generator',
-            description: 'Generate 5 calon mahasiswa baru otomatis lengkap dengan nomor registrasi, invoice biaya PMB, dan nomor VA BSI (9928).',
-            icon: Users,
-            color: 'blue',
-            badge: 'Testing PMB & VA',
-        },
-        {
-            type: 'finance',
-            title: 'Tagihan SPP & Keuangan Mahasiswa',
-            description: 'Generate tagihan SPP semester ganjil untuk seluruh mahasiswa aktif lengkap dengan VA BSI.',
-            icon: CreditCard,
-            color: 'purple',
-            badge: 'Testing Billing & Keuangan',
-        },
-        {
-            type: 'curriculum',
-            title: 'Kurikulum OBE & Master Matakuliah',
-            description: 'Seed struktur kurikulum OBE terbaru, sebaran beban SKS wajib & pilihan, dan daftar mata kuliah per program studi.',
-            icon: School,
-            color: 'amber',
-            badge: 'Testing Akademik',
-        },
-    ];
-
     return (
-        <AppLayout title="Manajemen Database, Backup & Seeder">
-            <Head title="Database & Backup" />
+        <AppLayout title="Database Management & Purge">
+            <Head title="Database Management & Purge" />
 
-            <div className="space-y-6">
-                {/* Header Banner */}
-                <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white shadow-xl border border-indigo-900/50 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-                    <div className="flex items-center space-x-4">
-                        <div className="p-3.5 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-2xl shrink-0">
-                            <Database className="w-7 h-7 text-indigo-400" />
-                        </div>
+            <div className="space-y-5 max-w-7xl mx-auto pb-16">
+                {/* 1. COMPACT HERO HEADER */}
+                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 rounded-2xl p-4 sm:p-5 text-white shadow-md border border-slate-700/50">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                            <div className="flex items-center space-x-2">
-                                <span className="px-2.5 py-0.5 bg-indigo-500/30 text-indigo-300 rounded-full font-black text-[10px] uppercase tracking-wider border border-indigo-400/40">
-                                    KHUSUS SUPERADMIN
+                            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-black mb-1">
+                                <Database className="w-3 h-3 text-indigo-400" />
+                                <span>DATABASE &amp; PURGE ENGINE TELEMETRY</span>
+                            </div>
+                            <h2 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+                                Database Management &amp; Pembersihan Data
+                                <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
+                                    Superadmin
                                 </span>
-                                <span className="text-[11px] text-slate-400">PostgreSQL Driver</span>
-                            </div>
-                            <h2 className="text-xl font-black tracking-tight text-white mt-1">
-                                Manajemen Database, Backup & Seeder Data
                             </h2>
-                            <p className="text-xs text-indigo-200 mt-0.5 max-w-xl">
-                                Kelola cadangan snapshot database (.json), pemulihan data (restore), penghapusan backup, serta generator data seeder untuk lingkungan pengembangan.
+                            <p className="text-[11px] text-slate-300 mt-0.5 max-w-2xl">
+                                Manajemen tabel PostgreSQL, pratinjau data interaktif, hapus baris satuan/massal, truncate aman per tabel, dan backup/restore.
                             </p>
                         </div>
-                    </div>
 
-                    <div className="flex items-center space-x-2 shrink-0">
-                        <button
-                            type="button"
-                            disabled={creatingBackup}
-                            onClick={handleCreateBackup}
-                            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white rounded-xl text-xs font-black transition shadow-lg shadow-indigo-600/30 flex items-center space-x-2 cursor-pointer disabled:opacity-50"
-                        >
-                            <HardDrive className={`w-4 h-4 text-indigo-200 ${creatingBackup ? 'animate-spin' : ''}`} />
-                            <span>{creatingBackup ? 'Membuat Snapshot...' : '+ Buat Backup Database Sekarang'}</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Database Metrics Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Nama Database</p>
-                        <p className="text-sm font-black text-slate-900 font-mono mt-0.5">{dbInfo.database}</p>
-                        <p className="text-[10px] text-emerald-600 font-bold mt-1">🟢 Host: {dbInfo.host}:{dbInfo.port}</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Ukuran Database</p>
-                        <p className="text-base font-black text-indigo-950 mt-0.5">{dbInfo.size}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">Storage PostgreSQL</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Total Tabel Terdaftar</p>
-                        <p className="text-base font-black text-slate-900 mt-0.5">{dbInfo.total_tables} Tabel</p>
-                        <p className="text-[10px] text-slate-500 mt-1">Struktur Skema SIAKAD</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Total Baris Record</p>
-                        <p className="text-base font-black text-emerald-700 mt-0.5">{dbInfo.total_rows.toLocaleString('id-ID')} Baris</p>
-                        <p className="text-[10px] text-slate-500 mt-1">{backups.length} File Backup Tersedia</p>
-                    </div>
-                </div>
-
-                {/* Auto Backup Scheduler Status Card */}
-                <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 p-4 rounded-2xl border border-emerald-800/40 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                    <div className="flex items-center space-x-3">
-                        <div className="p-2.5 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-500/30">
-                            <Clock className="w-5 h-5 text-emerald-400" />
-                        </div>
-                        <div>
-                            <div className="flex items-center space-x-2">
-                                <h4 className="text-xs font-black text-white uppercase tracking-wider">Jadwal Pencadangan Otomatis (Auto Backup Scheduler)</h4>
-                                <span className="px-2 py-0.2 bg-emerald-500 text-slate-950 rounded font-black text-[9px]">AKTIF</span>
+                        {/* Quick Counters */}
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <div className="px-3 py-1.5 bg-slate-800/90 border border-slate-700 rounded-lg text-slate-300">
+                                <span>Tabel: <strong className="text-white font-bold">{tableCatalog.length}</strong></span>
                             </div>
-                            <p className="text-[11px] text-emerald-200 mt-0.5">
-                                Pencadangan snapshot JSON berjalan otomatis setiap hari pukul <strong>01:00 WIB</strong> via cron scheduler dengan kebijakan retensi <strong>14 arsip terbaru</strong>.
-                            </p>
+                            <div className="px-3 py-1.5 bg-slate-800/90 border border-slate-700 rounded-lg text-slate-300">
+                                <span>Total Record: <strong className="text-white font-bold">{(dbInfo.total_rows || 0).toLocaleString()}</strong></span>
+                            </div>
+                            <div className="px-3 py-1.5 bg-rose-950/70 border border-rose-800/50 rounded-lg text-rose-200">
+                                <span>Percobaan: <strong className="text-white font-bold">{totalTestRows.toLocaleString()}</strong></span>
+                            </div>
+                            <div className="px-3 py-1.5 bg-slate-800/90 border border-slate-700 rounded-lg text-slate-300">
+                                <span>Size: <strong className="text-white font-bold">{dbInfo.size || '0 MB'}</strong></span>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center space-x-2 shrink-0">
-                        <span className="px-3 py-1 bg-white/10 text-emerald-300 rounded-lg text-[10px] font-mono font-bold">
-                            Retensi: 14 Snapshot
-                        </span>
                     </div>
                 </div>
 
-                {/* TAB CONTROLS */}
-                <div className="flex border-b border-slate-200 space-x-2 bg-slate-100/60 p-1.5 rounded-2xl">
+                {/* 2. TABS SWITCHER (GAYA GEDUNG & RUANG / MASTER AKADEMIK STAI) */}
+                <div className="flex border-b border-slate-200 space-x-6 overflow-x-auto">
                     <button
+                        type="button"
+                        onClick={() => setActiveTab('tables')}
+                        className={`pb-3 text-xs font-bold border-b-2 transition flex items-center space-x-2 cursor-pointer whitespace-nowrap ${
+                            activeTab === 'tables'
+                                ? 'border-emerald-600 text-emerald-700'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        <Database className="w-4 h-4" />
+                        <span>Katalog &amp; Truncate Tabel</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            activeTab === 'tables' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                            {tableCatalog.length}
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('purge')}
+                        className={`pb-3 text-xs font-bold border-b-2 transition flex items-center space-x-2 cursor-pointer whitespace-nowrap ${
+                            activeTab === 'purge'
+                                ? 'border-rose-600 text-rose-700'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        <Flame className="w-4 h-4" />
+                        <span>Pembersihan Data Percobaan (Purge Engine)</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            activeTab === 'purge' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                            {totalTestRows} Baris
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
                         onClick={() => setActiveTab('backups')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                        className={`pb-3 text-xs font-bold border-b-2 transition flex items-center space-x-2 cursor-pointer whitespace-nowrap ${
                             activeTab === 'backups'
-                                ? 'bg-white text-indigo-900 shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
+                                ? 'border-indigo-600 text-indigo-700'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                     >
                         <HardDrive className="w-4 h-4" />
-                        <span>Daftar File Backup ({backups.length})</span>
+                        <span>File Backup Database</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            activeTab === 'backups' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                            {backups.length}
+                        </span>
                     </button>
 
                     <button
+                        type="button"
                         onClick={() => setActiveTab('upload')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                        className={`pb-3 text-xs font-bold border-b-2 transition flex items-center space-x-2 cursor-pointer whitespace-nowrap ${
                             activeTab === 'upload'
-                                ? 'bg-white text-indigo-900 shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
+                                ? 'border-indigo-600 text-indigo-700'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                     >
                         <Upload className="w-4 h-4" />
-                        <span>Upload & Restore File</span>
+                        <span>Upload &amp; Restore</span>
                     </button>
 
                     <button
+                        type="button"
                         onClick={() => setActiveTab('seeders')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                        className={`pb-3 text-xs font-bold border-b-2 transition flex items-center space-x-2 cursor-pointer whitespace-nowrap ${
                             activeTab === 'seeders'
-                                ? 'bg-white text-indigo-900 shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
+                                ? 'border-indigo-600 text-indigo-700'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                     >
-                        <Sparkles className="w-4 h-4" />
-                        <span>Database Seeder & Generator</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab('tables')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                            activeTab === 'tables'
-                                ? 'bg-white text-indigo-900 shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                    >
-                        <Layers className="w-4 h-4" />
-                        <span>Katalog Tabel ({tableStats.length})</span>
+                        <Play className="w-4 h-4" />
+                        <span>Database Seeder</span>
                     </button>
                 </div>
 
                 {/* ========================================================================= */}
-                {/* TAB 1: DAFTAR FILE BACKUP */}
+                {/* TAB 1: KATALOG & TRUNCATE TABEL (DALAM BENTUK TABEL COMPACT) */}
                 {/* ========================================================================= */}
-                {activeTab === 'backups' && (
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-                            <div>
-                                <h3 className="font-bold text-xs text-slate-900">Arsip File Backup Server</h3>
-                                <p className="text-[11px] text-slate-500">Tersimpan di direktori storage/app/backups</p>
+                {activeTab === 'tables' && (
+                    <div className="space-y-4">
+                        {/* Search & Filter Bar */}
+                        <div className="bg-white rounded-xl p-3.5 sm:p-4 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={tableSearch}
+                                    onChange={(e) => setTableSearch(e.target.value)}
+                                    placeholder="Cari nama tabel (misal: pmb, invoices, krs, users) atau kata kunci..."
+                                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                                />
+                                {tableSearch && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setTableSearch('')}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
                             </div>
-                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200">
-                                {backups.length} File Tersimpan
-                            </span>
+
+                            {/* Category Filter Buttons */}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setCategoryFilter('all')}
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${
+                                        categoryFilter === 'all' 
+                                            ? 'bg-slate-900 text-white' 
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    Semua ({categoryCounts.all})
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCategoryFilter('transactional')}
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${
+                                        categoryFilter === 'transactional' 
+                                            ? 'bg-rose-600 text-white' 
+                                            : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                                    }`}
+                                >
+                                    Transaksi ({categoryCounts.transactional})
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCategoryFilter('master')}
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${
+                                        categoryFilter === 'master' 
+                                            ? 'bg-emerald-700 text-white' 
+                                            : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                                    }`}
+                                >
+                                    Master ({categoryCounts.master})
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCategoryFilter('log')}
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${
+                                        categoryFilter === 'log' 
+                                            ? 'bg-sky-700 text-white' 
+                                            : 'bg-sky-50 text-sky-800 hover:bg-sky-100'
+                                    }`}
+                                >
+                                    Log ({categoryCounts.log})
+                                </button>
+
+                                <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-slate-100 select-none ml-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={onlyWithRows}
+                                        onChange={(e) => setOnlyWithRows(e.target.checked)}
+                                        className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 w-3.5 h-3.5"
+                                    />
+                                    <span>&gt; 0 baris</span>
+                                </label>
+                            </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse text-xs">
-                                <thead>
-                                    <tr className="bg-slate-900 text-white font-bold uppercase tracking-wider text-[10px]">
-                                        <th className="py-3 px-4 w-12 text-center">No.</th>
-                                        <th className="py-3 px-4">Nama File Backup</th>
-                                        <th className="py-3 px-3 text-center">Ukuran</th>
-                                        <th className="py-3 px-4 text-center">Jumlah Data</th>
-                                        <th className="py-3 px-4">Waktu Pembuatan</th>
-                                        <th className="py-3 px-4 text-center w-52">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 font-medium">
-                                    {backups.length > 0 ? (
-                                        backups.map((item, idx) => (
-                                            <tr key={item.filename} className="hover:bg-slate-50/60 transition">
-                                                <td className="py-3.5 px-4 text-center font-bold text-slate-500">
-                                                    {idx + 1}
-                                                </td>
-
-                                                <td className="py-3.5 px-4">
-                                                    <div className="flex items-center space-x-2">
-                                                        <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
-                                                        <span className="font-mono font-bold text-slate-900">
-                                                            {item.filename}
-                                                        </span>
-                                                    </div>
-                                                    {item.meta?.created_by && (
-                                                        <p className="text-[10px] text-slate-400 mt-0.5">Dibuat oleh: <strong className="text-slate-600">{item.meta.created_by}</strong></p>
-                                                    )}
-                                                </td>
-
-                                                <td className="py-3.5 px-3 text-center font-bold text-slate-700">
-                                                    {item.size_mb > 1 ? `${item.size_mb} MB` : `${item.size_kb} KB`}
-                                                </td>
-
-                                                <td className="py-3.5 px-4 text-center text-slate-700">
-                                                    <span className="px-2 py-0.5 bg-slate-100 rounded-md font-bold text-[11px]">
-                                                        {item.meta?.total_rows ? `${item.meta.total_rows.toLocaleString('id-ID')} Baris` : '-'}
-                                                    </span>
-                                                </td>
-
-                                                <td className="py-3.5 px-4 text-slate-600">
-                                                    <div className="flex items-center space-x-1.5">
-                                                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                                        <span>{item.created_at}</span>
-                                                    </div>
-                                                </td>
-
-                                                <td className="py-3.5 px-4 text-center">
-                                                    <div className="flex items-center justify-center space-x-1.5">
-                                                        {/* Download */}
-                                                        <a
-                                                            href={`/admin/database/download/${item.filename}`}
-                                                            className="p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition flex items-center space-x-1 text-[11px] font-bold"
-                                                            title="Download File Backup"
-                                                        >
-                                                            <Download className="w-3.5 h-3.5" />
-                                                            <span>Unduh</span>
-                                                        </a>
-
-                                                        {/* Restore */}
-                                                        <button
-                                                            type="button"
-                                                            disabled={restoringFile === item.filename}
-                                                            onClick={() => setConfirmModal({ isOpen: true, filename: item.filename })}
-                                                            className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 transition flex items-center space-x-1 text-[11px] font-bold cursor-pointer"
-                                                            title="Restore Database dari File Ini"
-                                                        >
-                                                            <RefreshCw className={`w-3.5 h-3.5 ${restoringFile === item.filename ? 'animate-spin' : ''}`} />
-                                                            <span>Pulihkan</span>
-                                                        </button>
-
-                                                        {/* Delete */}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteBackup(item.filename)}
-                                                            className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 transition flex items-center space-x-1 text-[11px] font-bold cursor-pointer"
-                                                            title="Hapus File Backup"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
+                        {/* TABLE FORMAT (Compact Table Layout) */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-[10px] font-black tracking-wider">
+                                            <th className="py-3 px-3 text-center w-12 border-r border-slate-100">#</th>
+                                            <th className="py-3 px-3.5 border-r border-slate-100 min-w-[220px]">Nama Tabel &amp; Entitas</th>
+                                            <th className="py-3 px-3 border-r border-slate-100 text-center w-36">Kategori</th>
+                                            <th className="py-3 px-3 border-r border-slate-100 text-center w-24">Jumlah Record</th>
+                                            <th className="py-3 px-3.5 border-r border-slate-100 min-w-[320px]">Rincian Data &amp; Efek Cascade</th>
+                                            <th className="py-3 px-3 text-center w-40">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                                        {filteredTables.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="py-8 text-center text-slate-400">
+                                                    Tidak ada tabel yang sesuai dengan pencarian / filter Anda.
                                                 </td>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="6" className="py-12 text-center text-slate-400">
-                                                Belum ada file backup yang dibuat. Klik tombol <strong>"+ Buat Backup Database Sekarang"</strong> di atas.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                        ) : (
+                                            filteredTables.map((item, idx) => {
+                                                const isTransactional = item.category === 'transactional';
+                                                const isMaster = item.category === 'master';
+                                                const isLog = item.category === 'log';
+                                                const isUsers = item.name === 'users';
+                                                const hasRows = item.rows > 0;
+
+                                                return (
+                                                    <tr key={item.name} className="hover:bg-slate-50/80 transition">
+                                                        <td className="py-2.5 px-3 text-center font-mono font-semibold text-slate-400 border-r border-slate-100">
+                                                            {idx + 1}
+                                                        </td>
+
+                                                        <td className="py-2.5 px-3.5 border-r border-slate-100">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-[11px] border border-slate-200">
+                                                                    {item.name}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                                                                {item.label}
+                                                            </span>
+                                                        </td>
+
+                                                        <td className="py-2.5 px-3 text-center border-r border-slate-100">
+                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border ${
+                                                                isTransactional
+                                                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                                                    : isMaster
+                                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                                        : isLog
+                                                                            ? 'bg-sky-50 text-sky-700 border-sky-200'
+                                                                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                                                            }`}>
+                                                                {item.category_label}
+                                                            </span>
+                                                        </td>
+
+                                                        <td className="py-2.5 px-3 text-center font-mono border-r border-slate-100">
+                                                            <span className={`font-bold px-2 py-0.5 rounded text-xs ${
+                                                                hasRows
+                                                                    ? isTransactional
+                                                                        ? 'bg-rose-100 text-rose-800'
+                                                                        : 'bg-slate-100 text-slate-800'
+                                                                    : 'text-slate-400'
+                                                            }`}>
+                                                                {item.rows.toLocaleString()}
+                                                            </span>
+                                                        </td>
+
+                                                        <td className="py-2.5 px-3.5 border-r border-slate-100 leading-relaxed">
+                                                            <p className="text-slate-600 line-clamp-1 font-medium">{item.description}</p>
+                                                            <p className="text-[11px] text-rose-800 line-clamp-2 mt-0.5">
+                                                                <strong>Cascade:</strong> {item.cascade_detail}
+                                                            </p>
+                                                        </td>
+
+                                                        <td className="py-2.5 px-3 text-center">
+                                                            <div className="flex items-center justify-center gap-1.5">
+                                                                {/* 1. Tombol View Data Modal */}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenViewer(item, 1, '')}
+                                                                    className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition cursor-pointer"
+                                                                    title="Lihat Data Tabel (Buka Pratinjau & Hapus Baris)"
+                                                                >
+                                                                    <Eye className="w-3.5 h-3.5" />
+                                                                </button>
+
+                                                                {/* 2. Tombol Kosongkan / Truncate */}
+                                                                {item.is_protected ? (
+                                                                    <span className="p-1.5 text-slate-300 cursor-not-allowed" title="Terkunci (Proteksi Migrasi)">
+                                                                        <Lock className="w-3.5 h-3.5" />
+                                                                    </span>
+                                                                ) : !hasRows ? (
+                                                                    <span className="p-1.5 text-slate-300 cursor-not-allowed" title="Tabel Kosong">
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </span>
+                                                                ) : isTransactional ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenTruncate(item)}
+                                                                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition cursor-pointer"
+                                                                        title="Kosongkan Tabel (TRUNCATE CASCADE)"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                ) : isUsers ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenTruncate(item)}
+                                                                        className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition cursor-pointer"
+                                                                        title="Bersihkan Akun Mahasiswa Dummy"
+                                                                    >
+                                                                        <Users className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenTruncate(item)}
+                                                                        className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition cursor-pointer"
+                                                                        title="Truncate Tabel (Master Data)"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {/* ========================================================================= */}
-                {/* TAB 2: UPLOAD & RESTORE MANUAL */}
+                {/* TAB 2: PEMBERSIHAN DATA PERCOBAAN (PURGE ENGINE MODUL) */}
                 {/* ========================================================================= */}
-                {activeTab === 'upload' && (
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs p-6 sm:p-8 max-w-2xl mx-auto space-y-6">
-                        <div>
-                            <div className="flex items-center space-x-2">
-                                <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
-                                    <Upload className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-black text-base text-slate-900">Upload & Restore File Backup</h3>
-                                    <p className="text-xs text-slate-500">Unggah file backup .json dari komputer lokal untuk memulihkan basis data.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 flex items-start space-x-3 text-xs text-amber-900">
-                            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                            <div>
-                                <p className="font-bold">Peringatan Keamanan Database:</p>
-                                <p className="text-[11px] mt-0.5">
-                                    Proses restore akan menghapus dan menimpa data yang ada saat ini dengan data dari file backup. Pastikan Anda telah membuat backup snapshot terbaru sebelum melakukan restore.
+                {activeTab === 'purge' && (
+                    <div className="space-y-4">
+                        {/* Master Reset Banner Card */}
+                        <div className="bg-gradient-to-r from-red-950 via-rose-900 to-slate-900 rounded-2xl p-5 sm:p-6 text-white border border-rose-700/60 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="space-y-1">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-500/20 text-red-300 rounded-full text-[10px] font-black border border-red-500/30 uppercase">
+                                    <Flame className="w-3 h-3 text-red-400" /> Total Safe Purge
+                                </span>
+                                <h3 className="text-base sm:text-lg font-bold">Reset Total Seluruh Data Transaksi Percobaan</h3>
+                                <p className="text-xs text-slate-300 max-w-xl">
+                                    Mengosongkan seluruh data transaksi dummy (PMB, Billing, KRS, Nilai, Absensi, EDOM) sekaligus dalam 1 transaksi aman. 
+                                    <strong className="text-emerald-300"> Master Data fakultas, prodi, kurikulum, matakuliah &amp; akun staf tetap utuh.</strong>
                                 </p>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setTotalResetModal({ isOpen: true, inputConfirm: '' })}
+                                className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs shadow-lg transition cursor-pointer flex items-center justify-center gap-2 shrink-0 border border-red-400/40"
+                            >
+                                <Flame className="w-4 h-4 text-amber-300" />
+                                Reset Semua Data Percobaan
+                            </button>
                         </div>
 
-                        <form onSubmit={handleUploadRestore} className="space-y-4">
-                            <div>
-                                <label className="block font-bold text-slate-700 text-xs mb-1">
-                                    Pilih File Backup (.json):
-                                </label>
-                                <input
-                                    type="file"
-                                    accept=".json"
-                                    onChange={(e) => uploadForm.setData('backup_file', e.target.files[0])}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-bold file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
-                                    required
-                                />
-                                {uploadForm.errors.backup_file && (
-                                    <p className="text-rose-600 font-bold text-[11px] mt-1">{uploadForm.errors.backup_file}</p>
-                                )}
+                        {/* Modul Purge Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                            {/* 1. PMB */}
+                            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-800 text-xs">1. Pendaftar PMB</span>
+                                    <span className="text-xs font-mono font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200">
+                                        {purgeStats.pmb?.applicants || 0} pendaftar
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 line-clamp-2">
+                                    Hapus calon mahasiswa, berkas upload PMB, tagihan formulir &amp; transaksi VA BSI.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => handleOpenPurgeModal('pmb', 'Pendaftar PMB', 'Seluruh pendaftar calon mahasiswa baru, berkas upload dokumen, invoice tagihan PMB, dan transaksi VA BSI terkait.', `${purgeStats.pmb?.applicants || 0} calon mahasiswa`)}
+                                    disabled={!purgeStats.pmb?.applicants}
+                                    className="w-full py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg text-xs transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Kosongkan Data PMB
+                                </button>
                             </div>
 
+                            {/* 2. Keuangan */}
+                            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-800 text-xs">2. Tagihan &amp; VA Keuangan</span>
+                                    <span className="text-xs font-mono font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200">
+                                        {purgeStats.finance?.invoices || 0} invoice
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 line-clamp-2">
+                                    Hapus seluruh invoice SPP/UKT, riwayat transaksi VA BSI, Winpay, dan dispensasi.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => handleOpenPurgeModal('finance', 'Tagihan & Keuangan', 'Seluruh invoice tagihan mahasiswa, transaksi VA BSI, transaksi Winpay, dan dispensasi keuangan.', `${purgeStats.finance?.invoices || 0} tagihan invoice`)}
+                                    disabled={!purgeStats.finance?.invoices}
+                                    className="w-full py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg text-xs transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Kosongkan Data Keuangan
+                                </button>
+                            </div>
+
+                            {/* 3. KRS */}
+                            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-800 text-xs">3. Rencana Studi (KRS)</span>
+                                    <span className="text-xs font-mono font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200">
+                                        {purgeStats.krs?.submissions || 0} pengajuan
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 line-clamp-2">
+                                    Hapus pengajuan KRS, rincian mata kuliah KRS, dan reset status mahasiswa ke Belum KRS.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => handleOpenPurgeModal('krs', 'Rencana Studi (KRS)', 'Seluruh pengajuan formulir KRS, item matakuliah yang diambil, dan peserta kelas.', `${purgeStats.krs?.submissions || 0} pengajuan KRS`)}
+                                    disabled={!purgeStats.krs?.submissions}
+                                    className="w-full py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg text-xs transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Kosongkan Data KRS
+                                </button>
+                            </div>
+
+                            {/* 4. Nilai */}
+                            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-800 text-xs">4. Nilai &amp; KHS Mahasiswa</span>
+                                    <span className="text-xs font-mono font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200">
+                                        {purgeStats.grades?.course_grades || 0} nilai
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 line-clamp-2">
+                                    Hapus rekapitulasi nilai perkuliahan, buku nilai DPNA, catatan KHS, dan transkrip.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => handleOpenPurgeModal('grades', 'Nilai & KHS', 'Seluruh nilai perkuliahan mahasiswa, rekaman lembar KHS semester, dan transkrip kumulatif.', `${purgeStats.grades?.course_grades || 0} record nilai`)}
+                                    disabled={!purgeStats.grades?.course_grades}
+                                    className="w-full py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg text-xs transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Kosongkan Data Nilai
+                                </button>
+                            </div>
+
+                            {/* 5. Presensi */}
+                            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-800 text-xs">5. Pertemuan &amp; Presensi</span>
+                                    <span className="text-xs font-mono font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200">
+                                        {purgeStats.attendance?.meetings || 0} sesi
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 line-clamp-2">
+                                    Hapus sesi pertemuan perkuliahan, PIN &amp; QR absensi, dan histori kehadiran mahasiswa.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => handleOpenPurgeModal('attendance', 'Presensi Perkuliahan', 'Seluruh pertemuan kuliah dan riwayat absensi mahasiswa.', `${purgeStats.attendance?.meetings || 0} pertemuan`)}
+                                    disabled={!purgeStats.attendance?.meetings}
+                                    className="w-full py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg text-xs transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Kosongkan Data Presensi
+                                </button>
+                            </div>
+
+                            {/* 6. Audit Log */}
+                            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-800 text-xs">6. Log Aktivitas Audit</span>
+                                    <span className="text-xs font-mono font-bold bg-sky-50 text-sky-700 px-2 py-0.5 rounded border border-sky-200">
+                                        {purgeStats.audit_logs?.total || 0} log
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 line-clamp-2">
+                                    Hapus riwayat rekam jejak aktivitas audit sistem untuk efisiensi ruang database.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => handleOpenPurgeModal('audit_logs', 'Audit Logs', 'Seluruh riwayat catatan aktivitas login dan eksekusi modul.', `${purgeStats.audit_logs?.total || 0} log`)}
+                                    disabled={!purgeStats.audit_logs?.total}
+                                    className="w-full py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold rounded-lg text-xs transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Bersihkan Audit Log
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ========================================================================= */}
+                {/* TAB 3: FILE BACKUP DATABASE */}
+                {/* ========================================================================= */}
+                {activeTab === 'backups' && (
+                    <div className="space-y-4">
+                        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-900">Arsip File Backup Database (.json)</h3>
+                                <p className="text-xs text-slate-500">
+                                    File cadangan database disimpan di storage internal server ({backups.length} file tersedia).
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleCreateBackup}
+                                disabled={creatingBackup}
+                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                {creatingBackup ? 'Membuat Backup...' : 'Buat Backup Baru'}
+                            </button>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            {backups.length === 0 ? (
+                                <div className="p-8 text-center text-slate-400 text-xs">
+                                    Belum ada file backup database yang dibuat di server.
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-100">
+                                    {backups.map((b) => (
+                                        <div key={b.filename} className="p-3.5 sm:p-4 flex items-center justify-between gap-3 text-xs hover:bg-slate-50/80 transition">
+                                            <div className="min-w-0">
+                                                <span className="font-mono font-bold text-slate-900 block truncate">{b.filename}</span>
+                                                <span className="text-[11px] text-slate-400">{b.created_at} • {b.size_kb} KB</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                <a
+                                                    href={`/admin/database/download/${b.filename}`}
+                                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                                    title="Download Backup"
+                                                >
+                                                    <Download className="w-4 h-4" />
+                                                </a>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setConfirmRestoreModal({ isOpen: true, filename: b.filename })}
+                                                    className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition cursor-pointer"
+                                                    title="Restore Database"
+                                                >
+                                                    <RefreshCw className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteBackup(b.filename)}
+                                                    className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                                                    title="Hapus File Backup"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* ========================================================================= */}
+                {/* TAB 4: UPLOAD & RESTORE MANUAL */}
+                {/* ========================================================================= */}
+                {activeTab === 'upload' && (
+                    <div className="max-w-xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                        <div className="flex items-center gap-3">
+                            <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-200">
+                                <Upload className="w-5 h-5" />
+                            </span>
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-900">Upload &amp; Restore Database (.json)</h3>
+                                <p className="text-xs text-slate-500">Pilih file backup yang sebelumnya telah Anda unduh dari SIAKAD.</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleUploadRestore} className="space-y-4 pt-2">
+                            <input
+                                type="file"
+                                accept=".json"
+                                onChange={(e) => uploadForm.setData('backup_file', e.target.files[0])}
+                                className="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
+                            />
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
+                                ⚠️ <strong>PERINGATAN:</strong> Memulihkan database dari file akan menimpa seluruh data tabel yang ada. Pastikan file backup valid.
+                            </div>
                             <button
                                 type="submit"
                                 disabled={uploadForm.processing || !uploadForm.data.backup_file}
-                                className="w-full py-3 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black rounded-xl text-xs transition shadow-lg shadow-amber-600/30 flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+                                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
-                                <RefreshCw className={`w-4 h-4 ${uploadForm.processing ? 'animate-spin' : ''}`} />
-                                <span>{uploadForm.processing ? 'Memulihkan Database...' : 'Mulai Restore Database dari File Upload'}</span>
+                                <Upload className="w-3.5 h-3.5" />
+                                {uploadForm.processing ? 'Memulihkan Database...' : 'Mulai Restore Data'}
                             </button>
                         </form>
                     </div>
                 )}
 
                 {/* ========================================================================= */}
-                {/* TAB 3: SEEDER & GENERATOR DATA */}
+                {/* TAB 5: DATABASE SEEDER */}
                 {/* ========================================================================= */}
                 {activeTab === 'seeders' && (
-                    <div className="space-y-4">
-                        <div className="bg-slate-900 text-white p-5 rounded-3xl border border-slate-800 flex items-center justify-between">
-                            <div>
-                                <h3 className="text-sm font-black text-white">Generator Data & Seeder Pengembangan</h3>
-                                <p className="text-xs text-slate-400 mt-0.5">
-                                    Gunakan seeder ini untuk menguji modul SIAKAD, PMB, Kurikulum OBE, dan simulasi perbankan Virtual Account.
-                                </p>
-                            </div>
-                            <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-full border border-emerald-500/30">
-                                Mode Development
-                            </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {seederModules.map((m) => {
-                                const IconComp = m.icon;
-                                const isRunning = runningSeeder === m.type;
-
-                                return (
-                                    <div
-                                        key={m.type}
-                                        className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-4 hover:border-indigo-300 transition"
-                                    >
-                                        <div className="space-y-2.5">
-                                            <div className="flex items-start justify-between">
-                                                <div className="p-2.5 bg-indigo-50 text-indigo-700 rounded-2xl">
-                                                    <IconComp className="w-5 h-5" />
-                                                </div>
-                                                <span className="text-[10px] font-black px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full">
-                                                    {m.badge}
-                                                </span>
-                                            </div>
-
-                                            <div>
-                                                <h4 className="font-black text-sm text-slate-900">{m.title}</h4>
-                                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{m.description}</p>
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            disabled={isRunning}
-                                            onClick={() => handleRunSeeder(m.type)}
-                                            className="w-full py-2.5 bg-slate-900 hover:bg-indigo-600 text-white font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50"
-                                        >
-                                            <Play className={`w-3.5 h-3.5 ${isRunning ? 'animate-spin' : ''}`} />
-                                            <span>{isRunning ? 'Mengeksekusi Seeder...' : 'Jalankan Seeder Ini'}</span>
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* ========================================================================= */}
-                {/* TAB 4: KATALOG TABEL & STATISTIK BARIS */}
-                {/* ========================================================================= */}
-                {activeTab === 'tables' && (
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-                            <div>
-                                <h3 className="font-bold text-xs text-slate-900">Katalog Skema & Jumlah Baris Database</h3>
-                                <p className="text-[11px] text-slate-500">Tabel aktif yang masuk dalam cakupan auto-backup snapshot</p>
-                            </div>
-                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800">
-                                {tableStats.length} Tabel Aktif
-                            </span>
-                        </div>
-
-                        <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                            {tableStats.map((t) => (
-                                <div key={t.name} className="p-3 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 transition flex items-center justify-between">
-                                    <div className="min-w-0 pr-2">
-                                        <p className="font-mono text-xs font-bold text-slate-800 truncate">{t.name}</p>
-                                        <p className="text-[10px] text-slate-400">PostgreSQL Table</p>
-                                    </div>
-                                    <span className="px-2 py-0.5 bg-white border border-slate-200 rounded-md font-bold text-[11px] text-indigo-900 shrink-0">
-                                        {t.rows} baris
-                                    </span>
+                    <div className="space-y-4 max-w-2xl mx-auto">
+                        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                            <div className="flex items-center gap-3">
+                                <span className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-200">
+                                    <Play className="w-5 h-5" />
+                                </span>
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-900">Jalankan Database Seeder</h3>
+                                    <p className="text-xs text-slate-500">Inisialisasi data master atau generate data dummy untuk keperluan pengujian sistem.</p>
                                 </div>
-                            ))}
+                            </div>
+
+                            <div className="space-y-2.5 pt-2">
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 text-xs">
+                                    <div>
+                                        <strong className="text-slate-900 block">Seeder Kurikulum OBE &amp; Matakuliah</strong>
+                                        <span className="text-slate-500 text-[11px]">Memperbarui master kurikulum OBE 5 prodi &amp; 38 matakuliah.</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRunSeeder('curriculum')}
+                                        disabled={runningSeeder !== null}
+                                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer shrink-0"
+                                    >
+                                        Jalankan
+                                    </button>
+                                </div>
+
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 text-xs">
+                                    <div>
+                                        <strong className="text-slate-900 block">Generate 5 Calon Mahasiswa PMB</strong>
+                                        <span className="text-slate-500 text-[11px]">Membuat 5 pendaftar dummy lengkap dengan invoice &amp; VA BSI.</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRunSeeder('pmb')}
+                                        disabled={runningSeeder !== null}
+                                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs transition cursor-pointer shrink-0"
+                                    >
+                                        Generate
+                                    </button>
+                                </div>
+
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 text-xs">
+                                    <div>
+                                        <strong className="text-slate-900 block">Generate Tagihan SPP Mahasiswa</strong>
+                                        <span className="text-slate-500 text-[11px]">Menerbitkan invoice SPP &amp; VA BSI untuk seluruh akun mahasiswa.</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRunSeeder('finance')}
+                                        disabled={runningSeeder !== null}
+                                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs transition cursor-pointer shrink-0"
+                                    >
+                                        Generate
+                                    </button>
+                                </div>
+
+                                <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl flex items-center justify-between gap-3 text-xs mt-3">
+                                    <div>
+                                        <strong className="text-indigo-950 block">Full Master Database Seeder</strong>
+                                        <span className="text-indigo-700 text-[11px]">Mengisi master fakultas, prodi, kurikulum, matakuliah, gedung, ruang, dan akun staf default.</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRunSeeder('full')}
+                                        disabled={runningSeeder !== null}
+                                        className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer shrink-0"
+                                    >
+                                        Full Seeder
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
 
             {/* ========================================================================= */}
-            {/* MODAL KONFIRMASI RESTORE */}
+            {/* MODAL 1: PRATINJAU DATA TABEL (VIEW DATA + HAPUS 1-1 / HAPUS MULTI) */}
             {/* ========================================================================= */}
-            {confirmModal.isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
-                    <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200">
-                        <div className="p-6 space-y-4 text-center">
-                            <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto">
-                                <AlertTriangle className="w-6 h-6" />
+            {viewerModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+                    <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
+                            <div className="flex items-center gap-3">
+                                <span className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                                    <Database className="w-5 h-5" />
+                                </span>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                                            Data Tabel: <span className="font-mono text-indigo-600 font-bold">{viewerModal.tableName}</span>
+                                        </h3>
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                                            {viewerModal.data?.total || 0} Total Record
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500">
+                                        {viewerModal.tableLabel} • Pratinjau isi tabel dan kelola data (hapus satuan / hapus multi).
+                                    </p>
+                                </div>
                             </div>
 
+                            <button
+                                type="button"
+                                onClick={() => setViewerModal(prev => ({ ...prev, isOpen: false, data: null, selectedIds: [] }))}
+                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Search & Bulk Action Bar Inside Modal */}
+                        <div className="p-3.5 bg-white border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="relative flex-1 max-w-md">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={viewerModal.searchQuery}
+                                    onChange={(e) => {
+                                        const q = e.target.value;
+                                        setViewerModal(prev => ({ ...prev, searchQuery: q }));
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleOpenViewer({ name: viewerModal.tableName, label: viewerModal.tableLabel }, 1, viewerModal.searchQuery);
+                                        }
+                                    }}
+                                    placeholder="Cari data di tabel ini... (tekan Enter)"
+                                    className="w-full pl-8 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            {/* Multi-Delete Bar */}
+                            <div className="flex items-center gap-2 shrink-0">
+                                {viewerModal.selectedIds.length > 0 ? (
+                                    <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl animate-in fade-in">
+                                        <span className="text-xs font-bold text-rose-800">
+                                            {viewerModal.selectedIds.length} baris dipilih
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={handleDeleteMultiRows}
+                                            className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                            Hapus Terpilih
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleOpenViewer({ name: viewerModal.tableName, label: viewerModal.tableLabel }, viewerModal.page, viewerModal.searchQuery)}
+                                        className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                                        title="Segarkan Data"
+                                    >
+                                        <RefreshCw className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Table Content */}
+                        <div className="flex-1 overflow-auto p-4">
+                            {viewerModal.isLoading ? (
+                                <div className="py-16 text-center text-slate-400">
+                                    <RefreshCw className="w-8 h-8 animate-spin mx-auto text-indigo-500 mb-2" />
+                                    <p className="text-xs font-medium">Memuat baris data tabel...</p>
+                                </div>
+                            ) : !viewerModal.data?.records || viewerModal.data.records.length === 0 ? (
+                                <div className="py-16 text-center text-slate-400">
+                                    <Database className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                                    <p className="text-xs font-semibold text-slate-600">Tabel ini saat ini kosong atau tidak ada data yang cocok.</p>
+                                </div>
+                            ) : (
+                                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                                    <table className="w-full text-left text-xs border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-wider">
+                                                {/* Checkbox Select All */}
+                                                <th className="py-2.5 px-3 text-center w-10 border-r border-slate-200">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={
+                                                            viewerModal.data.records.length > 0 &&
+                                                            viewerModal.selectedIds.length === viewerModal.data.records.length
+                                                        }
+                                                        onChange={handleSelectAllRows}
+                                                        className="rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 w-3.5 h-3.5 cursor-pointer"
+                                                        title="Pilih Semua di Halaman Ini"
+                                                    />
+                                                </th>
+
+                                                {/* Dynamic Column Headers */}
+                                                {viewerModal.data.columns.map((col) => (
+                                                    <th key={col} className="py-2.5 px-3 border-r border-slate-200 whitespace-nowrap font-mono">
+                                                        {col}
+                                                    </th>
+                                                ))}
+
+                                                {/* Action Column */}
+                                                <th className="py-2.5 px-3 text-center w-16 whitespace-nowrap">
+                                                    Aksi
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 font-sans">
+                                            {viewerModal.data.records.map((row, rIdx) => {
+                                                const pkVal = row._pk || row[viewerModal.data.primary_key];
+                                                const isSelected = viewerModal.selectedIds.includes(pkVal);
+
+                                                return (
+                                                    <tr 
+                                                        key={pkVal || rIdx} 
+                                                        className={`transition ${isSelected ? 'bg-indigo-50/70' : 'hover:bg-slate-50/70'}`}
+                                                    >
+                                                        {/* Checkbox per row */}
+                                                        <td className="py-2 px-3 text-center border-r border-slate-100">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => handleToggleRowSelection(pkVal)}
+                                                                className="rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 w-3.5 h-3.5 cursor-pointer"
+                                                            />
+                                                        </td>
+
+                                                        {/* Dynamic Cell Values */}
+                                                        {viewerModal.data.columns.map((col) => {
+                                                            const val = row[col];
+                                                            return (
+                                                                <td key={col} className="py-2 px-3 border-r border-slate-100 font-mono text-[11px] text-slate-800 max-w-[200px] truncate">
+                                                                    {val !== null && val !== undefined ? String(val) : <span className="text-slate-300 italic">-</span>}
+                                                                </td>
+                                                            );
+                                                        })}
+
+                                                        {/* Delete 1-1 Button */}
+                                                        <td className="py-2 px-3 text-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeleteSingleRow(pkVal)}
+                                                                className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition cursor-pointer"
+                                                                title={`Hapus baris data ID #${pkVal}`}
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer / Pagination */}
+                        {viewerModal.data && viewerModal.data.total > 0 && (
+                            <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
+                                <div>
+                                    <span>Menampilkan halaman <strong>{viewerModal.data.current_page}</strong> dari <strong>{viewerModal.data.last_page}</strong> (Total <strong>{viewerModal.data.total}</strong> data)</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        disabled={viewerModal.data.current_page <= 1}
+                                        onClick={() => handleOpenViewer({ name: viewerModal.tableName, label: viewerModal.tableLabel }, viewerModal.data.current_page - 1, viewerModal.searchQuery)}
+                                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                    >
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={viewerModal.data.current_page >= viewerModal.data.last_page}
+                                        onClick={() => handleOpenViewer({ name: viewerModal.tableName, label: viewerModal.tableLabel }, viewerModal.data.current_page + 1, viewerModal.searchQuery)}
+                                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                    >
+                                        <ChevronRight className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* MODAL 2: KONFIRMASI KOSONGKAN TABEL (TRUNCATE CASCADE) */}
+            {/* ========================================================================= */}
+            {truncateModal.isOpen && truncateModal.table && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-3.5">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2.5 bg-rose-100 text-rose-600 rounded-xl shrink-0">
+                                <AlertOctagon className="w-6 h-6" />
+                            </div>
                             <div>
-                                <h3 className="font-black text-base text-slate-900">Konfirmasi Restore Database</h3>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    Apakah Anda yakin ingin memulihkan database dari file:
-                                </p>
-                                <p className="font-mono font-bold text-xs text-indigo-700 mt-1 bg-indigo-50 p-2 rounded-xl border border-indigo-200 break-all">
-                                    {confirmModal.filename}
-                                </p>
-                                <p className="text-[11px] text-rose-600 font-bold mt-2">
-                                    PERHATIAN: Seluruh data saat ini akan ditimpa dengan data dari file backup ini!
+                                <h3 className="text-sm font-bold text-slate-900">
+                                    Kosongkan Tabel <span className="font-mono text-rose-600">{truncateModal.table.name}</span>
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    {truncateModal.table.label} • {truncateModal.table.rows.toLocaleString()} baris data
                                 </p>
                             </div>
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-2 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setConfirmModal({ isOpen: false, filename: null })}
-                                    className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleRestoreConfirm}
-                                    className="py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs transition shadow cursor-pointer"
-                                >
-                                    Ya, Pulihkan Sekarang
-                                </button>
+                        <div className="bg-slate-50 rounded-xl p-3 text-xs space-y-2 border border-slate-200 text-slate-700">
+                            <div>
+                                <strong className="text-slate-900 block">Fungsi Data:</strong>
+                                <p className="text-slate-600 text-[11px]">{truncateModal.table.description}</p>
                             </div>
+                            <div className="pt-2 border-t border-slate-200">
+                                <strong className="text-rose-700 block text-[11px]">Dampak &amp; Relasi yang Ikut Dihapus (Cascade):</strong>
+                                <p className="text-rose-900 text-[11px] font-medium leading-relaxed">{truncateModal.table.cascade_detail}</p>
+                            </div>
+                            {truncateModal.table.name === 'users' && (
+                                <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-900 text-[11px] font-medium">
+                                    🛡️ Akun Superadmin aktif dan dosen/staf Anda dilindungi dan TIDAK akan terhapus.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setTruncateModal({ isOpen: false, table: null })}
+                                disabled={isPurging}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition cursor-pointer"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleExecuteTruncate}
+                                disabled={isPurging}
+                                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5"
+                            >
+                                {isPurging ? 'Sedang Mengosongkan...' : 'Ya, Kosongkan Tabel'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* MODAL 3: TOTAL RESET DATA PERCOBAAN */}
+            {/* ========================================================================= */}
+            {totalResetModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-rose-200 space-y-3.5">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2.5 bg-rose-100 text-rose-600 rounded-xl shrink-0">
+                                <Flame className="w-6 h-6 animate-bounce" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-900">Reset Total Data Percobaan</h3>
+                                <p className="text-xs text-slate-500">Membersihkan seluruh data transaksi dummy sekaligus.</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 rounded-xl p-3 text-xs space-y-2 border border-slate-200 text-slate-700">
+                            <p className="text-[11px] text-slate-600">
+                                Seluruh data pendaftar PMB, tagihan invoice, KRS, nilai perkuliahan, presensi, kuesioner EDOM, dan mahasiswa dummy akan dikosongkan.
+                            </p>
+                            <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-900 text-[11px] font-medium">
+                                🛡️ <strong>MASTER DATA AMAN:</strong> Fakultas, Program Studi, Kurikulum, Matakuliah, Ruang, Periode Semester &amp; Akun Staf tetap utuh.
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-slate-700">
+                                Ketik <span className="font-mono text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-200 select-all">RESET DATA PERCOBAAN</span>:
+                            </label>
+                            <input
+                                type="text"
+                                value={totalResetModal.inputConfirm}
+                                onChange={(e) => setTotalResetModal(prev => ({ ...prev, inputConfirm: e.target.value }))}
+                                placeholder="RESET DATA PERCOBAAN"
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold text-rose-700 tracking-wider focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white"
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setTotalResetModal({ isOpen: false, inputConfirm: '' })}
+                                disabled={isPurging}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition cursor-pointer"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleExecuteTotalReset}
+                                disabled={isPurging || totalResetModal.inputConfirm !== 'RESET DATA PERCOBAAN'}
+                                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xs transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                {isPurging ? 'Sedang Mereset...' : 'Konfirmasi Reset Total'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* MODAL 4: PURGE MODUL INDIVIDUAL */}
+            {/* ========================================================================= */}
+            {purgeModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-3.5">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2.5 bg-rose-100 text-rose-600 rounded-xl shrink-0">
+                                <Trash2 className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-900">Pembersihan Modul: {purgeModal.title}</h3>
+                                <p className="text-xs text-slate-500">Target data: {purgeModal.affectedRows}</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 rounded-xl p-3 text-xs space-y-1.5 border border-slate-200 text-slate-700">
+                            <strong className="text-slate-900 block">Data yang Dihapus:</strong>
+                            <p className="text-[11px] text-slate-600 leading-relaxed">{purgeModal.description}</p>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setPurgeModal({ isOpen: false, module: null, title: '', description: '', affectedRows: '' })}
+                                disabled={isPurging}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition cursor-pointer"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleExecutePurge}
+                                disabled={isPurging}
+                                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1"
+                            >
+                                {isPurging ? 'Sedang Membersihkan...' : 'Ya, Bersihkan Modul Ini'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* MODAL 5: KONFIRMASI RESTORE BACKUP */}
+            {confirmRestoreModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-3.5">
+                        <h3 className="text-sm font-bold text-slate-900">Konfirmasi Restore Database</h3>
+                        <p className="text-xs text-slate-600">
+                            Memulihkan database dari file <strong className="font-mono text-slate-900">{confirmRestoreModal.filename}</strong>? Tindakan ini akan menimpa data yang ada saat ini.
+                        </p>
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmRestoreModal({ isOpen: false, filename: null })}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition cursor-pointer"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleRestoreConfirm}
+                                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition cursor-pointer"
+                            >
+                                Ya, Lakukan Restore
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -210,7 +210,7 @@ class UserController extends Controller
     }
 
     /**
-     * Hapus Pengguna
+     * Hapus Pengguna (Cascade Clean-up Relasional)
      */
     public function destroy(int $id): RedirectResponse
     {
@@ -219,7 +219,85 @@ class UserController extends Controller
             return back()->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
         }
 
-        $user->delete();
-        return back()->with('success', "Akun {$user->name} berhasil dihapus dari sistem.");
+        if ($user->role === 'superadmin' && User::where('role', 'superadmin')->count() <= 1) {
+            return back()->with('error', 'Tidak dapat menghapus superadmin satu-satunya dalam sistem.');
+        }
+
+        DB::transaction(function () use ($user) {
+            $userId = $user->id;
+
+            // 1. Tagihan & VA BSI
+            $invoices = DB::table('student_invoices')->where('user_id', $userId)->pluck('id')->toArray();
+            if (!empty($invoices)) {
+                DB::table('va_bsi_transactions')->whereIn('student_invoice_id', $invoices)->delete();
+                if (DB::getSchemaBuilder()->hasTable('winpay_transactions')) {
+                    DB::table('winpay_transactions')->whereIn('student_invoice_id', $invoices)->delete();
+                }
+                if (DB::getSchemaBuilder()->hasTable('fee_dispensations')) {
+                    DB::table('fee_dispensations')->whereIn('student_invoice_id', $invoices)->delete();
+                }
+                DB::table('student_invoices')->whereIn('id', $invoices)->delete();
+            }
+
+            // 2. KRS & Rencana Studi
+            $subs = DB::table('krs_submissions')->where('student_id', $userId)->pluck('id')->toArray();
+            if (!empty($subs)) {
+                DB::table('krs_items')->whereIn('krs_submission_id', $subs)->delete();
+                DB::table('krs_submissions')->whereIn('id', $subs)->delete();
+            }
+
+            // 3. Class enrollments & Attendances
+            DB::table('class_enrollments')->where('student_id', $userId)->delete();
+            DB::table('attendances')->where('student_id', $userId)->delete();
+            if (DB::getSchemaBuilder()->hasTable('student_attendances')) {
+                DB::table('student_attendances')->where('student_id', $userId)->delete();
+            }
+
+            // 4. Grades, KHS, Transcripts
+            DB::table('course_grades')->where('student_id', $userId)->delete();
+            DB::table('khs_records')->where('student_id', $userId)->delete();
+            DB::table('transcripts')->where('student_id', $userId)->delete();
+            if (DB::getSchemaBuilder()->hasTable('transfer_grade_conversions')) {
+                DB::table('transfer_grade_conversions')->where('student_id', $userId)->delete();
+            }
+
+            // 5. EDOM
+            DB::table('edom_responses')->where('student_id', $userId)->delete();
+            DB::table('student_edom_completions')->where('student_id', $userId)->delete();
+
+            // 6. Skripsi, Yudisium & Aktivitas
+            if (DB::getSchemaBuilder()->hasTable('thesis_submissions')) {
+                DB::table('thesis_submissions')->where('student_id', $userId)->delete();
+            }
+            if (DB::getSchemaBuilder()->hasTable('yudisium_applicants')) {
+                DB::table('yudisium_applicants')->where('student_id', $userId)->delete();
+            }
+            if (DB::getSchemaBuilder()->hasTable('student_activities')) {
+                DB::table('student_activities')->where('student_id', $userId)->delete();
+            }
+            if (DB::getSchemaBuilder()->hasTable('student_leave_requests')) {
+                DB::table('student_leave_requests')->where('student_id', $userId)->delete();
+            }
+
+            // 7. Relasi Dosen jika ada
+            DB::table('class_lecturers')->where('lecturer_id', $userId)->delete();
+
+            // 8. Hapus user
+            $user->delete();
+
+            DB::table('audit_logs')->insert([
+                'user_id' => auth()->id(),
+                'action' => 'USER_DELETE',
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'target_entity' => 'User',
+                'target_id' => (string) $userId,
+                'details' => json_encode(['name' => $user->name, 'username' => $user->username, 'role' => $user->role]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        return back()->with('success', "Akun {$user->name} ({$user->role}) beserta seluruh data riwayat terkait berhasil dihapus.");
     }
 }
