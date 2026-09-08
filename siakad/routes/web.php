@@ -134,6 +134,8 @@ Route::middleware('auth')->group(function () {
             // Manajemen Database, Backup, Restore, Purge & Seeder (Khusus Superadmin)
             Route::get('/database', [DatabaseController::class, 'index'])->name('database.index');
             Route::post('/database/backup', [DatabaseController::class, 'createBackup'])->name('database.backup.create');
+            Route::post('/database/backup/cloud-upload/{filename}', [DatabaseController::class, 'uploadBackupToCloud'])->name('database.backup.cloud_upload');
+            Route::post('/database/telegram/test', [DatabaseController::class, 'testTelegramNotification'])->name('database.telegram.test');
             Route::get('/database/download/{filename}', [DatabaseController::class, 'downloadBackup'])->name('database.backup.download');
             Route::delete('/database/backup/{filename}', [DatabaseController::class, 'deleteBackup'])->name('database.backup.delete');
             Route::post('/database/restore', [DatabaseController::class, 'restoreBackup'])->name('database.restore');

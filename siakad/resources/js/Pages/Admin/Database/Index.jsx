@@ -7,13 +7,15 @@ import {
     Layers, FileText, Server, Users, Search, Flame, 
     ShieldCheck, Lock, AlertOctagon, Info, Eye, CheckSquare, 
     Square, Check, X, ChevronLeft, ChevronRight, Building2,
-    Calendar, Sparkles
+    Calendar, Sparkles, Cloud, Send, Bell
 } from 'lucide-react';
 
 export default function DatabaseIndex({ 
     tableCatalog = [], 
     totalTestRows = 0, 
     backups = [], 
+    cloudStatus = {},
+    telegramStatus = {},
     purgeStats = {}, 
     dbInfo = {} 
 }) {
@@ -43,8 +45,15 @@ export default function DatabaseIndex({
         page: 1,
     });
 
-    // 5. Utility States (Backup & Seeder)
+    // 5. Utility States (Backup, Cloud S3, Telegram & Seeder)
     const [creatingBackup, setCreatingBackup] = useState(false);
+    const [backupOptions, setBackupOptions] = useState({
+        encrypt: true,
+        upload_cloud: true,
+        notify_telegram: true,
+    });
+    const [testingTelegram, setTestingTelegram] = useState(false);
+    const [uploadingCloud, setUploadingCloud] = useState(null);
     const [runningSeeder, setRunningSeeder] = useState(null);
     const [restoringFile, setRestoringFile] = useState(null);
     const [confirmRestoreModal, setConfirmRestoreModal] = useState({ isOpen: false, filename: null });
@@ -271,9 +280,25 @@ export default function DatabaseIndex({
     // --- BACKUP & RESTORE ACTIONS ---
     const handleCreateBackup = () => {
         setCreatingBackup(true);
-        router.post('/admin/database/backup', {}, {
+        router.post('/admin/database/backup', backupOptions, {
             preserveScroll: true,
             onFinish: () => setCreatingBackup(false),
+        });
+    };
+
+    const handleUploadToCloud = (filename) => {
+        setUploadingCloud(filename);
+        router.post(`/admin/database/backup/cloud-upload/${filename}`, {}, {
+            preserveScroll: true,
+            onFinish: () => setUploadingCloud(null),
+        });
+    };
+
+    const handleTestTelegram = () => {
+        setTestingTelegram(true);
+        router.post('/admin/database/telegram/test', {}, {
+            preserveScroll: true,
+            onFinish: () => setTestingTelegram(false),
         });
     };
 
@@ -838,46 +863,220 @@ export default function DatabaseIndex({
                 )}
 
                 {/* ========================================================================= */}
-                {/* TAB 3: FILE BACKUP DATABASE */}
+                {/* TAB 3: FILE BACKUP DATABASE (S3 CLOUD & TELEGRAM SENTINEL) */}
                 {/* ========================================================================= */}
                 {activeTab === 'backups' && (
                     <div className="space-y-4">
-                        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-900">Arsip File Backup Database (.json)</h3>
-                                <p className="text-xs text-slate-500">
-                                    File cadangan database disimpan di storage internal server ({backups.length} file tersedia).
-                                </p>
+                        {/* Telemetri Cloud Storage & Telegram Sentinel */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Card 1: Cloud Storage (S3 / MinIO / R2) */}
+                            <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 text-white rounded-2xl p-4 sm:p-5 border border-indigo-800/40 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                                    <Cloud className="w-24 h-24 text-white" />
+                                </div>
+                                <div className="flex items-start justify-between relative z-10 gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                                            <Cloud className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-300">Cloud Storage Archiving</h4>
+                                            <p className="text-sm font-black text-white">{cloudStatus?.provider || 'S3 Compatible Storage'}</p>
+                                        </div>
+                                    </div>
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                        cloudStatus?.is_configured 
+                                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                                            : 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
+                                    }`}>
+                                        {cloudStatus?.mode === 'LIVE_CLOUD' ? 'S3 Production Terhubung' : 'Staging Cloud Aktif'}
+                                    </span>
+                                </div>
+                                <div className="mt-4 pt-3 border-t border-indigo-800/40 flex items-center justify-between text-xs text-indigo-200/80">
+                                    <div>
+                                        <span className="text-[11px] text-indigo-400 block">Target Bucket:</span>
+                                        <span className="font-mono font-bold text-white text-xs">{cloudStatus?.bucket || 'stai-siakad-backups'}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[11px] text-indigo-400 block">Region:</span>
+                                        <span className="font-mono font-bold text-white text-xs">{cloudStatus?.region || 'us-east-1'}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={handleCreateBackup}
-                                disabled={creatingBackup}
-                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shrink-0"
-                            >
-                                <Download className="w-3.5 h-3.5" />
-                                {creatingBackup ? 'Membuat Backup...' : 'Buat Backup Baru'}
-                            </button>
+
+                            {/* Card 2: Telegram Sentinel Bot */}
+                            <div className="bg-gradient-to-br from-sky-950 via-slate-900 to-indigo-950 text-white rounded-2xl p-4 sm:p-5 border border-sky-800/40 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                                    <Send className="w-24 h-24 text-white" />
+                                </div>
+                                <div className="flex items-start justify-between relative z-10 gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-300">
+                                            <Bell className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-sky-300">Telegram Sentinel Bot</h4>
+                                            <p className="text-sm font-black text-white">
+                                                {telegramStatus?.is_configured ? 'Sentinel Aktif (Real-time)' : 'Audit Sentinel (Simulasi)'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleTestTelegram}
+                                        disabled={testingTelegram}
+                                        className="px-2.5 py-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-lg text-[10px] transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shrink-0"
+                                    >
+                                        <Send className="w-3 h-3" />
+                                        {testingTelegram ? 'Menguji...' : 'Uji Bot'}
+                                    </button>
+                                </div>
+                                <div className="mt-4 pt-3 border-t border-sky-800/40 flex items-center justify-between text-xs text-sky-200/80">
+                                    <div>
+                                        <span className="text-[11px] text-sky-400 block">Target Channel / Chat ID:</span>
+                                        <span className="font-mono font-bold text-white text-xs">{telegramStatus?.chat_id || 'Chat ID Default (Audit)'}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[11px] text-sky-400 block">Status Sentinel:</span>
+                                        <span className="inline-flex items-center gap-1 font-bold text-emerald-400 text-xs">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                                            Siaga 24/7
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        {/* Panel Buat Cadangan Database Baru */}
+                        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-4">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                        <Database className="w-4 h-4 text-indigo-600" />
+                                        Pencadangan Database Komprehensif
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Membuat snapshot seluruh tabel data institusi, transaksi akademik, dan keuangan ke arsip terkompresi.
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateBackup}
+                                        disabled={creatingBackup}
+                                        className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-sm shrink-0"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        {creatingBackup ? 'Memproses Cadangan...' : 'Cadangkan Database Sekarang'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Opsi Tambahan Pencadangan */}
+                            <div className="pt-3 border-t border-slate-100 flex items-center gap-4 flex-wrap text-xs text-slate-600">
+                                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={backupOptions.encrypt}
+                                        onChange={(e) => setBackupOptions({ ...backupOptions, encrypt: e.target.checked })}
+                                        className="rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 w-4 h-4"
+                                    />
+                                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                                        <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                                        Enkripsi AES-256-CBC (Standar Audit ISO 27001)
+                                    </span>
+                                </label>
+
+                                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={backupOptions.upload_cloud}
+                                        onChange={(e) => setBackupOptions({ ...backupOptions, upload_cloud: e.target.checked })}
+                                        className="rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 w-4 h-4"
+                                    />
+                                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                                        <Cloud className="w-3.5 h-3.5 text-indigo-600" />
+                                        Sinkronkan ke Cloud Storage
+                                    </span>
+                                </label>
+
+                                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={backupOptions.notify_telegram}
+                                        onChange={(e) => setBackupOptions({ ...backupOptions, notify_telegram: e.target.checked })}
+                                        className="rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 w-4 h-4"
+                                    />
+                                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                                        <Send className="w-3.5 h-3.5 text-sky-600" />
+                                        Kirim Notifikasi Telegram Sentinel
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Tabel Daftar Berkas Cadangan */}
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="px-4 py-3 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-700">Daftar Berkas Cadangan Tersimpan ({backups.length} Arsip)</span>
+                                <span className="text-[11px] text-slate-400">Retensi Otomatis: 14 arsip terbaru</span>
+                            </div>
+
                             {backups.length === 0 ? (
                                 <div className="p-8 text-center text-slate-400 text-xs">
-                                    Belum ada file backup database yang dibuat di server.
+                                    Belum ada file backup database yang dibuat di server. Klik tombol &quot;Cadangkan Database Sekarang&quot; di atas untuk membuat cadangan pertama.
                                 </div>
                             ) : (
                                 <div className="divide-y divide-slate-100">
                                     {backups.map((b) => (
-                                        <div key={b.filename} className="p-3.5 sm:p-4 flex items-center justify-between gap-3 text-xs hover:bg-slate-50/80 transition">
-                                            <div className="min-w-0">
-                                                <span className="font-mono font-bold text-slate-900 block truncate">{b.filename}</span>
-                                                <span className="text-[11px] text-slate-400">{b.created_at} • {b.size_kb} KB</span>
+                                        <div key={b.filename} className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:bg-slate-50/80 transition">
+                                            <div className="min-w-0 space-y-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-mono font-bold text-slate-900 text-xs truncate">{b.filename}</span>
+                                                    {b.is_encrypted ? (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                                            <Lock className="w-2.5 h-2.5" />
+                                                            AES-256
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                            Plain JSON
+                                                        </span>
+                                                    )}
+                                                    {b.is_cloud_synced ? (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-1">
+                                                            <Cloud className="w-2.5 h-2.5" />
+                                                            Cloud Synced
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                                                            Lokal Server
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[11px] text-slate-400 block">
+                                                    Dibuat: {b.created_at} • Ukuran: {b.size_formatted || `${b.size_kb} KB`}
+                                                </span>
                                             </div>
-                                            <div className="flex items-center gap-1.5 shrink-0">
+
+                                            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                                {!b.is_cloud_synced && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleUploadToCloud(b.filename)}
+                                                        disabled={uploadingCloud === b.filename}
+                                                        className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1"
+                                                        title="Unggah ke Cloud Storage"
+                                                    >
+                                                        <Cloud className="w-3.5 h-3.5" />
+                                                        {uploadingCloud === b.filename ? 'Mengunggah...' : 'Upload Cloud'}
+                                                    </button>
+                                                )}
                                                 <a
                                                     href={`/admin/database/download/${b.filename}`}
                                                     className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                                                    title="Download Backup"
+                                                    title="Download Arsip"
                                                 >
                                                     <Download className="w-4 h-4" />
                                                 </a>
@@ -885,7 +1084,7 @@ export default function DatabaseIndex({
                                                     type="button"
                                                     onClick={() => setConfirmRestoreModal({ isOpen: true, filename: b.filename })}
                                                     className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition cursor-pointer"
-                                                    title="Restore Database"
+                                                    title="Pulihkan Database dari Arsip Ini"
                                                 >
                                                     <RefreshCw className="w-4 h-4" />
                                                 </button>
@@ -893,7 +1092,7 @@ export default function DatabaseIndex({
                                                     type="button"
                                                     onClick={() => handleDeleteBackup(b.filename)}
                                                     className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
-                                                    title="Hapus File Backup"
+                                                    title="Hapus File Cadangan"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>

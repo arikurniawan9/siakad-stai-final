@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use App\Services\DatabaseBackupService;
+use App\Services\TelegramNotificationService;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -742,48 +744,14 @@ class DatabaseController extends Controller
             abort(403, 'Akses ditolak. Fitur Database Management hanya dapat diakses oleh Super Administrator.');
         }
 
-        $backupDir = storage_path('app/backups');
-        if (!File::exists($backupDir)) {
-            File::makeDirectory($backupDir, 0755, true);
-        }
-
-        // Ambil daftar file backup
-        $files = File::glob($backupDir . '/*.json');
-        $backups = [];
-
-        foreach ($files as $file) {
-            $filename = basename($file);
-            $sizeBytes = filesize($file);
-            $createdAt = filemtime($file);
-
-            // Baca metadata ringkas jika file valid JSON
-            $meta = [];
-            try {
-                $raw = File::get($file);
-                $json = json_decode($raw, true);
-                if (is_array($json)) {
-                    $meta = [
-                        'app_name' => $json['app_name'] ?? 'SIAKAD',
-                        'total_tables' => $json['total_tables'] ?? count($json['data'] ?? []),
-                        'total_rows' => $json['total_rows'] ?? 0,
-                        'created_by' => $json['created_by'] ?? 'System',
-                        'timestamp' => $json['created_at'] ?? date('c', $createdAt),
-                    ];
-                }
-            } catch (\Exception $e) {}
-
-            $backups[] = [
-                'filename' => $filename,
-                'size_kb' => round($sizeBytes / 1024, 2),
-                'size_mb' => round($sizeBytes / (1024 * 1024), 2),
-                'created_at' => date('d M Y H:i:s', $createdAt),
-                'timestamp' => $createdAt,
-                'meta' => $meta,
-            ];
-        }
-
-        // Urutkan backup terbaru di paling atas
-        usort($backups, fn($a, $b) => $b['timestamp'] <=> $a['timestamp']);
+        // Ambil daftar file backup lengkap (JSON & Encrypted) via DatabaseBackupService
+        $backups = DatabaseBackupService::listBackups();
+        $cloudStatus = DatabaseBackupService::getCloudStatus();
+        $telegramStatus = [
+            'is_configured' => TelegramNotificationService::isConfigured(),
+            'bot_token_preview' => env('TELEGRAM_BOT_TOKEN') ? substr(env('TELEGRAM_BOT_TOKEN'), 0, 8) . '...' : 'Belum Dikonfigurasi',
+            'chat_id' => env('TELEGRAM_CHAT_ID') ?: 'Belum Dikonfigurasi',
+        ];
 
         // Ambil SEMUA tabel riil dari PostgreSQL
         $dbTables = DB::select("
@@ -877,6 +845,8 @@ class DatabaseController extends Controller
             'tableCatalog' => $tableCatalog,
             'totalTestRows' => $totalTestRows,
             'backups' => $backups,
+            'cloudStatus' => $cloudStatus,
+            'telegramStatus' => $telegramStatus,
             'purgeStats' => $purgeStats,
             'dbInfo' => [
                 'driver' => config('database.default'),
@@ -891,7 +861,7 @@ class DatabaseController extends Controller
     }
 
     /**
-     * Buat Backup Database Baru (.json)
+     * Buat Backup Database Baru (Mendukung Enkripsi AES-256, Cloud Sync, dan Notifikasi Telegram)
      */
     public function createBackup(Request $request): RedirectResponse
     {
@@ -899,58 +869,66 @@ class DatabaseController extends Controller
             abort(403, 'Akses ditolak.');
         }
 
-        $backupDir = storage_path('app/backups');
-        if (!File::exists($backupDir)) {
-            File::makeDirectory($backupDir, 0755, true);
+        try {
+            $encrypt = $request->boolean('encrypt', true);
+            $uploadCloud = $request->boolean('upload_cloud', true);
+            $notifyTelegram = $request->boolean('notify_telegram', true);
+            $userName = Auth::user()?->name ?? 'Superadmin';
+
+            $result = DatabaseBackupService::createBackup([
+                'encrypt' => $encrypt,
+                'upload_cloud' => $uploadCloud,
+                'notify_telegram' => $notifyTelegram,
+                'triggered_by' => "{$userName} (Superadmin UI)",
+            ]);
+
+            $encLabel = $result['is_encrypted'] ? 'Enkripsi AES-256' : 'Plain JSON';
+            return back()->with('success', "✅ Cadangan database '{$result['filename']}' ({$result['size_formatted']}) berhasil dibuat! [{$encLabel} | {$result['cloud_status']}].");
+        } catch (\Throwable $e) {
+            Log::error('Create Backup Error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membuat cadangan database: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Upload File Backup Tertentu ke Cloud Storage
+     */
+    public function uploadBackupToCloud(Request $request, string $filename): RedirectResponse
+    {
+        if (Auth::user()?->role !== 'superadmin') {
+            abort(403, 'Akses ditolak.');
         }
 
-        $tables = $this->getTablesToBackup();
-        $exportData = [];
-        $totalRows = 0;
-
-        foreach ($tables as $t) {
-            if (DB::getSchemaBuilder()->hasTable($t)) {
-                $rows = DB::table($t)->get()->map(fn($r) => (array) $r)->toArray();
-                $exportData[$t] = $rows;
-                $totalRows += count($rows);
+        try {
+            $res = DatabaseBackupService::uploadToCloud($filename);
+            if ($res['success']) {
+                return back()->with('success', "✅ Berkas '{$filename}' berhasil disinkronkan ke Cloud Storage ({$res['status_label']}).");
             }
+            return back()->with('error', "Gagal mengunggah ke Cloud: " . ($res['message'] ?? 'Terjadi kesalahan.'));
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal mengunggah berkas ke cloud: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Uji Notifikasi Bot Telegram Sentinel
+     */
+    public function testTelegramNotification(Request $request): RedirectResponse
+    {
+        if (Auth::user()?->role !== 'superadmin') {
+            abort(403, 'Akses ditolak.');
         }
 
-        $backupPayload = [
-            'app_name' => config('app.name', 'SIAKAD STAI Al-Ittihad'),
-            'app_env' => config('app.env'),
-            'created_at' => now()->toIso8601String(),
-            'created_by' => Auth::user()?->name ?? 'Superadmin',
-            'created_by_id' => Auth::id(),
-            'total_tables' => count($exportData),
-            'total_rows' => $totalRows,
-            'data' => $exportData,
-        ];
-
-        $filename = 'backup_siakad_' . date('Y-m-d_His') . '.json';
-        $filePath = $backupDir . '/' . $filename;
-
-        File::put($filePath, json_encode($backupPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
-        // Catat Audit Log
-        DB::table('audit_logs')->insert([
-            'user_id' => Auth::id(),
-            'action' => 'DATABASE_BACKUP_CREATE',
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'target_entity' => 'Database',
-            'target_id' => $filename,
-            'details' => json_encode([
-                'filename' => $filename,
-                'total_tables' => count($exportData),
-                'total_rows' => $totalRows,
-                'size_kb' => round(filesize($filePath) / 1024, 2),
-            ]),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return back()->with('success', "Backup database '{$filename}' berhasil dibuat! ({$totalRows} baris data dari " . count($exportData) . " tabel tersimpan).");
+        try {
+            $res = TelegramNotificationService::testConnection();
+            if ($res['success']) {
+                $status = !empty($res['simulated']) ? 'Mode Simulasi Aktif (Audit Log Tercatat)' : 'Terkirim Sukses ke Telegram';
+                return back()->with('success', "🔔 Uji koneksi Telegram Sentinel: {$status}.");
+            }
+            return back()->with('error', 'Uji koneksi Telegram gagal: ' . ($res['message'] ?? 'Unknown Error'));
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Uji koneksi Telegram gagal: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -969,8 +947,10 @@ class DatabaseController extends Controller
             abort(404, 'File backup tidak ditemukan.');
         }
 
+        $contentType = str_ends_with($filename, '.enc') ? 'application/octet-stream' : 'application/json';
+
         return response()->download($filePath, $filename, [
-            'Content-Type' => 'application/json',
+            'Content-Type' => $contentType,
         ]);
     }
 
@@ -988,6 +968,12 @@ class DatabaseController extends Controller
 
         if (File::exists($filePath)) {
             File::delete($filePath);
+
+            // Hapus juga dari cloud archives jika ada
+            $cloudPath = storage_path('app/cloud_archives/' . $filename);
+            if (File::exists($cloudPath)) {
+                File::delete($cloudPath);
+            }
 
             // Audit Log
             DB::table('audit_logs')->insert([
@@ -1009,7 +995,7 @@ class DatabaseController extends Controller
     }
 
     /**
-     * Restore Database dari File Backup Server / Upload File
+     * Restore Database dari File Backup Server / Upload File (Mendukung .json & .enc)
      */
     public function restoreBackup(Request $request): RedirectResponse
     {
@@ -1019,78 +1005,27 @@ class DatabaseController extends Controller
 
         $filename = $request->input('filename');
         $uploadedFile = $request->file('backup_file');
-        $jsonContent = null;
-        $sourceName = '';
-
-        if ($uploadedFile) {
-            $request->validate([
-                'backup_file' => 'required|file|mimes:json,txt|max:51200', // max 50MB
-            ]);
-            $sourceName = $uploadedFile->getClientOriginalName();
-            $jsonContent = json_decode(File::get($uploadedFile->getRealPath()), true);
-        } elseif ($filename) {
-            $safeName = basename($filename);
-            $filePath = storage_path('app/backups/' . $safeName);
-            if (!File::exists($filePath)) {
-                return back()->with('error', "File backup '{$safeName}' tidak ditemukan.");
-            }
-            $sourceName = $safeName;
-            $jsonContent = json_decode(File::get($filePath), true);
-        } else {
-            return back()->with('error', 'Silakan pilih file backup yang ingin di-restore.');
-        }
-
-        if (!is_array($jsonContent) || !isset($jsonContent['data']) || !is_array($jsonContent['data'])) {
-            return back()->with('error', 'Format file backup tidak valid. Pastikan file JSON hasil backup SIAKAD STAI Al-Ittihad.');
-        }
-
-        $data = $jsonContent['data'];
-        $restoredTables = 0;
-        $restoredRows = 0;
 
         try {
-            DB::transaction(function () use ($data, &$restoredTables, &$restoredRows) {
-                // 1. Truncate tabel dalam urutan terbalik
-                foreach (array_reverse(array_keys($data)) as $table) {
-                    if (DB::getSchemaBuilder()->hasTable($table)) {
-                        DB::statement("TRUNCATE TABLE {$table} CASCADE");
-                    }
+            if ($uploadedFile) {
+                $request->validate([
+                    'backup_file' => 'required|file|max:51200', // max 50MB
+                ]);
+                $tempPath = $uploadedFile->getRealPath();
+                $res = DatabaseBackupService::restoreBackup($tempPath);
+                return back()->with('success', "✅ Database BERHASIL DI-RESTORE dari berkas unggahan! Sebanyak {$res['restored_rows']} baris data pada {$res['restored_tables']} tabel berhasil dipulihkan.");
+            } elseif ($filename) {
+                $safeName = basename($filename);
+                $filePath = storage_path('app/backups/' . $safeName);
+                if (!File::exists($filePath)) {
+                    return back()->with('error', "File backup '{$safeName}' tidak ditemukan.");
                 }
+                $res = DatabaseBackupService::restoreBackup($filePath);
+                return back()->with('success', "✅ Database BERHASIL DI-RESTORE dari '{$safeName}'! Sebanyak {$res['restored_rows']} baris data pada {$res['restored_tables']} tabel berhasil dipulihkan.");
+            }
 
-                // 2. Masukkan data per tabel dalam batch
-                foreach ($data as $table => $rows) {
-                    if (DB::getSchemaBuilder()->hasTable($table) && !empty($rows)) {
-                        foreach (array_chunk($rows, 50) as $chunk) {
-                            DB::table($table)->insert($chunk);
-                        }
-                        $restoredTables++;
-                        $restoredRows += count($rows);
-                    }
-                }
-
-                // 3. Sinkronkan semua sequence PostgreSQL
-                $this->resyncSequences();
-            });
-
-            // Catat ke Audit Log
-            DB::table('audit_logs')->insert([
-                'user_id' => Auth::id(),
-                'action' => 'DATABASE_RESTORE',
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'target_entity' => 'Database',
-                'target_id' => $sourceName,
-                'details' => json_encode([
-                    'source' => $sourceName,
-                    'restored_tables' => $restoredTables,
-                    'restored_rows' => $restoredRows,
-                ]),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            return back()->with('success', "✅ Database BERHASIL DI-RESTORE dari '{$sourceName}'! Sebanyak {$restoredRows} baris data pada {$restoredTables} tabel berhasil dipulihkan.");
-        } catch (\Exception $e) {
+            return back()->with('error', 'Silakan pilih berkas cadangan yang ingin dipulihkan.');
+        } catch (\Throwable $e) {
             Log::error('Restore Database Error: ' . $e->getMessage());
             return back()->with('error', 'Gagal memulihkan database: ' . $e->getMessage());
         }
