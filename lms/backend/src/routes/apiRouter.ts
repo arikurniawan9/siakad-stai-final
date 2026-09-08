@@ -208,7 +208,11 @@ apiRouter.get('/progress/classes/:classId/students', requireAuth, requireRole('d
 // 8. NOTIFICATIONS & CALENDAR
 apiRouter.get('/notifications', requireAuth, notifCtrl.getNotifications);
 apiRouter.patch('/notifications/:notificationId/read', requireAuth, notifCtrl.markAsRead);
+apiRouter.patch('/notifications/:notificationId/unread', requireAuth, notifCtrl.markAsUnread);
 apiRouter.post('/notifications/mark-all-read', requireAuth, notifCtrl.markAllAsRead);
+apiRouter.delete('/notifications/clear-read', requireAuth, notifCtrl.clearReadNotifications);
+apiRouter.delete('/notifications/:notificationId', requireAuth, notifCtrl.deleteNotification);
+apiRouter.post('/notifications/broadcast', requireAuth, notifCtrl.createBroadcastNotification);
 apiRouter.get('/calendar/events', requireAuth, notifCtrl.getCalendarEvents);
 
 // 9. REPORTING & AUDIT

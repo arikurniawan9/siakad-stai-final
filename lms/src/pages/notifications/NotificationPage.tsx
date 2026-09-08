@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Bell, 
   CheckCheck, 
@@ -14,11 +14,12 @@ import {
   Server, 
   FileCheck, 
   Users, 
-  Megaphone,
-  Clock,
-  Plus,
-  Send,
-  X
+  Megaphone, 
+  Clock, 
+  Plus, 
+  Send, 
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -37,6 +38,37 @@ export interface NotificationPageProps {
 
 type TabCategory = 'SEMUA' | 'UNREAD' | 'AKADEMIK' | 'TUGAS_NILAI' | 'KRS_BIMBINGAN' | 'EWS_KEAMANAN' | 'SISTEM';
 
+function formatRelativeTime(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSec < 45) {
+      return 'Baru saja';
+    }
+    if (diffMin < 60) {
+      return `${diffMin} mnt lalu`;
+    }
+    if (diffHours < 24) {
+      return `${diffHours} jam lalu`;
+    }
+    if (diffDays === 1) {
+      return `Kemarin, ${date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+    }
+    if (diffDays < 7) {
+      return `${diffDays} hari lalu`;
+    }
+    return `${date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}, ${date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+  } catch {
+    return dateString;
+  }
+}
+
 export const NotificationPage: React.FC<NotificationPageProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const toast = useToast();
@@ -46,6 +78,7 @@ export const NotificationPage: React.FC<NotificationPageProps> = ({ onNavigate }
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [priorityFilter, setPriorityFilter] = useState<string>('SEMUA');
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Form state broadcast
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -55,14 +88,28 @@ export const NotificationPage: React.FC<NotificationPageProps> = ({ onNavigate }
   const [broadcastRoles, setBroadcastRoles] = useState<UserRole[]>(['mahasiswa', 'dosen']);
   const [broadcastDeepLink, setBroadcastDeepLink] = useState('/');
 
-  const loadNotifications = () => {
+  const loadNotifications = useCallback(() => {
     if (user) {
       setNotifications(notificationService.getNotifications(user.id, user.role));
+    }
+  }, [user]);
+
+  const handleSyncServer = async () => {
+    setIsSyncing(true);
+    try {
+      await notificationService.fetchNotificationsFromApi();
+      loadNotifications();
+      toast.success('Tersinkronisasi', 'Data notifikasi berhasil disinkronkan dengan database server.');
+    } catch {
+      toast.warning('Offline', 'Menggunakan cache data notifikasi lokal.');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
   useEffect(() => {
     loadNotifications();
+    notificationService.fetchNotificationsFromApi().then(() => loadNotifications()).catch(() => {});
 
     const handleUpdate = () => {
       loadNotifications();
@@ -72,7 +119,7 @@ export const NotificationPage: React.FC<NotificationPageProps> = ({ onNavigate }
     return () => {
       window.removeEventListener('salam_notification_updated', handleUpdate);
     };
-  }, [user]);
+  }, [loadNotifications]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -236,6 +283,15 @@ export const NotificationPage: React.FC<NotificationPageProps> = ({ onNavigate }
         </div>
 
         <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+          <Button
+            variant="outline"
+            icon={RefreshCw}
+            onClick={handleSyncServer}
+            disabled={isSyncing}
+            style={{ opacity: isSyncing ? 0.7 : 1 }}
+          >
+            {isSyncing ? 'Sinkronisasi...' : 'Sinkronkan'}
+          </Button>
           {canBroadcast && (
             <Button
               variant="primary"
@@ -490,9 +546,12 @@ export const NotificationPage: React.FC<NotificationPageProps> = ({ onNavigate }
                     </span>
                   </div>
 
-                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                     <Clock size={12} />
-                    {new Date(notif.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date(notif.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                    <span style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>{formatRelativeTime(notif.createdAt)}</span>
+                    <span style={{ fontSize: '0.6875rem', opacity: 0.75 }}>
+                      • {new Date(notif.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date(notif.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                    </span>
                   </span>
                 </div>
 
