@@ -317,6 +317,19 @@ class WinpayController extends Controller
                 'updated_at' => now(),
             ]);
 
+            // Trigger Notifikasi WhatsApp Otomatis (E-Receipt Mahasiswa & Alert Grup Manajemen/Keuangan/Pimpinan)
+            try {
+                \App\Services\WhatsAppNotificationService::dispatchPaymentNotifications(
+                    $invoice->id,
+                    $vaNumber,
+                    (float) $invoice->final_amount,
+                    $winpayTxId,
+                    'WINPAY_' . $channel
+                );
+            } catch (\Throwable $e) {
+                Log::error('[WA NOTIF ERROR] Gagal mengirim WhatsApp payment alert (Winpay Simulator): ' . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Simulasi Webhook Pembayaran Winpay (' . $channel . ') Berhasil Diproses!',
@@ -398,6 +411,18 @@ class WinpayController extends Controller
                         'payment_method' => 'WINPAY_' . $channel,
                         'updated_at' => now(),
                     ]);
+
+                try {
+                    \App\Services\WhatsAppNotificationService::dispatchPaymentNotifications(
+                        $winpayTx->student_invoice_id,
+                        $winpayTx->va_number,
+                        (float) $winpayTx->amount,
+                        $winpayTxId ?: $winpayTx->winpay_transaction_id,
+                        'WINPAY_' . $channel
+                    );
+                } catch (\Throwable $e) {
+                    Log::error('[WA NOTIF ERROR] Gagal mengirim WhatsApp payment alert (Winpay Callback): ' . $e->getMessage());
+                }
             }
         }
 

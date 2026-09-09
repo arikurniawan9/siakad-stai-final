@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Services\WhatsAppNotificationService;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SettingController extends Controller
@@ -74,9 +76,17 @@ class SettingController extends Controller
         $data = $request->except(['_token']);
 
         foreach ($data as $key => $val) {
+            if (is_bool($val)) {
+                $strVal = $val ? 'true' : 'false';
+            } elseif (is_array($val)) {
+                $strVal = json_encode($val);
+            } else {
+                $strVal = (string) ($val ?? '');
+            }
+
             DB::table('system_settings')->updateOrInsert(
                 ['key' => $key],
-                ['value' => (string) $val, 'updated_at' => now()]
+                ['value' => $strVal, 'updated_at' => now()]
             );
         }
 
@@ -97,5 +107,15 @@ class SettingController extends Controller
             ]);
             return back()->with('success', 'Mode Pemeliharaan (Maintenance) AKTIF. Pengguna umum tidak dapat mengakses sistem.');
         }
+    }
+
+    /**
+     * Uji Kirim Notifikasi WhatsApp Pembayaran (Mahasiswa E-Receipt & Alert Manajemen)
+     */
+    public function testWaPayment(Request $request): JsonResponse
+    {
+        $phone = $request->input('phone');
+        $res = WhatsAppNotificationService::testPaymentNotification($phone);
+        return response()->json($res);
     }
 }

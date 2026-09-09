@@ -239,6 +239,19 @@ class BsiVirtualAccountController extends Controller
             ]);
         });
 
+        // 5. Trigger Notifikasi WhatsApp Otomatis (E-Receipt Mahasiswa & Alert Grup Manajemen/Keuangan/Pimpinan)
+        try {
+            \App\Services\WhatsAppNotificationService::dispatchPaymentNotifications(
+                $invoice->id,
+                $vaNumber,
+                (float) $amount,
+                $bsiRefNo,
+                $payload['channel'] ?? 'VA_BSI'
+            );
+        } catch (\Throwable $e) {
+            Log::error('[WA NOTIFICATION DISPATCH ERROR] Gagal mengirim WhatsApp payment alert: ' . $e->getMessage());
+        }
+
         return response()->json([
             'responseCode' => '2002500',
             'responseMessage' => 'Successful',

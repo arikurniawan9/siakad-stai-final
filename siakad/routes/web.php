@@ -158,6 +158,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/settings/clear-cache', [SettingController::class, 'clearCache'])->name('settings.clear_cache');
             Route::post('/settings/retry-jobs', [SettingController::class, 'retryJobs'])->name('settings.retry_jobs');
             Route::post('/settings/flush-jobs', [SettingController::class, 'flushJobs'])->name('settings.flush_jobs');
+            Route::post('/settings/test-wa-payment', [SettingController::class, 'testWaPayment'])->name('settings.test_wa_payment');
         });
 
         // -----------------------------------------------------------------

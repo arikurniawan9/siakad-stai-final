@@ -444,6 +444,19 @@ class BsiGatewayController extends Controller
             ]);
         });
 
+        // Trigger Notifikasi WhatsApp Otomatis (E-Receipt Mahasiswa & Alert Grup Manajemen/Keuangan/Pimpinan)
+        try {
+            \App\Services\WhatsAppNotificationService::dispatchPaymentNotifications(
+                $invoice->id,
+                $vaNumber,
+                (float) $invoice->final_amount,
+                $bsiRefNo,
+                'VA_BSI_' . $channel
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('[WA NOTIF ERROR] Gagal mengirim WhatsApp payment alert (BSI Gateway Simulator): ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Simulasi pelunasan BSI Virtual Account berhasil diverifikasi!',
