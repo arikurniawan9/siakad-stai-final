@@ -84,12 +84,52 @@ export default function LecturersIndex({
     });
 
     const [importRecords, setImportRecords] = useState([]);
+    const [importConflicts, setImportConflicts] = useState([]);
+    const [isCheckingImport, setIsCheckingImport] = useState(false);
+    const [duplicateAction, setDuplicateAction] = useState('skip');
 
     // Sinkronisasi props saat Inertia memuat ulang data dari aksi CRUD
     useEffect(() => {
         setLecturersData(lecturers);
         setStatsData(stats);
     }, [lecturers, stats]);
+
+    useEffect(() => {
+        if (importRecords.length === 0) {
+            setImportConflicts([]);
+            setIsCheckingImport(false);
+            return undefined;
+        }
+
+        let cancelled = false;
+        const checkImportConflicts = async () => {
+            setIsCheckingImport(true);
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                const response = await fetch('/admin/lecturers/import-conflicts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({ records: importRecords }),
+                });
+                if (!response.ok) throw new Error('Pemeriksaan data duplikat gagal.');
+
+                const data = await response.json();
+                if (!cancelled) setImportConflicts(data.conflicts || []);
+            } catch (error) {
+                console.error(error);
+                if (!cancelled) setImportConflicts([]);
+            } finally {
+                if (!cancelled) setIsCheckingImport(false);
+            }
+        };
+
+        checkImportConflicts();
+        return () => { cancelled = true; };
+    }, [importRecords]);
 
     // Bersihkan URL query parameter agar browser tetap di /admin/lecturers
     useEffect(() => {
@@ -428,6 +468,7 @@ export default function LecturersIndex({
                     });
 
                     if (parsed.length > 0) {
+                        setDuplicateAction('skip');
                         setImportRecords(parsed);
                     } else {
                         alert('Tidak ditemukan baris data dosen yang valid di file Excel ini. Pastikan kolom nama terisi.');
@@ -520,6 +561,7 @@ export default function LecturersIndex({
                 }
 
                 if (parsed.length > 0) {
+                    setDuplicateAction('skip');
                     setImportRecords(parsed);
                 } else {
                     alert('Tidak ditemukan baris data dosen yang valid di file CSV ini. Pastikan kolom nama terisi.');
@@ -536,6 +578,7 @@ export default function LecturersIndex({
             { name: 'Dra. Hj. Siti Maryam, M.Pd.I', identity_number: '2115047802', nik: '3203015504780002', email: 'siti.maryam@staialittihad.ac.id', password: 'salam123', role: 'dosen_pa', study_program: 'Pendidikan Agama Islam (S1)', gender: 'P', phone_number: '08129876543' },
             { name: 'Dr. Ahmad Syafi\'i, M.Ag', identity_number: '2118097201', nik: '3203011809720001', email: 'ahmad.syafii@staialittihad.ac.id', password: 'salam123', role: 'kaprodi', study_program: 'Pendidikan Agama Islam (S1)', gender: 'L', phone_number: '08134567890' },
         ];
+        setDuplicateAction('skip');
         setImportRecords(mockData);
     };
 
@@ -564,10 +607,11 @@ export default function LecturersIndex({
     };
 
     const handleImportSubmit = () => {
-        router.post('/admin/lecturers/import-batch', { records: importRecords }, {
+        router.post('/admin/lecturers/import-batch', { records: importRecords, duplicate_action: duplicateAction }, {
             onSuccess: () => {
                 setIsImportOpen(false);
                 setImportRecords([]);
+                setDuplicateAction('skip');
             },
         });
     };
@@ -1852,6 +1896,7 @@ export default function LecturersIndex({
 
                                 {/* Box 3: Pratinjau Data Siap Impor */}
                                 {importRecords.length > 0 && (
+                                    <>
                                     <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
                                         <div className="p-2.5 bg-slate-100 border-b border-slate-200 font-bold text-[10px] uppercase text-slate-700 flex items-center justify-between">
                                             <span className="flex items-center space-x-1.5 text-emerald-800">
@@ -1910,6 +1955,65 @@ export default function LecturersIndex({
                                             ))}
                                         </div>
                                     </div>
+
+                                    {isCheckingImport && (
+                                        <div className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-[11px] font-semibold text-sky-800">
+                                            <Loader2 className="h-4 w-4 animate-spin text-sky-600" />
+                                            Memeriksa NIK, email, dan NIDN/NIP yang sudah terdaftar…
+                                        </div>
+                                    )}
+
+                                    {!isCheckingImport && importConflicts.length > 0 && (
+                                        <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-[11px] text-amber-950">
+                                            <div className="flex items-start gap-2.5">
+                                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                                                <div>
+                                                    <p className="font-black">{importConflicts.length} data sudah memiliki akun di sistem</p>
+                                                    <p className="mt-0.5 text-amber-800">Kecocokan ditemukan dari NIK, email, atau NIDN/NIP. Tentukan perlakuan data duplikat sebelum melanjutkan.</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="max-h-24 space-y-1 overflow-y-auto rounded-lg border border-amber-200 bg-white/70 p-2 text-[10px]">
+                                                {importConflicts.map((conflict) => (
+                                                    <p key={conflict.row}>
+                                                        <strong>Baris {conflict.row}</strong> — cocok berdasarkan {conflict.matched_by.join(', ') || 'identitas'} dengan {conflict.accounts.map((account) => account.name).join(', ')}.
+                                                    </p>
+                                                ))}
+                                            </div>
+
+                                            <div className="grid gap-2 sm:grid-cols-2">
+                                                <label className={`cursor-pointer rounded-lg border p-2.5 transition ${duplicateAction === 'skip' ? 'border-amber-500 bg-white shadow-sm' : 'border-amber-200 bg-white/60 hover:border-amber-400'}`}>
+                                                    <input
+                                                        type="radio"
+                                                        name="duplicateAction"
+                                                        value="skip"
+                                                        checked={duplicateAction === 'skip'}
+                                                        onChange={() => setDuplicateAction('skip')}
+                                                        className="sr-only"
+                                                    />
+                                                    <span className="block font-black">Lewati data duplikat (disarankan)</span>
+                                                    <span className="mt-0.5 block text-[10px] text-amber-800">Akun lama tetap tidak berubah.</span>
+                                                </label>
+                                                <label className={`cursor-pointer rounded-lg border p-2.5 transition ${duplicateAction === 'overwrite' ? 'border-amber-500 bg-white shadow-sm' : 'border-amber-200 bg-white/60 hover:border-amber-400'}`}>
+                                                    <input
+                                                        type="radio"
+                                                        name="duplicateAction"
+                                                        value="overwrite"
+                                                        checked={duplicateAction === 'overwrite'}
+                                                        onChange={() => setDuplicateAction('overwrite')}
+                                                        className="sr-only"
+                                                    />
+                                                    <span className="block font-black">Timpa data akun dosen</span>
+                                                    <span className="mt-0.5 block text-[10px] text-amber-800">Memperbarui profil dosen yang sudah cocok.</span>
+                                                </label>
+                                            </div>
+
+                                            <p className="text-[10px] leading-relaxed text-amber-800">
+                                                Akun selain dosen, serta data yang NIK dan emailnya mengarah ke akun berbeda, selalu dilindungi dan akan dilewati.
+                                            </p>
+                                        </div>
+                                    )}
+                                    </>
                                 )}
 
                                 {/* Box 4: Catatan Akun */}
@@ -1935,10 +2039,10 @@ export default function LecturersIndex({
                                     <button
                                         type="button"
                                         onClick={handleImportSubmit}
-                                        disabled={importRecords.length === 0}
+                                        disabled={importRecords.length === 0 || isCheckingImport}
                                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition shadow-xs disabled:opacity-50 cursor-pointer"
                                     >
-                                        Proses Impor ({importRecords.length} Dosen)
+                                        {isCheckingImport ? 'Memeriksa Data…' : `Proses Impor (${importRecords.length} Dosen)`}
                                     </button>
                                 </div>
                             </div>

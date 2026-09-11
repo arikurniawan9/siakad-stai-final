@@ -324,11 +324,64 @@ class LecturerAdminController extends Controller
     }
 
     /**
+     * Periksa data impor yang sudah memiliki akun berdasarkan NIK, email, atau identitas dosen.
+     */
+    public function importConflicts(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'records' => ['required', 'array', 'max:1000'],
+            'records.*.nik' => ['nullable', 'string', 'max:20'],
+            'records.*.email' => ['nullable', 'string', 'max:255'],
+            'records.*.identity_number' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $conflicts = [];
+        foreach ($validated['records'] as $index => $record) {
+            $nik = $this->normalizeImportValue($record['nik'] ?? '');
+            $email = $this->normalizeImportValue($record['email'] ?? '');
+            $identityNumber = $this->normalizeImportValue($record['identity_number'] ?? '');
+            $matches = $this->findImportMatches($nik, $email, $identityNumber);
+
+            if ($matches->isEmpty()) {
+                continue;
+            }
+
+            $matchedBy = [];
+            foreach ($matches as $match) {
+                if ($nik !== '' && $match->nik === $nik) $matchedBy[] = 'NIK';
+                if ($email !== '' && strcasecmp((string) $match->email, $email) === 0) $matchedBy[] = 'email';
+                if ($identityNumber !== '' && ($match->identity_number === $identityNumber || $match->username === $identityNumber)) $matchedBy[] = 'NIDN/NIP';
+            }
+
+            $conflicts[] = [
+                'row' => $index + 1,
+                'matched_by' => array_values(array_unique($matchedBy)),
+                'accounts' => $matches->map(fn (User $user) => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'can_overwrite' => in_array($user->role, ['dosen', 'dosen_pa', 'kaprodi'], true),
+                ])->values(),
+            ];
+        }
+
+        return response()->json([
+            'conflicts' => $conflicts,
+            'count' => count($conflicts),
+        ]);
+    }
+
+    /**
      * Impor Massal Dosen via Excel / CSV / Batch
      */
     public function importBatch(Request $request): RedirectResponse
     {
         $records = $request->input('records', []);
+        $duplicateAction = $request->input('duplicate_action', 'skip');
+
+        $request->validate([
+            'duplicate_action' => ['nullable', 'in:skip,overwrite'],
+        ]);
 
         // Jika unggah file CSV secara langsung
         if ($request->hasFile('file')) {
@@ -394,6 +447,8 @@ class LecturerAdminController extends Controller
 
         $created = 0;
         $updated = 0;
+        $skipped = 0;
+        $protected = 0;
         $now = now();
 
         // Cari nomor DSN tertinggi yang sudah ada di database
@@ -408,7 +463,7 @@ class LecturerAdminController extends Controller
             }
         }
 
-        DB::transaction(function () use ($records, &$created, &$updated, &$maxDsn, $now) {
+        DB::transaction(function () use ($records, $duplicateAction, &$created, &$updated, &$skipped, &$protected, &$maxDsn, $now) {
             foreach ($records as $r) {
                 $name = trim($r['name'] ?? '');
                 $identityNumber = trim($r['identity_number'] ?? '');
@@ -433,18 +488,21 @@ class LecturerAdminController extends Controller
                     ? trim($r['email']) 
                     : (strtolower($identityNumber) . '@staialittihad.ac.id');
 
-                // Cari dosen yang sudah ada berdasarkan NIK, identity_number, username, atau email
-                $existing = null;
-                if (!empty($nik)) {
-                    $existing = User::where('nik', $nik)->first();
+                $matches = $this->findImportMatches($nik, $email, $identityNumber);
+                if ($matches->count() > 1) {
+                    $skipped++;
+                    continue;
                 }
-                if (!$existing && !empty($identityNumber)) {
-                    $existing = User::where('identity_number', $identityNumber)
-                        ->orWhere('username', $identityNumber)
-                        ->first();
+
+                $existing = $matches->first();
+                if ($existing && !in_array($existing->role, ['dosen', 'dosen_pa', 'kaprodi'], true)) {
+                    $protected++;
+                    continue;
                 }
-                if (!$existing && !empty($email)) {
-                    $existing = User::where('email', $email)->first();
+
+                if ($existing && $duplicateAction === 'skip') {
+                    $skipped++;
+                    continue;
                 }
 
                 if ($existing) {
@@ -507,9 +565,40 @@ class LecturerAdminController extends Controller
         $messages = [];
         if ($created > 0) $messages[] = "{$created} dosen baru berhasil ditambahkan";
         if ($updated > 0) $messages[] = "{$updated} dosen diperbarui";
+        if ($skipped > 0) $messages[] = "{$skipped} data duplikat dilewati";
+        if ($protected > 0) $messages[] = "{$protected} akun non-dosen dilindungi dan tidak diubah";
         $summary = count($messages) > 0 ? implode(' dan ', $messages) : "0 data diproses";
 
         return back()->with('success', "Proses impor selesai: {$summary}. Kode guru & kata sandi akun berhasil digenerate.");
+    }
+
+    private function findImportMatches(string $nik, string $email, string $identityNumber)
+    {
+        if ($nik === '' && $email === '' && $identityNumber === '') {
+            return collect();
+        }
+
+        return User::query()
+            ->where(function ($query) use ($nik, $email, $identityNumber) {
+                if ($nik !== '') {
+                    $query->orWhere('nik', $nik);
+                }
+                if ($email !== '') {
+                    $query->orWhereRaw('LOWER(email) = ?', [strtolower($email)]);
+                }
+                if ($identityNumber !== '') {
+                    $query->orWhere('identity_number', $identityNumber)
+                        ->orWhere('username', $identityNumber);
+                }
+            })
+            ->get(['id', 'name', 'nik', 'email', 'identity_number', 'username', 'role']);
+    }
+
+    private function normalizeImportValue(mixed $value): string
+    {
+        $value = trim((string) $value);
+
+        return $value === '-' ? '' : $value;
     }
 
     /**

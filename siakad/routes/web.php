@@ -238,6 +238,7 @@ Route::middleware('auth')->group(function () {
             Route::put('/lecturers/{id}', [LecturerAdminController::class, 'update'])->name('lecturers.update');
             Route::delete('/lecturers/{id}', [LecturerAdminController::class, 'destroy'])->name('lecturers.destroy');
             Route::post('/lecturers/batch-delete', [LecturerAdminController::class, 'batchDestroy'])->name('lecturers.batch_destroy');
+            Route::post('/lecturers/import-conflicts', [LecturerAdminController::class, 'importConflicts'])->name('lecturers.import_conflicts');
             Route::post('/lecturers/import-batch', [LecturerAdminController::class, 'importBatch'])->name('lecturers.import_batch');
 
             // Kurikulum Mahasiswa & User Portal Mahasiswa
