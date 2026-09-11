@@ -349,7 +349,7 @@ class LecturerAdminController extends Controller
 
             if ($header) {
                 $header = array_map(function ($h) {
-                    return strtolower(trim(str_replace([' ', '-', '/'], '_', $h)));
+                    return preg_replace('/[^a-z0-9]+/', '_', strtolower(trim($h)));
                 }, $header);
 
                 while (($row = fgetcsv($handle, 1000, ',')) !== false) {
@@ -361,22 +361,26 @@ class LecturerAdminController extends Controller
                     $item = [];
                     foreach ($header as $i => $col) {
                         $val = trim($row[$i] ?? '');
-                        if (in_array($col, ['nama', 'nama_lengkap', 'name'])) $item['name'] = $val;
-                        elseif (in_array($col, ['nidn', 'nip', 'nidn_nip', 'identity_number'])) $item['identity_number'] = $val;
-                        elseif (in_array($col, ['nik', 'no_ktp', 'ktp'])) $item['nik'] = $val;
-                        elseif (in_array($col, ['email', 'email_institusi'])) $item['email'] = $val;
-                        elseif (in_array($col, ['prodi', 'program_studi', 'study_program', 'homebase'])) $item['study_program'] = $val;
-                        elseif (in_array($col, ['jabatan', 'role', 'peran'])) {
+                        if (in_array($col, ['nama', 'nama_lengkap', 'name', 'nama_dosen', 'dosen'])) $item['name'] = $val;
+                        elseif (in_array($col, ['nidn', 'nip', 'nidn_nip', 'identity_number', 'no_induk', 'nomor_induk'])) $item['identity_number'] = $val;
+                        elseif (in_array($col, ['nik', 'no_ktp', 'ktp', 'nomor_ktp', 'nik_no_ktp', 'nik_ktp', 'no_identitas'])) $item['nik'] = $val;
+                        elseif (in_array($col, ['email', 'email_institusi', 'surel', 'e_mail'])) $item['email'] = $val;
+                        elseif (in_array($col, ['prodi', 'program_studi', 'study_program', 'homebase', 'jurusan'])) $item['study_program'] = $val;
+                        elseif (in_array($col, ['jabatan', 'role', 'peran', 'posisi'])) {
                             $rLower = strtolower($val);
                             if (str_contains($rLower, 'kaprodi') || str_contains($rLower, 'ketua')) $item['role'] = 'kaprodi';
                             elseif (str_contains($rLower, 'wali') || str_contains($rLower, 'pa')) $item['role'] = 'dosen_pa';
                             else $item['role'] = 'dosen';
                         }
-                        elseif (in_array($col, ['gender', 'jenis_kelamin', 'jk'])) $item['gender'] = strtoupper(substr($val, 0, 1)) === 'P' ? 'P' : 'L';
-                        elseif (in_array($col, ['no_hp', 'hp', 'phone', 'phone_number', 'telepon', 'whatsapp'])) $item['phone_number'] = $val;
+                        elseif (in_array($col, ['gender', 'jenis_kelamin', 'jk', 'sex'])) {
+                            $gUpper = strtoupper(substr($val, 0, 1));
+                            $item['gender'] = ($gUpper === 'P' || $gUpper === 'W') ? 'P' : 'L';
+                        }
+                        elseif (in_array($col, ['no_hp', 'hp', 'phone', 'phone_number', 'telepon', 'no_telp', 'no_telepon', 'whatsapp', 'wa', 'kontak'])) $item['phone_number'] = $val;
+                        elseif (in_array($col, ['password', 'kata_sandi', 'pass'])) $item['password'] = $val ?: 'salam123';
                     }
 
-                    if (!empty($item['name']) && !empty($item['identity_number'])) {
+                    if (!empty($item['name'])) {
                         $records[] = $item;
                     }
                 }
@@ -385,43 +389,127 @@ class LecturerAdminController extends Controller
         }
 
         if (empty($records)) {
-            return back()->with('error', 'Tidak ada data dosen yang berhasil diproses dari unggahan.');
+            return back()->with('error', 'Tidak ada data dosen yang berhasil diproses dari unggahan. Pastikan kolom nama terisi.');
         }
 
         $created = 0;
+        $updated = 0;
         $now = now();
 
-        DB::transaction(function () use ($records, &$created, $now) {
+        // Cari nomor DSN tertinggi yang sudah ada di database
+        $maxDsn = 0;
+        $existingDsns = User::where('identity_number', 'LIKE', 'DSN%')
+            ->orWhere('username', 'LIKE', 'DSN%')
+            ->pluck('identity_number');
+        foreach ($existingDsns as $code) {
+            if (preg_match('/DSN(\d+)/i', $code, $m)) {
+                $val = (int) $m[1];
+                if ($val > $maxDsn) $maxDsn = $val;
+            }
+        }
+
+        DB::transaction(function () use ($records, &$created, &$updated, &$maxDsn, $now) {
             foreach ($records as $r) {
-                if (empty($r['name']) || empty($r['identity_number'])) continue;
+                $name = trim($r['name'] ?? '');
+                $identityNumber = trim($r['identity_number'] ?? '');
+                $nik = trim($r['nik'] ?? '');
+                $password = !empty($r['password']) ? trim($r['password']) : 'salam123';
 
-                $email = !empty($r['email']) ? $r['email'] : ($r['identity_number'] . '@staialittihad.ac.id');
+                if (empty($name)) continue;
 
-                if (User::where('identity_number', $r['identity_number'])->orWhere('email', $email)->exists()) {
-                    continue;
+                if ($identityNumber === '-') $identityNumber = '';
+                if ($nik === '-') $nik = '';
+
+                // Jika identity_number / Kode Guru kosong, generate otomatis DSN001, DSN002...
+                if (empty($identityNumber)) {
+                    do {
+                        $maxDsn++;
+                        $candidateCode = 'DSN' . str_pad($maxDsn, 3, '0', STR_PAD_LEFT);
+                    } while (User::where('identity_number', $candidateCode)->orWhere('username', $candidateCode)->exists());
+                    $identityNumber = $candidateCode;
                 }
 
-                User::create([
-                    'name' => $r['name'],
-                    'username' => $r['identity_number'],
-                    'identity_number' => $r['identity_number'],
-                    'nik' => !empty($r['nik']) ? $r['nik'] : null,
-                    'email' => $email,
-                    'role' => $r['role'] ?? 'dosen',
-                    'study_program' => $r['study_program'] ?? 'Pendidikan Agama Islam (S1)',
-                    'gender' => $r['gender'] ?? 'L',
-                    'phone_number' => $r['phone_number'] ?? null,
-                    'password' => Hash::make('salam123'),
-                    'is_active' => true,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
+                $email = !empty($r['email']) && $r['email'] !== '-' && !str_starts_with($r['email'], '-@')
+                    ? trim($r['email']) 
+                    : (strtolower($identityNumber) . '@staialittihad.ac.id');
 
-                $created++;
+                // Cari dosen yang sudah ada berdasarkan NIK, identity_number, username, atau email
+                $existing = null;
+                if (!empty($nik)) {
+                    $existing = User::where('nik', $nik)->first();
+                }
+                if (!$existing && !empty($identityNumber)) {
+                    $existing = User::where('identity_number', $identityNumber)
+                        ->orWhere('username', $identityNumber)
+                        ->first();
+                }
+                if (!$existing && !empty($email)) {
+                    $existing = User::where('email', $email)->first();
+                }
+
+                if ($existing) {
+                    $updateData = [
+                        'name' => $name,
+                        'study_program' => $r['study_program'] ?? $existing->study_program ?? 'Pendidikan Agama Islam (S1)',
+                        'role' => in_array($r['role'] ?? '', ['dosen', 'dosen_pa', 'kaprodi']) ? $r['role'] : $existing->role,
+                        'gender' => in_array($r['gender'] ?? '', ['L', 'P']) ? $r['gender'] : $existing->gender,
+                        'phone_number' => !empty($r['phone_number']) ? $r['phone_number'] : $existing->phone_number,
+                        'updated_at' => $now,
+                    ];
+                    if (!empty($nik)) {
+                        $updateData['nik'] = $nik;
+                    }
+                    if (!empty($identityNumber) && (empty($existing->identity_number) || $existing->identity_number === '-')) {
+                        $updateData['identity_number'] = $identityNumber;
+                    }
+                    if (!empty($r['password']) && $r['password'] !== 'salam123') {
+                        $updateData['password'] = Hash::make($r['password']);
+                    }
+                    $existing->update($updateData);
+                    $updated++;
+                } else {
+                    $uniqueEmail = $email;
+                    $suffix = 1;
+                    while (User::where('email', $uniqueEmail)->exists()) {
+                        $cleanPrefix = preg_replace('/@.*$/', '', $email);
+                        $uniqueEmail = $cleanPrefix . $suffix . '@staialittihad.ac.id';
+                        $suffix++;
+                    }
+
+                    $uniqueUsername = $identityNumber;
+                    $uSuffix = 1;
+                    while (User::where('username', $uniqueUsername)->exists()) {
+                        $uniqueUsername = $identityNumber . '_' . $uSuffix;
+                        $uSuffix++;
+                    }
+
+                    User::create([
+                        'name' => $name,
+                        'username' => $uniqueUsername,
+                        'identity_number' => $identityNumber,
+                        'nik' => !empty($nik) ? $nik : null,
+                        'email' => $uniqueEmail,
+                        'role' => in_array($r['role'] ?? '', ['dosen', 'dosen_pa', 'kaprodi']) ? $r['role'] : 'dosen',
+                        'study_program' => $r['study_program'] ?? 'Pendidikan Agama Islam (S1)',
+                        'gender' => in_array($r['gender'] ?? '', ['L', 'P']) ? $r['gender'] : 'L',
+                        'phone_number' => !empty($r['phone_number']) ? $r['phone_number'] : null,
+                        'password' => Hash::make($password),
+                        'is_active' => true,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]);
+
+                    $created++;
+                }
             }
         });
 
-        return back()->with('success', "Berhasil mengimpor {$created} dosen baru dengan kata sandi default 'salam123'.");
+        $messages = [];
+        if ($created > 0) $messages[] = "{$created} dosen baru berhasil ditambahkan";
+        if ($updated > 0) $messages[] = "{$updated} dosen diperbarui";
+        $summary = count($messages) > 0 ? implode(' dan ', $messages) : "0 data diproses";
+
+        return back()->with('success', "Proses impor selesai: {$summary}. Kode guru & kata sandi akun berhasil digenerate.");
     }
 
     /**

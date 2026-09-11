@@ -42,6 +42,7 @@ use App\Http\Controllers\CaptchaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\PmbController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicVerificationController;
 use App\Http\Controllers\SetupSuperadminController;
 use App\Http\Controllers\Student\KhsController;
@@ -130,6 +131,10 @@ Route::middleware('auth')->group(function () {
         }
         return back()->with('error', 'Peran yang dipilih tidak terdaftar untuk akun Anda.');
     })->name('switch.role');
+
+    // Profil & Pengaturan Akun (Self-Service untuk Seluruh Civitas Akademika)
+    Route::put('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // =====================================================================
     // 3. ADMIN & CIVITAS MODULES (PROTECTED BY ROLE MIDDLEWARE)

@@ -306,34 +306,66 @@ export default function LecturersIndex({
                     const worksheet = workbook.Sheets[firstSheetName];
                     const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
+                    // Temukan nomor urut DSN tertinggi yang sudah ada di database
+                    let maxExistingDsn = 0;
+                    const currentLecturers = lecturersData?.data || (Array.isArray(lecturersData) ? lecturersData : []);
+                    currentLecturers.forEach(lec => {
+                        const m = String(lec.identity_number || lec.username || '').match(/DSN(\d+)/i);
+                        if (m) {
+                            const val = parseInt(m[1], 10);
+                            if (val > maxExistingDsn) maxExistingDsn = val;
+                        }
+                    });
+                    let nextDsnNumber = maxExistingDsn;
+
                     const parsed = [];
                     rows.forEach((row) => {
                         const cleanRow = {};
                         Object.keys(row).forEach(k => {
-                            cleanRow[k.trim().toLowerCase().replace(/[\s\/-]/g, '_')] = String(row[k] || '').trim();
+                            const cleanKey = k.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/^_+|_+$/g, '');
+                            cleanRow[cleanKey] = String(row[k] || '').trim();
                         });
 
-                        const name = cleanRow.nama_lengkap || cleanRow.nama || cleanRow.name || '';
-                        const identity_number = cleanRow.nidn_nip || cleanRow.nidn || cleanRow.nip || cleanRow.identity_number || '';
-                        const nik = cleanRow.nik || cleanRow.no_ktp || cleanRow.ktp || '';
-                        let email = cleanRow.email || cleanRow.email_institusi || '';
-                        const study_program = cleanRow.program_studi || cleanRow.prodi || cleanRow.study_program || cleanRow.homebase || prodi || 'Pendidikan Agama Islam (S1)';
+                        const name = cleanRow.nama_lengkap || cleanRow.nama || cleanRow.name || cleanRow.nama_dosen || cleanRow.dosen || cleanRow.nama_guru || cleanRow.guru || cleanRow.lecturer_name || '';
+                        let identity_number = cleanRow.kode_guru || cleanRow.kode_dosen || cleanRow.kode || cleanRow.nidn_nip || cleanRow.nidn || cleanRow.nip || cleanRow.identity_number || cleanRow.no_induk || cleanRow.nomor_induk || '';
+                        if (identity_number === '-') identity_number = '';
+
+                        let nik = cleanRow.nik || cleanRow.no_ktp || cleanRow.ktp || cleanRow.nomor_ktp || cleanRow.nik_no_ktp || cleanRow.nik_ktp || cleanRow.no_identitas || '';
+                        if (nik === '-') nik = '';
+
+                        let email = cleanRow.email || cleanRow.email_institusi || cleanRow.surel || cleanRow.e_mail || '';
+                        if (email === '-') email = '';
+
+                        let password = cleanRow.password || cleanRow.kata_sandi || cleanRow.pass || 'salam123';
+
+                        const study_program = cleanRow.program_studi || cleanRow.prodi || cleanRow.study_program || cleanRow.jurusan || cleanRow.homebase || prodi || 'Pendidikan Agama Islam (S1)';
                         
                         let role = 'dosen';
-                        const rVal = (cleanRow.jabatan || cleanRow.role || cleanRow.peran || '').toLowerCase();
+                        const rVal = (cleanRow.jabatan || cleanRow.role || cleanRow.peran || cleanRow.posisi || cleanRow.keterangan || '').toLowerCase();
                         if (rVal.includes('kaprodi') || rVal.includes('ketua')) role = 'kaprodi';
                         else if (rVal.includes('wali') || rVal.includes('pa')) role = 'dosen_pa';
 
-                        const gender = (cleanRow.jenis_kelamin || cleanRow.gender || cleanRow.jk || 'L').toUpperCase().startsWith('P') ? 'P' : 'L';
-                        const phone_number = cleanRow.no_hp || cleanRow.hp || cleanRow.phone || cleanRow.telepon || '';
+                        const genderVal = (cleanRow.jenis_kelamin || cleanRow.gender || cleanRow.jk || cleanRow.sex || 'L').toUpperCase();
+                        const gender = (genderVal.startsWith('P') || genderVal.startsWith('W') || genderVal === 'PEREMPUAN' || genderVal === 'WANITA') ? 'P' : 'L';
+                        const phone_number = cleanRow.no_hp || cleanRow.hp || cleanRow.phone || cleanRow.telepon || cleanRow.no_telepon || cleanRow.no_telp || cleanRow.wa || cleanRow.whatsapp || cleanRow.kontak || '';
 
-                        if (name && identity_number) {
-                            if (!email) email = `${identity_number}@staialittihad.ac.id`;
+                        // Auto-generate Kode Guru (DSN001, DSN002...) jika NIP/NIDN kosong
+                        if (!identity_number) {
+                            nextDsnNumber++;
+                            identity_number = `DSN${String(nextDsnNumber).padStart(3, '0')}`;
+                        }
+
+                        if (!email) {
+                            email = `${identity_number.toLowerCase()}@staialittihad.ac.id`;
+                        }
+
+                        if (name) {
                             parsed.push({
                                 name,
                                 identity_number,
                                 nik,
                                 email,
+                                password,
                                 study_program,
                                 role,
                                 gender,
@@ -345,7 +377,7 @@ export default function LecturersIndex({
                     if (parsed.length > 0) {
                         setImportRecords(parsed);
                     } else {
-                        alert('Tidak ditemukan baris data dosen yang valid di file Excel ini. Pastikan kolom nama_lengkap dan nidn_nip terisi.');
+                        alert('Tidak ditemukan baris data dosen yang valid di file Excel ini. Pastikan kolom nama terisi.');
                     }
                 } catch (err) {
                     console.error('Gagal membaca file Excel:', err);
@@ -367,8 +399,19 @@ export default function LecturersIndex({
                 if (lines[0].includes('\t')) delimiter = '\t';
 
                 const cleanHeader = lines[0].split(delimiter).map(h => 
-                    h.replace(/["\r]/g, '').trim().toLowerCase().replace(/[\s\/-]/g, '_')
+                    h.replace(/["\r]/g, '').trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/^_+|_+$/g, '')
                 );
+
+                let maxExistingDsn = 0;
+                const currentLecturers = lecturersData?.data || (Array.isArray(lecturersData) ? lecturersData : []);
+                currentLecturers.forEach(lec => {
+                    const m = String(lec.identity_number || lec.username || '').match(/DSN(\d+)/i);
+                    if (m) {
+                        const val = parseInt(m[1], 10);
+                        if (val > maxExistingDsn) maxExistingDsn = val;
+                    }
+                });
+                let nextDsnNumber = maxExistingDsn;
 
                 const parsed = [];
                 for (let i = 1; i < lines.length; i++) {
@@ -380,6 +423,7 @@ export default function LecturersIndex({
                         identity_number: '',
                         nik: '',
                         email: '',
+                        password: 'salam123',
                         study_program: prodi || 'Pendidikan Agama Islam (S1)',
                         role: 'dosen',
                         gender: 'L',
@@ -388,28 +432,45 @@ export default function LecturersIndex({
 
                     cleanHeader.forEach((col, idx) => {
                         const val = row[idx] || '';
-                        if (['nama', 'nama_lengkap', 'name'].includes(col)) item.name = val;
-                        else if (['nidn', 'nip', 'nidn_nip', 'identity_number'].includes(col)) item.identity_number = val;
-                        else if (['nik', 'no_ktp', 'ktp'].includes(col)) item.nik = val;
-                        else if (['email', 'email_institusi'].includes(col)) item.email = val;
-                        else if (['prodi', 'program_studi', 'study_program', 'homebase'].includes(col)) item.study_program = val;
-                        else if (['jabatan', 'role', 'peran'].includes(col)) {
+                        if (['nama', 'nama_lengkap', 'name', 'nama_dosen', 'dosen', 'nama_guru', 'guru'].includes(col)) item.name = val;
+                        else if (['kode_guru', 'kode_dosen', 'kode', 'nidn', 'nip', 'nidn_nip', 'identity_number', 'no_induk', 'nomor_induk'].includes(col)) item.identity_number = val === '-' ? '' : val;
+                        else if (['nik', 'no_ktp', 'ktp', 'nomor_ktp', 'nik_no_ktp', 'nik_ktp', 'no_identitas'].includes(col)) item.nik = val === '-' ? '' : val;
+                        else if (['email', 'email_institusi', 'surel', 'e_mail'].includes(col)) item.email = val === '-' ? '' : val;
+                        else if (['password', 'kata_sandi', 'pass'].includes(col)) item.password = val || 'salam123';
+                        else if (['prodi', 'program_studi', 'study_program', 'homebase', 'jurusan'].includes(col)) item.study_program = val;
+                        else if (['jabatan', 'role', 'peran', 'posisi'].includes(col)) {
                             const r = val.toLowerCase();
                             if (r.includes('kaprodi') || r.includes('ketua')) item.role = 'kaprodi';
                             else if (r.includes('wali') || r.includes('pa')) item.role = 'dosen_pa';
                             else item.role = 'dosen';
                         }
-                        else if (['gender', 'jenis_kelamin', 'jk'].includes(col)) item.gender = val.toUpperCase().startsWith('P') ? 'P' : 'L';
-                        else if (['no_hp', 'hp', 'phone', 'phone_number', 'telepon', 'whatsapp'].includes(col)) item.phone_number = val;
+                        else if (['gender', 'jenis_kelamin', 'jk', 'sex'].includes(col)) {
+                            const g = val.toUpperCase();
+                            item.gender = (g.startsWith('P') || g.startsWith('W') || g === 'PEREMPUAN' || g === 'WANITA') ? 'P' : 'L';
+                        }
+                        else if (['no_hp', 'hp', 'phone', 'phone_number', 'telepon', 'no_telp', 'no_telepon', 'whatsapp', 'wa', 'kontak'].includes(col)) item.phone_number = val;
                     });
 
-                    if (item.name && item.identity_number) {
-                        if (!item.email) item.email = `${item.identity_number}@staialittihad.ac.id`;
+                    // Auto-generate Kode Guru (DSN001, DSN002...) jika kosong
+                    if (!item.identity_number) {
+                        nextDsnNumber++;
+                        item.identity_number = `DSN${String(nextDsnNumber).padStart(3, '0')}`;
+                    }
+
+                    if (!item.email) {
+                        item.email = `${item.identity_number.toLowerCase()}@staialittihad.ac.id`;
+                    }
+
+                    if (item.name) {
                         parsed.push(item);
                     }
                 }
 
-                setImportRecords(parsed);
+                if (parsed.length > 0) {
+                    setImportRecords(parsed);
+                } else {
+                    alert('Tidak ditemukan baris data dosen yang valid di file CSV ini. Pastikan kolom nama terisi.');
+                }
                 if (fileInputRef.current) fileInputRef.current.value = '';
             };
             reader.readAsText(file);
@@ -418,11 +479,35 @@ export default function LecturersIndex({
 
     const handleGenerateMockImport = () => {
         const mockData = [
-            { name: 'Dr. H. M. Ridwan, M.Ag', identity_number: '2112087501', nik: '3203011208750001', email: 'm.ridwan@staialittihad.ac.id', role: 'dosen', study_program: 'Pendidikan Agama Islam (S1)', gender: 'L', phone_number: '08123456789' },
-            { name: 'Dra. Hj. Siti Maryam, M.Pd.I', identity_number: '2115047802', nik: '3203015504780002', email: 'siti.maryam@staialittihad.ac.id', role: 'dosen_pa', study_program: 'Pendidikan Agama Islam (S1)', gender: 'P', phone_number: '08129876543' },
-            { name: 'Dr. Ahmad Syafi\'i, M.Ag', identity_number: '2118097201', nik: '3203011809720001', email: 'ahmad.syafii@staialittihad.ac.id', role: 'kaprodi', study_program: 'Pendidikan Agama Islam (S1)', gender: 'L', phone_number: '08134567890' },
+            { name: 'Dr. H. M. Ridwan, M.Ag', identity_number: '2112087501', nik: '3203011208750001', email: 'm.ridwan@staialittihad.ac.id', password: 'salam123', role: 'dosen', study_program: 'Pendidikan Agama Islam (S1)', gender: 'L', phone_number: '08123456789' },
+            { name: 'Dra. Hj. Siti Maryam, M.Pd.I', identity_number: '2115047802', nik: '3203015504780002', email: 'siti.maryam@staialittihad.ac.id', password: 'salam123', role: 'dosen_pa', study_program: 'Pendidikan Agama Islam (S1)', gender: 'P', phone_number: '08129876543' },
+            { name: 'Dr. Ahmad Syafi\'i, M.Ag', identity_number: '2118097201', nik: '3203011809720001', email: 'ahmad.syafii@staialittihad.ac.id', password: 'salam123', role: 'kaprodi', study_program: 'Pendidikan Agama Islam (S1)', gender: 'L', phone_number: '08134567890' },
         ];
         setImportRecords(mockData);
+    };
+
+    const handleDownloadImportCredentials = () => {
+        if (!importRecords || importRecords.length === 0) return;
+        const header = ['No', 'Nama Lengkap', 'Kode Guru (Username)', 'NIK', 'Email Institusi', 'Password Login', 'Program Studi', 'Jabatan'];
+        const rows = importRecords.map((r, idx) => [
+            idx + 1,
+            `"${(r.name || '').replace(/"/g, '""')}"`,
+            `"${r.identity_number}"`,
+            `"${r.nik || ''}"`,
+            `"${r.email}"`,
+            `"${r.password || 'salam123'}"`,
+            `"${r.study_program}"`,
+            `"${r.role === 'kaprodi' ? 'Kaprodi' : r.role === 'dosen_pa' ? 'Dosen PA' : 'Dosen'}"`
+        ]);
+        const csvContent = '\uFEFF' + [header.join(','), ...rows.map(row => row.join(','))].join('\r\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `kredensial-akun-dosen-${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const handleImportSubmit = () => {
@@ -1568,10 +1653,10 @@ export default function LecturersIndex({
                                             <span>Template Resmi & Sederhana Excel (.xlsx)</span>
                                         </p>
                                         <p className="text-[11px] text-emerald-800 mt-0.5">
-                                            Kolom wajib diisi: <strong>nama_lengkap</strong>, <strong>nidn_nip</strong>, <strong>email</strong>, <strong>program_studi</strong>.
+                                            Kolom data: <strong>nama_lengkap</strong>, <strong>nik</strong> atau <strong>nidn_nip</strong>, <strong>jenis_kelamin</strong>, <strong>no_hp</strong>, <strong>program_studi</strong>.
                                         </p>
                                         <p className="text-[10px] text-emerald-700/80 italic">
-                                            *Data lainnya (NIK, No. HP, Jabatan) bersifat opsional dan dapat dilengkapi mandiri oleh dosen di portal.
+                                            *Jika NIP/NIDN atau Email kosong, sistem otomatis memakai NIK sebagai identitas login & membuatkan email institusi secara otomatis.
                                         </p>
                                     </div>
                                     <div className="flex items-center space-x-2 shrink-0 w-full sm:w-auto">
@@ -1630,31 +1715,46 @@ export default function LecturersIndex({
                                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                                 <span>Pratinjau Data Siap Diimpor ({importRecords.length} Dosen)</span>
                                             </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setImportRecords([]);
-                                                    if (fileInputRef.current) fileInputRef.current.value = '';
-                                                }}
-                                                className="text-rose-600 hover:text-rose-800 text-[10px] font-bold cursor-pointer hover:underline"
-                                            >
-                                                Bersihkan Data
-                                            </button>
+                                            <div className="flex items-center space-x-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleDownloadImportCredentials}
+                                                    className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[10px] font-bold flex items-center space-x-1 transition cursor-pointer shadow-2xs"
+                                                    title="Unduh file data akun login (Kode Guru & Password) untuk dibagikan ke dosen"
+                                                >
+                                                    <Download className="w-3 h-3" />
+                                                    <span>Unduh Kredensial (.CSV)</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setImportRecords([]);
+                                                        if (fileInputRef.current) fileInputRef.current.value = '';
+                                                    }}
+                                                    className="text-rose-600 hover:text-rose-800 text-[10px] font-bold cursor-pointer hover:underline"
+                                                >
+                                                    Bersihkan
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="max-h-52 overflow-y-auto divide-y divide-slate-100">
+                                        <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
                                             {importRecords.map((r, idx) => (
                                                 <div key={idx} className="p-2.5 flex items-center justify-between hover:bg-slate-50 transition text-xs">
                                                     <div>
-                                                        <div className="flex items-center space-x-2">
+                                                        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                                                             <span className="font-bold text-slate-900">{r.name}</span>
-                                                            <span className="text-[11px] font-mono bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 text-slate-700">
-                                                                NIDN: {r.identity_number}
+                                                            <span className="text-[11px] font-mono bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 text-emerald-800 font-bold">
+                                                                Kode/ID: {r.identity_number}
                                                             </span>
                                                             {r.nik && (
-                                                                <span className="text-[10px] font-mono bg-slate-50 px-1 py-0.2 rounded text-slate-500">
+                                                                <span className="text-[10px] font-mono bg-slate-50 px-1 py-0.2 rounded text-slate-600 border border-slate-200">
                                                                     NIK: {r.nik}
                                                                 </span>
                                                             )}
+                                                            <span className="text-[10px] font-mono bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 text-amber-900 font-bold flex items-center space-x-1">
+                                                                <KeyRound className="w-2.5 h-2.5 text-amber-600" />
+                                                                <span>Pass: {r.password || 'salam123'}</span>
+                                                            </span>
                                                         </div>
                                                         <p className="text-[10px] text-slate-500 mt-0.5">
                                                             {r.study_program} • <span className="font-mono">{r.email}</span>
@@ -1670,9 +1770,14 @@ export default function LecturersIndex({
                                 )}
 
                                 {/* Box 4: Catatan Akun */}
-                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-[11px] flex items-center space-x-2">
-                                    <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-                                    <span>Semua akun dosen otomatis dibuat aktif dengan username NIDN dan kata sandi default: <strong className="font-mono text-emerald-700">salam123</strong>.</span>
+                                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-emerald-900 text-[11px] flex items-start space-x-2.5">
+                                    <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                    <div>
+                                        <span className="font-bold">Pembuatan Kode Guru & Kata Sandi Otomatis</span>
+                                        <p className="text-[10px] text-emerald-800/80 mt-0.5 leading-relaxed">
+                                            Jika kolom NIP/NIDN kosong, sistem otomatis membuatkan <strong>Kode Guru unik (misal: DSN001)</strong> dan kata sandi login default: <strong className="font-mono text-emerald-800">salam123</strong>. Klik tombol <strong>Unduh Kredensial (.CSV)</strong> di atas untuk menyimpan dan membagikan akun ke pengajar.
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {/* Modal Footer */}

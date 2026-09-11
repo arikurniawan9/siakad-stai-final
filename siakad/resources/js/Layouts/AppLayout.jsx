@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
+import UserProfileModal from '../Components/UserProfileModal';
 import { 
     LayoutDashboard, Building2, School, GraduationCap, 
     CreditCard, BookOpen, Star, FileText, Settings, 
@@ -1022,117 +1023,13 @@ export default function AppLayout({ title, children }) {
                 </div>
             </div>
 
-            {/* MODAL PENGATURAN PROFIL & AKUN */}
-            {showProfileModal && (
-                <div 
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) setShowProfileModal(false);
-                    }}
-                    className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
-                >
-                    <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
-                        {/* Header Dark Gradient */}
-                        <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <div className="p-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg border border-emerald-500/30">
-                                    <UserCheck className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-xs text-white">Profil & Pengaturan Akun</h3>
-                                    <p className="text-[10px] text-slate-300">Informasi kredensial pengguna aktif SIAKAD</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center space-x-1.5">
-                                <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700">
-                                    ESC
-                                </span>
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowProfileModal(false)} 
-                                    className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Profile Info Content */}
-                        <div className="p-5 space-y-3.5 text-xs">
-                            {/* User Identity Card */}
-                            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center space-x-3">
-                                <div className="w-11 h-11 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-sm shadow-xs shrink-0">
-                                    {user.name ? user.name.charAt(0) : 'U'}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <h4 className="font-black text-sm text-slate-900 truncate">{user.name}</h4>
-                                    <div className="flex items-center space-x-2 mt-0.5">
-                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                            {role?.replace('_', ' ')}
-                                        </span>
-                                        <span className="text-[10px] text-slate-500 font-mono">
-                                            @{user.username}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Details Grid */}
-                            <div className="grid grid-cols-2 gap-2.5">
-                                <div className="p-2.5 bg-white rounded-xl border border-slate-200">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">No. Identitas / NIP / NIM</span>
-                                    <span className="font-mono font-bold text-slate-800 text-xs mt-0.5 block truncate">
-                                        {user.identity_number || '-'}
-                                    </span>
-                                </div>
-                                <div className="p-2.5 bg-white rounded-xl border border-slate-200">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Email Terdaftar</span>
-                                    <span className="font-mono font-bold text-slate-800 text-xs mt-0.5 block truncate">
-                                        {user.email || '-'}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Status Card */}
-                            <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-emerald-900 text-[11px] flex items-start space-x-2.5">
-                                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <span className="font-bold">Status Akun Terverifikasi</span>
-                                    <p className="text-[10px] text-emerald-800/80 mt-0.5">
-                                        Akun aktif dan memiliki izin penuh modul sesuai hak akses role {role?.replace('_', ' ')}.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Security Note */}
-                            <div className="p-2.5 bg-slate-50 rounded-xl text-slate-500 text-[10px] border border-slate-200 leading-relaxed">
-                                💡 Untuk pembaruan gelar akademik atau pergantian password, silakan hubungi Tim IT / Administrator SIAKAD.
-                            </div>
-
-                            {/* Actions Footer */}
-                            <div className="pt-2 flex justify-between items-center border-t border-slate-100">
-                                {(role === 'superadmin' || role === 'admin_akademik') ? (
-                                    <Link
-                                        href="/admin/settings"
-                                        onClick={() => setShowProfileModal(false)}
-                                        className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center space-x-1"
-                                    >
-                                        <Settings className="w-3.5 h-3.5" />
-                                        <span>Buka Pengaturan Sistem →</span>
-                                    </Link>
-                                ) : <span />}
-
-                                <button
-                                    type="button"
-                                    onClick={() => setShowProfileModal(false)}
-                                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs"
-                                >
-                                    Tutup
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* MODAL PENGATURAN PROFIL & AKUN (SELF-SERVICE) */}
+            <UserProfileModal
+                isOpen={showProfileModal}
+                onClose={() => setShowProfileModal(false)}
+                user={user}
+                role={role}
+            />
         </div>
     );
 }
