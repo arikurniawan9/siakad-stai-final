@@ -45,14 +45,13 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-6 sm:py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
+        <div className="login-page min-h-screen flex flex-col justify-center py-6 sm:py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
             <Head title="Masuk" />
 
-            {/* Smooth Animated Ambient Aurora Orbs */}
-            <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none animate-ambient-1"></div>
-            <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-teal-500/20 blur-3xl pointer-events-none animate-ambient-2"></div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] rounded-full bg-indigo-600/15 blur-[100px] pointer-events-none animate-ambient-3"></div>
-            <div className="absolute top-12 right-1/4 w-72 h-72 rounded-full bg-emerald-400/15 blur-3xl pointer-events-none animate-ambient-pulse"></div>
+            {/* Ambient layers only animate transforms for smooth compositing. */}
+            <div className="login-ambient login-ambient-primary" aria-hidden="true"></div>
+            <div className="login-ambient login-ambient-secondary" aria-hidden="true"></div>
+            <div className="login-ambient login-ambient-tertiary" aria-hidden="true"></div>
 
             {/* Subtle Texture & Soft Vignette */}
             <div className="absolute inset-0 bg-dot-grid opacity-50 pointer-events-none"></div>
@@ -61,7 +60,7 @@ export default function Login() {
             <div className="sm:mx-auto sm:w-full sm:max-w-sm z-10">
                 {/* Brand Header */}
                 <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-14 h-14 mb-2">
+                    <div className="inline-flex items-center justify-center w-[4.5rem] h-[4.5rem] mb-3">
                         <img src="/logostai.png" alt="Logo STAI Al-Ittihad" className="w-full h-full object-contain drop-shadow-md" />
                     </div>
                     <h2 className="text-xl font-extrabold text-white tracking-tight">SIAKAD TERPADU</h2>
@@ -69,23 +68,26 @@ export default function Login() {
                 </div>
 
                 {/* Login Card */}
-                <div className="mt-4 bg-white py-5 px-5 sm:px-6 shadow-xl rounded-xl border border-slate-100 relative">
+                <div className="login-card mt-5 py-5 px-5 sm:px-6 relative">
+                    <div className="login-card-heading">
+                        <span>Portal Akademik</span>
+                        <span>Akses Terlindungi</span>
+                    </div>
                     <form onSubmit={handleSubmit} className="space-y-3.5">
                         {/* 1. Login Identifier */}
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                                Identitas Pengguna (NIM / NIDN / Username / Email)
-                            </label>
-                            <div className="relative rounded-md shadow-2xs">
+                            <div className="login-input-field">
+                                <label htmlFor="login-identity">Identitas Pengguna</label>
                                 <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
                                     <User className="w-3.5 h-3.5" />
                                 </div>
                                 <input
+                                    id="login-identity"
                                     type="text"
                                     value={data.login}
                                     onChange={(e) => setData('login', e.target.value)}
-                                    placeholder="Contoh: 21010042 atau adminakademik"
-                                    className="block w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-md text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500 focus:border-emerald-500 transition placeholder:text-slate-400"
+                                    placeholder="Masukkan identitas Anda"
+                                    className="login-form-input block w-full pl-8 pr-3 py-2.5 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-900 focus:outline-none transition placeholder:text-slate-400"
                                     required
                                 />
                             </div>
@@ -96,19 +98,18 @@ export default function Login() {
 
                         {/* 2. Password */}
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                                Kata Sandi (Password)
-                            </label>
-                            <div className="relative rounded-md shadow-2xs">
+                            <div className="login-input-field">
+                                <label htmlFor="login-password">Kata Sandi</label>
                                 <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
                                     <Lock className="w-3.5 h-3.5" />
                                 </div>
                                 <input
+                                    id="login-password"
                                     type={showPassword ? 'text' : 'password'}
                                     value={data.password}
                                     onChange={(e) => setData('password', e.target.value)}
                                     placeholder="••••••••"
-                                    className="block w-full pl-8 pr-8 py-2 bg-slate-50 border border-slate-300 rounded-md text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-1.5 focus:ring-emerald-500 focus:border-emerald-500 transition placeholder:text-slate-400"
+                                    className="login-form-input block w-full pl-8 pr-8 py-2.5 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-900 focus:outline-none transition placeholder:text-slate-400"
                                     required
                                 />
                                 <button
@@ -186,7 +187,7 @@ export default function Login() {
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-emerald-500 transition disabled:opacity-50 cursor-pointer"
+                                className="login-submit-button w-full flex items-center justify-center py-2.5 px-4 border border-transparent rounded-md text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-400 disabled:opacity-50 cursor-pointer"
                             >
                                 {processing ? (
                                     <span className="flex items-center space-x-1.5">

@@ -100,11 +100,19 @@ export const NAVIGATION_DOSEN: NavGroup[] = [
     ]
   },
   {
-    id: 'perkuliahan-group',
-    title: 'KEGIATAN BELAJAR DARING',
+    id: 'kelas-group',
+    title: 'KELAS SAYA',
     items: [
       { id: 'mata-kuliah-saya', label: 'Mata Kuliah & Materi', path: '/mata-kuliah', icon: BookOpen },
       { id: 'presensi-kuliah', label: 'Presensi & BAP Kuliah', path: '/presensi', icon: QrCode },
+    ]
+  },
+  {
+    id: 'pengelolaan-pembelajaran-group',
+    title: 'KELOLA PEMBELAJARAN',
+    collapsible: true,
+    defaultCollapsed: true,
+    items: [
       { id: 'tugas-kelola', label: 'Tugas & Penilaian Daring', path: '/tugas', icon: CheckSquare, badge: 'Perlu Nilai' },
       { id: 'kuis-kelola', label: 'Bank Soal & Kuis CBT', path: '/kuis', icon: HelpCircle },
       { id: 'video-interaktif', label: 'Video Kuliah Interaktif', path: '/video', icon: Video },
@@ -113,24 +121,14 @@ export const NAVIGATION_DOSEN: NavGroup[] = [
     ]
   },
   {
-    id: 'jadwal-group',
-    title: 'JADWAL & AGENDA',
+    id: 'akademik-informasi-group',
+    title: 'AKADEMIK & INFORMASI',
+    collapsible: true,
+    defaultCollapsed: true,
     items: [
       { id: 'jadwal-mengajar', label: 'Jadwal Mengajar', path: '/jadwal', icon: Calendar },
       { id: 'kalender-akademik', label: 'Kalender Akademik', path: '/kalender', icon: Calendar },
-    ]
-  },
-  {
-    id: 'akademik-group',
-    title: 'INTEGRASI SIAKAD (DPNA RESMI)',
-    items: [
       { id: 'rekap-nilai', label: 'Input DPNA di SIAKAD', path: '/admin/nilai', icon: Award, badge: 'SIAKAD' },
-    ]
-  },
-  {
-    id: 'informasi-group',
-    title: 'INFORMASI & LAYANAN',
-    items: [
       { id: 'pengumuman', label: 'Pengumuman Kampus', path: '/pengumuman', icon: Bell },
       { id: 'notifikasi-pusat', label: 'Pusat Notifikasi', path: '/notifikasi', icon: Bell },
     ]
@@ -138,6 +136,8 @@ export const NAVIGATION_DOSEN: NavGroup[] = [
   {
     id: 'akun-group',
     title: 'AKUN',
+    collapsible: true,
+    defaultCollapsed: true,
     items: [
       { id: 'profil-saya', label: 'Profil Saya', path: '/profil', icon: User },
       { id: 'keamanan-akun', label: 'Keamanan Akun', path: '/keamanan', icon: ShieldCheck },
@@ -157,11 +157,19 @@ export const NAVIGATION_DOSEN_PA: NavGroup[] = [
     ]
   },
   {
-    id: 'perkuliahan-group',
-    title: 'KEGIATAN BELAJAR DARING',
+    id: 'kelas-group',
+    title: 'KELAS SAYA',
     items: [
       { id: 'mata-kuliah-saya', label: 'Mata Kuliah & Materi', path: '/mata-kuliah', icon: BookOpen },
       { id: 'presensi-kuliah', label: 'Presensi & BAP Kuliah', path: '/presensi', icon: QrCode },
+    ]
+  },
+  {
+    id: 'pengelolaan-pembelajaran-group',
+    title: 'KELOLA PEMBELAJARAN',
+    collapsible: true,
+    defaultCollapsed: true,
+    items: [
       { id: 'tugas-kelola', label: 'Tugas & Penilaian Daring', path: '/tugas', icon: CheckSquare },
       { id: 'kuis-kelola', label: 'Bank Soal & Kuis CBT', path: '/kuis', icon: HelpCircle },
       { id: 'video-interaktif', label: 'Video Kuliah Interaktif', path: '/video', icon: Video },
@@ -170,25 +178,15 @@ export const NAVIGATION_DOSEN_PA: NavGroup[] = [
     ]
   },
   {
-    id: 'jadwal-group',
-    title: 'JADWAL & AGENDA',
+    id: 'akademik-informasi-group',
+    title: 'AKADEMIK & INFORMASI',
+    collapsible: true,
+    defaultCollapsed: true,
     items: [
       { id: 'jadwal-mengajar', label: 'Jadwal Mengajar', path: '/jadwal', icon: Calendar },
       { id: 'kalender-akademik', label: 'Kalender Akademik', path: '/kalender', icon: Calendar },
-    ]
-  },
-  {
-    id: 'bimbingan-group',
-    title: 'INTEGRASI SIAKAD (BIMBINGAN & DPNA)',
-    items: [
       { id: 'mahasiswa-bimbingan', label: 'Bimbingan KRS di SIAKAD', path: '/bimbingan', icon: Users, badge: 'SIAKAD' },
       { id: 'rekap-nilai', label: 'Input DPNA di SIAKAD', path: '/admin/nilai', icon: Award, badge: 'SIAKAD' },
-    ]
-  },
-  {
-    id: 'informasi-group',
-    title: 'INFORMASI & LAYANAN',
-    items: [
       { id: 'pengumuman', label: 'Pengumuman Kampus', path: '/pengumuman', icon: Bell },
       { id: 'notifikasi-pusat', label: 'Pusat Notifikasi', path: '/notifikasi', icon: Bell },
     ]
@@ -196,6 +194,8 @@ export const NAVIGATION_DOSEN_PA: NavGroup[] = [
   {
     id: 'akun-group',
     title: 'AKUN',
+    collapsible: true,
+    defaultCollapsed: true,
     items: [
       { id: 'profil-saya', label: 'Profil Saya', path: '/profil', icon: User },
       { id: 'keamanan-akun', label: 'Keamanan Akun', path: '/keamanan', icon: ShieldCheck },

@@ -24,6 +24,7 @@ export default function AppLayout({ title, children }) {
     const [userDropdownOpen, setUserDropdownOpen] = useState(false);
     const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
+    const [currentDateTime, setCurrentDateTime] = useState(() => new Date());
     const isAcademicSettingsActive = pageUrl.includes('/admin/setting') || pageUrl.includes('/admin/academic-settings');
     const isPejabatActive = pageUrl.includes('/admin/setting/data-pejabat') || pageUrl.includes('/admin/setting/pejabat-pengesah') || pageUrl.includes('tab=data-pejabat') || pageUrl.includes('tab=pejabat-pengesah');
 
@@ -32,6 +33,12 @@ export default function AppLayout({ title, children }) {
         'pejabat': isPejabatActive
     });
     const userDropdownRef = useRef(null);
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => setCurrentDateTime(new Date()), 1000);
+
+        return () => window.clearInterval(intervalId);
+    }, []);
 
     // Sync menu collapse when navigating: auto-expand when entering academic settings, collapse when leaving
     useEffect(() => {
@@ -94,6 +101,18 @@ export default function AppLayout({ title, children }) {
     };
 
     const role = user.role || 'mahasiswa';
+    const currentDate = new Intl.DateTimeFormat('id-ID', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    }).format(currentDateTime);
+    const currentTime = new Intl.DateTimeFormat('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    }).format(currentDateTime);
 
     const handleStopImpersonate = (e) => {
         e.preventDefault();
@@ -623,15 +642,6 @@ export default function AppLayout({ title, children }) {
                         </button>
                     </div>
 
-                    {/* TOMBOL BULAT HIDE-SEEK (DESKTOP TOGGLE BUTTON) */}
-                    <button
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        title={sidebarCollapsed ? "Perluas Sidebar" : "Kecilkan Sidebar"}
-                        className="hidden md:flex absolute -right-3 top-4 w-6 h-6 rounded-full bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white items-center justify-center shadow-lg border-2 border-slate-950 z-50 transition transform hover:scale-110 cursor-pointer"
-                    >
-                        {sidebarCollapsed ? <ChevronRight className="w-3.5 h-3.5 stroke-[3]" /> : <ChevronLeft className="w-3.5 h-3.5 stroke-[3]" />}
-                    </button>
-
                     {/* Nav Items List (Vibrant Color-Coded Icons & Ultra-Sleek Scrollbar) */}
                     <nav className={`flex-1 overflow-y-auto px-2.5 py-3 space-y-1 custom-sidebar-scrollbar ${
                         role === 'superadmin' ? 'developer-scrollbar' : ''
@@ -802,6 +812,16 @@ export default function AppLayout({ title, children }) {
                     </div>
                 </aside>
 
+                <button
+                    type="button"
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    title={sidebarCollapsed ? "Perluas Sidebar" : "Kecilkan Sidebar"}
+                    aria-label={sidebarCollapsed ? "Perluas Sidebar" : "Kecilkan Sidebar"}
+                    className={`hidden md:flex fixed ${impersonation.is_active ? 'top-14' : 'top-4'} ${sidebarCollapsed ? 'left-16' : 'left-64'} z-[60] h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border-2 border-white/20 bg-slate-800 text-slate-100 shadow-xl ring-2 ring-slate-950/60 transition duration-200 hover:scale-110 hover:bg-emerald-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer`}
+                >
+                    {sidebarCollapsed ? <ChevronRight className="w-3.5 h-3.5 stroke-[3]" /> : <ChevronLeft className="w-3.5 h-3.5 stroke-[3]" />}
+                </button>
+
                 {/* 3. MAIN CONTENT CONTAINER */}
                 <div className={`flex-1 flex flex-col min-w-0 transition-all duration-200 ${
                     sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
@@ -880,6 +900,15 @@ export default function AppLayout({ title, children }) {
 
                         {/* Right Navigation Controls */}
                         <div className="flex items-center space-x-2.5">
+                            <div className="hidden lg:flex flex-col items-end border-r border-slate-200 pr-3 leading-tight">
+                                <time dateTime={currentDateTime.toISOString()} className="text-[10px] font-bold text-slate-500">
+                                    {currentDate}
+                                </time>
+                                <time dateTime={currentDateTime.toISOString()} className="text-xs font-black tabular-nums text-emerald-700">
+                                    {currentTime}
+                                </time>
+                            </div>
+
                             {/* SALAM LMS SSO 1-Click Launch Button */}
                             <a
                                 href="/sso/lms"

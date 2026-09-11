@@ -69,72 +69,195 @@
 /* ========================================================================= */
 /* SMOOTH AMBIENT LOGIN BACKGROUND ANIMATIONS                                */
 /* ========================================================================= */
-@keyframes ambient-float-1 {
-    0%, 100% {
-        transform: translate3d(0, 0, 0) scale(1);
-    }
-    33% {
-        transform: translate3d(90px, -70px, 0) scale(1.18);
-    }
-    66% {
-        transform: translate3d(-60px, 50px, 0) scale(0.92);
-    }
+.login-page {
+    background: linear-gradient(135deg, #020617 0%, #073c35 50%, #0f172a 100%);
 }
 
-@keyframes ambient-float-2 {
-    0%, 100% {
-        transform: translate3d(0, 0, 0) scale(1);
-    }
-    33% {
-        transform: translate3d(-85px, 65px, 0) scale(0.88);
-    }
-    66% {
-        transform: translate3d(75px, -75px, 0) scale(1.22);
-    }
+.login-card {
+    overflow: hidden;
+    border: 1px solid rgba(203, 213, 225, 0.9);
+    border-top: 4px solid #10b981;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 28px 60px rgba(2, 6, 23, 0.38), 0 8px 20px rgba(15, 23, 42, 0.2);
 }
 
-@keyframes ambient-float-3 {
-    0%, 100% {
-        transform: translate3d(0, 0, 0) scale(0.92);
-    }
-    50% {
-        transform: translate3d(60px, 60px, 0) scale(1.2);
-    }
+.login-card::after {
+    position: absolute;
+    top: -4px;
+    right: 0;
+    width: 42%;
+    height: 4px;
+    background: linear-gradient(90deg, #34d399, #0f766e, #1e3a5f);
+    content: '';
 }
 
-@keyframes ambient-pulse {
-    0%, 100% {
-        opacity: 0.3;
-        transform: scale(0.95);
-    }
-    50% {
-        opacity: 0.6;
-        transform: scale(1.15);
-    }
+.login-card-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.15rem;
+    color: #334155;
+    font-size: 0.625rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    line-height: 1;
+    text-transform: uppercase;
 }
 
-.animate-ambient-1 {
-    animation: ambient-float-1 14s ease-in-out infinite;
+.login-card-heading span:last-child {
+    color: #047857;
+}
+
+.login-input-field {
+    position: relative;
+}
+
+.login-input-field > label {
+    position: absolute;
+    top: -0.55rem;
+    left: 0.65rem;
+    z-index: 1;
+    padding: 0 0.35rem;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+    transition: color 0.2s ease;
+}
+
+.login-form-input {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.login-input-field:focus-within > label {
+    color: #059669;
+}
+
+.login-input-field:focus-within .login-form-input {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+}
+
+.login-submit-button {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: linear-gradient(105deg, #047857 0%, #059669 45%, #0f766e 100%);
+    box-shadow: 0 10px 20px rgba(5, 150, 105, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+}
+
+.login-submit-button::before {
+    position: absolute;
+    top: -60%;
+    left: -35%;
+    width: 24%;
+    height: 220%;
+    background: rgba(255, 255, 255, 0.3);
+    content: '';
+    pointer-events: none;
+    transform: translateX(-220%) rotate(18deg);
+    transition: transform 0.6s ease;
+}
+
+.login-submit-button > * {
+    position: relative;
+    z-index: 1;
+}
+
+.login-submit-button:hover:not(:disabled) {
+    filter: saturate(1.1) brightness(1.05);
+    box-shadow: 0 15px 28px rgba(5, 150, 105, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.26);
+    transform: translateY(-2px);
+}
+
+.login-submit-button:hover:not(:disabled)::before {
+    transform: translateX(620%) rotate(18deg);
+}
+
+.login-submit-button:active:not(:disabled) {
+    box-shadow: 0 6px 14px rgba(5, 150, 105, 0.28), inset 0 2px 5px rgba(6, 78, 59, 0.24);
+    transform: translateY(0) scale(0.985);
+}
+
+.login-ambient {
+    position: absolute;
+    width: 28rem;
+    height: 28rem;
+    border-radius: 9999px;
+    filter: blur(72px);
+    pointer-events: none;
+    contain: paint;
     will-change: transform;
+    backface-visibility: hidden;
 }
 
-.animate-ambient-2 {
-    animation: ambient-float-2 16s ease-in-out infinite;
-    will-change: transform;
+.login-ambient-primary {
+    top: -13rem;
+    left: -13rem;
+    background: rgba(16, 185, 129, 0.38);
+    animation: login-ambient-primary 18s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
 }
 
-.animate-ambient-3 {
-    animation: ambient-float-3 15s ease-in-out infinite;
-    will-change: transform;
+.login-ambient-secondary {
+    right: -14rem;
+    bottom: -14rem;
+    background: rgba(20, 184, 166, 0.34);
+    animation: login-ambient-secondary 21s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
 }
 
-.animate-ambient-pulse {
-    animation: ambient-pulse 10s ease-in-out infinite;
-    will-change: transform, opacity;
+.login-ambient-tertiary {
+    top: 50%;
+    left: 50%;
+    width: 24rem;
+    height: 24rem;
+    background: rgba(99, 102, 241, 0.24);
+    animation: login-ambient-tertiary 24s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+
+@keyframes login-ambient-primary {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(9rem, 5rem, 0); }
+}
+
+@keyframes login-ambient-secondary {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(-8rem, -6rem, 0); }
+}
+
+@keyframes login-ambient-tertiary {
+    from { transform: translate3d(-50%, -50%, 0); }
+    to { transform: translate3d(calc(-50% + 3rem), calc(-50% - 2rem), 0); }
+}
+
+@media (max-width: 640px) {
+    .login-ambient {
+        width: 22rem;
+        height: 22rem;
+        filter: blur(56px);
+    }
+
+    .login-ambient-tertiary {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-ambient {
+        animation: none;
+        will-change: auto;
+    }
+
+    .login-submit-button,
+    .login-submit-button::before {
+        transition: none;
+    }
 }
 
 .bg-dot-grid {
     background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.2px);
     background-size: 24px 24px;
 }
-

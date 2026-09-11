@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, PanelLeftClose, ExternalLink } from 'lucide-react';
+import { ChevronDown, ExternalLink, LogOut, PanelLeftClose } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getNavigationByRole, SIAKAD_PORTAL_URL } from '../../constants/navigation';
 import { academicService } from '../../services/academicService';
@@ -24,6 +24,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, logout } = useAuth();
   const [classCount, setClassCount] = useState<number | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!user) return;
@@ -63,6 +64,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   if (!user) return null;
 
   const navGroups = getNavigationByRole(user.role);
+
+  const isGroupCollapsed = (group: typeof navGroups[number]): boolean => {
+    if (isCollapsed || !group.collapsible) return false;
+    if (group.items.some((item) => item.path === activePath)) return false;
+    return collapsedGroups[group.id] ?? group.defaultCollapsed ?? false;
+  };
 
   return (
     <>
@@ -123,11 +130,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div key={group.id} style={{ width: '100%' }}>
               {isCollapsed ? (
                 groupIdx > 0 && <div className="sidebar-nav-divider" />
+              ) : group.collapsible ? (
+                <button
+                  type="button"
+                  className="nav-group-title"
+                  onClick={() => setCollapsedGroups((groups) => ({
+                    ...groups,
+                    [group.id]: !isGroupCollapsed(group),
+                  }))}
+                  aria-expanded={!isGroupCollapsed(group)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    border: 0,
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span>{group.title}</span>
+                  <ChevronDown
+                    size={14}
+                    style={{
+                      transform: isGroupCollapsed(group) ? 'rotate(-90deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  />
+                </button>
               ) : (
                 <div className="nav-group-title">{group.title}</div>
               )}
 
-              <ul className="nav-items-list">
+              {!isGroupCollapsed(group) && <ul className="nav-items-list">
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   const isActive = activePath === item.path;
@@ -170,7 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </li>
                   );
                 })}
-              </ul>
+              </ul>}
             </div>
           ))}
         </nav>

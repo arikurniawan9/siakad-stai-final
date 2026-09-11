@@ -18,4 +18,6 @@ export interface NavGroup {
   title: string;
   items: NavItem[];
   roles?: UserRole[];
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
 }
