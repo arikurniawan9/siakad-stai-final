@@ -56,11 +56,12 @@ class AuthController extends Controller
             ])->withInput($request->except('password', 'captcha'));
         }
 
-        // 2. Multi-Identifier Lookup (NIM / NIDN / NIP / Username / Email)
+        // 2. Multi-Identifier Lookup (Case-Insensitive untuk PostgreSQL)
         $loginInput = trim($request->input('login'));
-        $user = User::where('username', $loginInput)
-            ->orWhere('identity_number', $loginInput)
-            ->orWhere('email', $loginInput)
+        $loginLower = strtolower($loginInput);
+        $user = User::whereRaw('LOWER(username) = ?', [$loginLower])
+            ->orWhereRaw('LOWER(identity_number) = ?', [$loginLower])
+            ->orWhereRaw('LOWER(email) = ?', [$loginLower])
             ->first();
 
         if (!$user || !Hash::check($request->input('password'), $user->password)) {

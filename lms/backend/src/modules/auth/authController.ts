@@ -22,10 +22,10 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     const userResult = await db.query(
       `SELECT id, username, password as password_hash, name, identity_number, email, role, study_program 
        FROM users 
-       WHERE username = $1 
+       WHERE LOWER(username) = LOWER($1) 
           OR identity_number = $1 
           OR REPLACE(identity_number, '.', '') = $1 
-          OR email = $1 
+          OR LOWER(email) = LOWER($1) 
        LIMIT 1`,
       [username.trim()]
     );

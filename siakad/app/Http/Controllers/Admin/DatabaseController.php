@@ -1191,6 +1191,11 @@ class DatabaseController extends Controller
                 $seeder->run();
                 $this->resyncSequences();
                 $msg = 'Seeder Kurikulum OBE & Matakuliah Berhasil Diperbarui!';
+            } elseif ($type === 'users') {
+                $seeder = new \Database\Seeders\UserSeeder();
+                $seeder->run();
+                $this->resyncSequences();
+                $msg = 'Seeder Akun Pengguna Berhasil! Seluruh akun civitas akademika telah dipulihkan dan kata sandi direset ke: salam123';
             }
 
             // Catat ke Audit Log
