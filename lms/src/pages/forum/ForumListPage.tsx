@@ -58,12 +58,7 @@ export const ForumListPage: React.FC<ForumListPageProps> = ({ onSelectThread }) 
 
     let classes = academicService.getClasses();
     if (isLecturer && user) {
-      const filtered = classes.filter(c =>
-        c.lecturerNidn === user.identityNumber ||
-        c.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
-        c.classLecturerName?.toLowerCase().includes(user.name.toLowerCase())
-      );
-      if (filtered.length > 0) classes = filtered;
+      classes = classes.filter(c => academicService.isLecturerAssignedToClass(c, user));
     }
     setAvailableClasses(classes);
     if (classes.length > 0) {
@@ -73,12 +68,7 @@ export const ForumListPage: React.FC<ForumListPageProps> = ({ onSelectThread }) 
     academicService.fetchClassesFromBackend().then(() => {
       let updated = academicService.getClasses();
       if (isLecturer && user) {
-        const filtered = updated.filter(c =>
-          c.lecturerNidn === user.identityNumber ||
-          c.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
-          c.classLecturerName?.toLowerCase().includes(user.name.toLowerCase())
-        );
-        if (filtered.length > 0) updated = filtered;
+        updated = updated.filter(c => academicService.isLecturerAssignedToClass(c, user));
       }
       setAvailableClasses(updated);
       if (updated.length > 0 && !selectedClassId) {

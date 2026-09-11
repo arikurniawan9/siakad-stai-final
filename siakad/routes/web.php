@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Admin\GradeAdminController;
 use App\Http\Controllers\Admin\KrsApprovalController;
 use App\Http\Controllers\Admin\LecturerAdminController;
+use App\Http\Controllers\Admin\LecturerAssignmentController;
 use App\Http\Controllers\Admin\LetterController;
 use App\Http\Controllers\Admin\LmsSyncController;
 use App\Http\Controllers\Admin\PddiktiController;
@@ -341,6 +342,14 @@ Route::middleware('auth')->group(function () {
             Route::post('/course-curriculum', [CourseCurriculumController::class, 'store'])->name('course_curriculum.store');
             Route::put('/course-curriculum/{id}', [CourseCurriculumController::class, 'update'])->name('course_curriculum.update');
             Route::delete('/course-curriculum/{id}', [CourseCurriculumController::class, 'destroy'])->name('course_curriculum.destroy');
+
+            // Plotting & Penugasan Dosen Pengampu Mata Kuliah (1 Dosen - Banyak Mata Kuliah)
+            Route::get('/lecturer-assignments', [LecturerAssignmentController::class, 'index'])->name('lecturer_assignments.index');
+            Route::post('/lecturer-assignments/assign', [LecturerAssignmentController::class, 'assign'])->name('lecturer_assignments.assign');
+            Route::post('/lecturer-assignments/batch-assign', [LecturerAssignmentController::class, 'batchAssign'])->name('lecturer_assignments.batch_assign');
+            Route::post('/lecturer-assignments/quick-class', [LecturerAssignmentController::class, 'quickCreateClassAndAssign'])->name('lecturer_assignments.quick_class');
+            Route::delete('/lecturer-assignments/remove', [LecturerAssignmentController::class, 'removeAssignment'])->name('lecturer_assignments.remove');
+            Route::get('/lecturer-assignments/export-excel', [LecturerAssignmentController::class, 'exportExcel'])->name('lecturer_assignments.export_excel');
 
             Route::get('/positions', [CurriculumController::class, 'index'])->name('positions.index');
 

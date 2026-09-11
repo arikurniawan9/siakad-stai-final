@@ -27,9 +27,21 @@ export async function getClasses(req: AuthenticatedRequest, res: Response, next:
           WHEN c.code LIKE 'MKU%' THEN 'Mata Kuliah Umum'
           ELSE 'Pendidikan Agama Islam'
         END) as "studyProgram",
-        cl.lecturer_id as "lecturerId",
-        COALESCE(u.name, 'Dr. H. M. Ridwan, M.Ag') as "lecturerName",
-        COALESCE(u.identity_number, '2112087501') as "lecturerNidn",
+        COALESCE(cl_primary.lecturer_id, cl_any.lecturer_id) as "lecturerId",
+        COALESCE(u_primary.name, u_any.name, 'Dosen Belum Ditentukan') as "lecturerName",
+        COALESCE(u_primary.identity_number, u_any.identity_number, '-') as "lecturerNidn",
+        COALESCE(
+          (SELECT STRING_AGG(DISTINCT lu_sub.name, ', ')
+           FROM class_lecturers cl_sub
+           JOIN users lu_sub ON lu_sub.id = cl_sub.lecturer_id
+           WHERE cl_sub.course_class_id = cc.id),
+          u_primary.name,
+          u_any.name,
+          'Dosen Belum Ditentukan'
+        ) as "allLecturerNames",
+        (SELECT ARRAY_TO_JSON(ARRAY_AGG(DISTINCT cl_sub.lecturer_id::text))
+         FROM class_lecturers cl_sub
+         WHERE cl_sub.course_class_id = cc.id) as "allLecturerIds",
         cs.day_of_week as "dayOfWeek",
         cs.start_time as "startTime",
         cs.end_time as "endTime",
@@ -39,8 +51,15 @@ export async function getClasses(req: AuthenticatedRequest, res: Response, next:
       JOIN courses c ON c.id = cc.course_id
       LEFT JOIN academic_periods ap ON ap.id = cc.academic_period_id
       LEFT JOIN study_programs sp ON sp.id = c.study_program_id
-      LEFT JOIN class_lecturers cl ON cl.course_class_id = cc.id AND cl.is_primary = TRUE
-      LEFT JOIN users u ON u.id = cl.lecturer_id
+      LEFT JOIN class_lecturers cl_primary ON cl_primary.course_class_id = cc.id AND cl_primary.is_primary = TRUE
+      LEFT JOIN users u_primary ON u_primary.id = cl_primary.lecturer_id
+      LEFT JOIN LATERAL (
+        SELECT cl_first.lecturer_id
+        FROM class_lecturers cl_first
+        WHERE cl_first.course_class_id = cc.id
+        LIMIT 1
+      ) cl_any ON TRUE
+      LEFT JOIN users u_any ON u_any.id = cl_any.lecturer_id
       LEFT JOIN class_schedules cs ON cs.course_class_id = cc.id
       LEFT JOIN rooms r ON r.id = cs.room_id
       WHERE cc.status = 'AKTIF'
@@ -82,6 +101,8 @@ export async function getClasses(req: AuthenticatedRequest, res: Response, next:
     } else if (user.role === 'dosen' || user.role === 'dosen_pa') {
       const cleanIdent = (user.identityNumber || user.username || '').replace(/[^0-9]/g, '');
       const parsedId = /^\d+$/.test(String(user.id)) ? parseInt(String(user.id), 10) : null;
+      const userEmail = user.email ? user.email.trim().toLowerCase() : null;
+      const userName = user.name ? user.name.trim().toLowerCase() : null;
 
       query += ` AND cc.id IN (
         SELECT cl.course_class_id 
@@ -93,9 +114,10 @@ export async function getClasses(req: AuthenticatedRequest, res: Response, next:
                 OR REPLACE(lu.identity_number, '.', '') = $2 
                 OR lu.username = $2
               ))
-           OR (NULLIF($3, '') IS NOT NULL AND LOWER(lu.name) = LOWER($3))
+           OR (NULLIF($3, '') IS NOT NULL AND LOWER(lu.email) = $3)
+           OR (NULLIF($4, '') IS NOT NULL AND LOWER(lu.name) = $4)
       )`;
-      params.push(parsedId, cleanIdent, user.name ? user.name.trim() : null);
+      params.push(parsedId, cleanIdent, userEmail, userName);
     }
 
     query += ` ORDER BY c.code ASC`;

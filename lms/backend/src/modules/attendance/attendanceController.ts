@@ -95,8 +95,8 @@ export async function getMeetingAttendanceSession(
         co.code as "classCode",
         co.name as "courseName",
         co.credits,
-        COALESCE(u.name, 'Dr. H. M. Ridwan, M.Ag') as "lecturerName",
-        COALESCE(u.id, cl.lecturer_id, 2) as "lecturerId"
+        COALESCE(u.name, 'Dosen Belum Ditentukan') as "lecturerName",
+        COALESCE(u.id, cl.lecturer_id) as "lecturerId"
       FROM class_meetings m
       JOIN course_classes c ON c.id = m.course_class_id
       JOIN courses co ON co.id = c.course_id
@@ -513,8 +513,8 @@ export async function getClassAttendanceSummary(
         co.code,
         co.name as "courseName",
         co.credits,
-        COALESCE(u.name, 'Dr. H. M. Ridwan, M.Ag') as "lecturerName",
-        u.identity_number as "lecturerNidn"
+        COALESCE(u.name, 'Dosen Belum Ditentukan') as "lecturerName",
+        COALESCE(u.identity_number, '-') as "lecturerNidn"
       FROM course_classes c
       JOIN courses co ON co.id = c.course_id
       LEFT JOIN class_lecturers cl ON cl.course_class_id = c.id

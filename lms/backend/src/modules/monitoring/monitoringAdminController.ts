@@ -228,7 +228,7 @@ export async function getClassEngagementMatrix(
         c.credits,
         COALESCE(pr.name, '-') as "studyProgramName",
         COALESCE(pr.code, '-') as "studyProgramCode",
-        COALESCE(u.name, 'Dr. H. M. Ridwan, M.Ag') as "lecturerName",
+        COALESCE(u.name, 'Dosen Belum Ditentukan') as "lecturerName",
         (SELECT COUNT(*) FROM class_enrollments ce WHERE ce.class_id = cc.id) as "enrolledStudentsCount",
         (SELECT COUNT(*) FROM materials m WHERE m.class_id = cc.id) as "totalMaterialsCount",
         (SELECT COUNT(*) FROM assignments a WHERE a.class_id = cc.id) as "totalAssignmentsCount",

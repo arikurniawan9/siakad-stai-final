@@ -33,17 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const updateCount = () => {
       const classes = academicService.getClasses();
       if (isLecturer) {
-        const userNidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
-        const filtered = classes.filter((cls) => {
-          const clsNidn = (cls.lecturerNidn || '').replace(/[^0-9]/g, '');
-          return (
-            (clsNidn && userNidn && clsNidn === userNidn) ||
-            cls.lecturerId === user.id ||
-            cls.lecturerNidn === user.identityNumber ||
-            cls.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
-            (cls.classLecturerName && cls.classLecturerName.toLowerCase().includes(user.name.toLowerCase()))
-          );
-        });
+        const filtered = classes.filter((cls) => academicService.isLecturerAssignedToClass(cls, user));
         setClassCount(filtered.length);
       } else if (isStudent) {
         const userNim = (user.identityNumber || user.username || '').replace(/[^0-9]/g, '');

@@ -58,14 +58,7 @@ export const MataKuliahListPage: React.FC<MataKuliahListPageProps> = ({ onSelect
     return classes.filter((cls) => {
       if (isLecturer && user) {
         // Dosen melihat kelas yang diampunya
-        const userNidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
-        const clsNidn = (cls.lecturerNidn || '').replace(/[^0-9]/g, '');
-        return (
-          (clsNidn && userNidn && clsNidn === userNidn) ||
-          cls.lecturerId === user.id ||
-          cls.lecturerNidn === user.identityNumber ||
-          cls.lecturerName.toLowerCase().includes(user.name.toLowerCase())
-        );
+        return academicService.isLecturerAssignedToClass(cls, user);
       }
       if (isStudent && user) {
         // Mahasiswa melihat kelas yang diambilnya sesuai KRS / SIAKAD
@@ -187,6 +180,7 @@ export const MataKuliahListPage: React.FC<MataKuliahListPageProps> = ({ onSelect
         cls.studyProgramCode || '',
         cls.lecturerName || '',
         cls.lecturerNidn || '',
+        cls.allLecturerNames || '',
         cls.academicPeriodName || '',
         scheduleText
       ]

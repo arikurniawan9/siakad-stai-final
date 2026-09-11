@@ -55,34 +55,17 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) =>
   const [lecturerClasses, setLecturerClasses] = React.useState<AcademicClass[]>(() => {
     const allClasses = academicService.getClasses();
     if (!isLecturer) return allClasses;
-    const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
-    const myClasses = allClasses.filter((c) => {
-      const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
-      const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
-      const matchId = c.lecturerId === user.id;
-      const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
-      return matchNidn || matchId || matchName;
-    });
-    return myClasses.length > 0 ? myClasses : allClasses.slice(0, 4);
+    return allClasses.filter((c) => academicService.isLecturerAssignedToClass(c, user));
   });
 
   React.useEffect(() => {
     if (isLecturer) {
       academicService.fetchClassesFromBackend().then((classes) => {
-        const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
-        const myClasses = classes.filter((c) => {
-          const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
-          const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
-          const matchId = c.lecturerId === user.id;
-          const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
-          return matchNidn || matchId || matchName;
-        });
-        if (myClasses.length > 0) {
-          setLecturerClasses(myClasses);
-        }
+        const myClasses = classes.filter((c) => academicService.isLecturerAssignedToClass(c, user));
+        setLecturerClasses(myClasses);
       });
     }
-  }, [isLecturer, user.identityNumber, user.id, user.name]);
+  }, [isLecturer, user]);
 
   // Batas Waktu Terdekat
   const upcomingEvents = calendarService.getUpcomingDeadlines().slice(0, 3);
@@ -618,23 +601,35 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) =>
                 </div>
               </CardHeader>
               <CardBody className="flex flex-col gap-3">
-                {lecturerClasses.map((cls) => (
-                  <div 
-                    key={cls.id} 
-                    style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-slate-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', cursor: 'pointer' }}
-                    onClick={() => onNavigate(`/mata-kuliah/${cls.id}`)}
-                  >
-                    <div className="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-1" style={{ marginBottom: '2px' }}>
-                      <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
-                        {cls.courseCode}: {cls.courseName} ({cls.name})
-                      </strong>
-                      <Badge variant="primary">{cls.studentCount} Mahasiswa</Badge>
+                {lecturerClasses.length === 0 ? (
+                  <div className="py-8 px-4 text-center">
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                      <BookOpen size={24} />
                     </div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                      Prodi {cls.studyProgramCode || 'PAI'} • {cls.credits} SKS • {cls.schedules?.[0]?.dayOfWeek || 'Jadwal Teratur'} {cls.schedules?.[0]?.startTime ? `${cls.schedules[0].startTime} - ${cls.schedules[0].endTime}` : ''}
-                    </div>
+                    <p className="text-sm font-semibold text-slate-700">Belum Ada Kelas yang Diampu</p>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      Anda belum memiliki rombel kelas aktif yang diplotkan untuk semester ini. Plotting mata kuliah dapat diatur melalui SIAKAD oleh Bagian Akademik (BAAK) atau Kaprodi.
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  lecturerClasses.map((cls) => (
+                    <div 
+                      key={cls.id} 
+                      style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-slate-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', cursor: 'pointer' }}
+                      onClick={() => onNavigate(`/mata-kuliah/${cls.id}`)}
+                    >
+                      <div className="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-1" style={{ marginBottom: '2px' }}>
+                        <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
+                          {cls.courseCode}: {cls.courseName} ({cls.name})
+                        </strong>
+                        <Badge variant="primary">{cls.studentCount} Mahasiswa</Badge>
+                      </div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                        Prodi {cls.studyProgramCode || 'PAI'} • {cls.credits} SKS • {cls.schedules?.[0]?.dayOfWeek || 'Jadwal Teratur'} {cls.schedules?.[0]?.startTime ? `${cls.schedules[0].startTime} - ${cls.schedules[0].endTime}` : ''}
+                      </div>
+                    </div>
+                  ))
+                )}
               </CardBody>
               <CardFooter>
                 <Button variant="outline" size="sm" onClick={() => onNavigate('/mata-kuliah')}>

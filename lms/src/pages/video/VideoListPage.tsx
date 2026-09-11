@@ -42,15 +42,7 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
   const [availableClasses, setAvailableClasses] = useState<AcademicClass[]>(() => {
     const all = academicService.getClasses();
     if (!isLecturer || !user) return all;
-    const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
-    const filtered = all.filter((c) => {
-      const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
-      const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
-      const matchId = c.lecturerId === user.id;
-      const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
-      return matchNidn || matchId || matchName;
-    });
-    return filtered.length > 0 ? filtered : all;
+    return all.filter((c) => academicService.isLecturerAssignedToClass(c, user));
   });
 
   const [newCourseName, setNewCourseName] = useState(() => availableClasses[0]?.courseName || 'Fiqih Mawaris');
@@ -64,20 +56,11 @@ export const VideoListPage: React.FC<VideoListPageProps> = ({ onSelectVideo }) =
 
   useEffect(() => {
     academicService.fetchClassesFromBackend().then((classes) => {
-      if (classes && classes.length > 0) {
+      if (classes) {
         if (isLecturer && user) {
-          const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
-          const filtered = classes.filter((c) => {
-            const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
-            const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
-            const matchId = c.lecturerId === user.id;
-            const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
-            return matchNidn || matchId || matchName;
-          });
-          if (filtered.length > 0) {
-            setAvailableClasses(filtered);
-            return;
-          }
+          const filtered = classes.filter((c) => academicService.isLecturerAssignedToClass(c, user));
+          setAvailableClasses(filtered);
+          return;
         }
         setAvailableClasses(classes);
       }

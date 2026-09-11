@@ -73,6 +73,8 @@ export interface AcademicClass {
   className?: string;
   section?: string;
   classLecturerName?: string;
+  allLecturerNames?: string;
+  allLecturerIds?: string[];
 }
 
 export interface ClassMember {

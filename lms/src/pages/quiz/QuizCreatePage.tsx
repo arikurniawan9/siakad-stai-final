@@ -538,33 +538,17 @@ export const QuizCreatePage: React.FC<QuizCreatePageProps> = ({ onBack, onCreate
     const allClasses = academicService.getClasses();
     let target = allClasses;
     if (isLecturerRole && user) {
-      const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
-      const filtered = allClasses.filter((c) => {
-        const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
-        const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
-        const matchId = c.lecturerId === user.id;
-        const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
-        return matchNidn || matchId || matchName;
-      });
-      if (filtered.length > 0) target = filtered;
+      target = allClasses.filter((c) => academicService.isLecturerAssignedToClass(c, user));
     }
     return target.map((c) => ({ classId: c.id, code: c.courseCode, name: `${c.courseName} (${c.name})` }));
   });
 
   useEffect(() => {
     academicService.fetchClassesFromBackend().then((classes) => {
-      if (classes && classes.length > 0) {
+      if (classes) {
         let target = classes;
         if (isLecturerRole && user) {
-          const nidn = (user.identityNumber || '').replace(/[^0-9]/g, '');
-          const filtered = classes.filter((c) => {
-            const cNidn = (c.lecturerNidn || '').replace(/[^0-9]/g, '');
-            const matchNidn = nidn && cNidn && (nidn === cNidn || cNidn.includes(nidn) || nidn.includes(cNidn));
-            const matchId = c.lecturerId === user.id;
-            const matchName = user.name && c.lecturerName && c.lecturerName.toLowerCase().includes(user.name.toLowerCase().trim());
-            return matchNidn || matchId || matchName;
-          });
-          if (filtered.length > 0) target = filtered;
+          target = classes.filter((c) => academicService.isLecturerAssignedToClass(c, user));
         }
         setCoursesList(target.map((c) => ({ classId: c.id, code: c.courseCode, name: `${c.courseName} (${c.name})` })));
       }

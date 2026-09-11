@@ -98,7 +98,7 @@ export async function getClassGradesSummary(
           WHEN c.code LIKE 'STAIPD%' THEN 'PIAUD'
           ELSE 'PAI'
         END) as "studyProgramCode",
-        COALESCE(u.name, 'Dr. H. M. Ridwan, M.Ag') as "lecturerName",
+        COALESCE(u.name, 'Dosen Belum Ditentukan') as "lecturerName",
         (SELECT COUNT(*) FROM class_enrollments ce WHERE ce.course_class_id = cc.id) as "enrolledCount",
         (SELECT COUNT(*) FROM course_grades cg WHERE cg.course_class_id = cc.id) as "gradedCount",
         (SELECT COALESCE(AVG(cg.final_score), 0) FROM course_grades cg WHERE cg.course_class_id = cc.id) as "averageScore",

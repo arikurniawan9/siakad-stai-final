@@ -734,6 +734,92 @@ class AcademicService {
     });
   }
 
+  /**
+   * Menentukan secara akurat apakah suatu kelas diampu oleh pengguna dosen yang sedang login
+   */
+  public isLecturerAssignedToClass(
+    cls: AcademicClass,
+    user?: { id?: string; identityNumber?: string; username?: string; name?: string; email?: string } | null
+  ): boolean {
+    if (!user || !cls) return false;
+
+    // 1. Cocokkan berdasarkan ID Dosen
+    const rawUserId = String(user.id || '').trim();
+    const cleanUserId = rawUserId.replace(/^usr-dsn-/, '');
+    const rawClsLecturerId = String(cls.lecturerId || '').trim();
+    const cleanClsLecturerId = rawClsLecturerId.replace(/^usr-dsn-/, '');
+
+    if (rawClsLecturerId && rawUserId) {
+      if (
+        rawClsLecturerId === rawUserId ||
+        (cleanClsLecturerId && cleanClsLecturerId === cleanUserId) ||
+        (cleanClsLecturerId && rawUserId === cleanClsLecturerId) ||
+        (cleanUserId && rawClsLecturerId === cleanUserId)
+      ) {
+        return true;
+      }
+    }
+
+    if (cls.allLecturerIds && Array.isArray(cls.allLecturerIds)) {
+      const matchInList = cls.allLecturerIds.some((id) => {
+        const strId = String(id).trim();
+        return (
+          strId === rawUserId ||
+          strId.replace(/^usr-dsn-/, '') === cleanUserId ||
+          (cleanUserId && strId === cleanUserId)
+        );
+      });
+      if (matchInList) return true;
+    }
+
+    // 2. Cocokkan berdasarkan NIDN / identityNumber / username
+    const userNidn = (user.identityNumber || user.username || '').replace(/[^0-9]/g, '');
+    const clsNidn = (cls.lecturerNidn || '').replace(/[^0-9]/g, '');
+    if (userNidn && clsNidn && userNidn.length >= 4 && clsNidn.length >= 4) {
+      if (userNidn === clsNidn || userNidn.includes(clsNidn) || clsNidn.includes(userNidn)) {
+        return true;
+      }
+    }
+
+    // 3. Cocokkan berdasarkan Nama (Normalisasi gelar akademik)
+    if (user.name) {
+      const uName = user.name.trim().toLowerCase();
+      const normalize = (s: string) =>
+        s
+          .toLowerCase()
+          .replace(/dr\.|h\.|hj\.|m\.ag|m\.pd|m\.pd\.i|m\.m\.|s\.pd|s\.kom|s\.ag|prof\.|kh\./gi, '')
+          .replace(/[^a-z0-9]/g, '');
+      const normUser = normalize(uName);
+
+      if (cls.lecturerName) {
+        const lName = cls.lecturerName.trim().toLowerCase();
+        if (lName === uName || lName.includes(uName) || uName.includes(lName)) return true;
+        const normLecturer = normalize(lName);
+        if (
+          normUser.length >= 4 &&
+          normLecturer.length >= 4 &&
+          (normLecturer.includes(normUser) || normUser.includes(normLecturer))
+        ) {
+          return true;
+        }
+      }
+
+      if (cls.allLecturerNames) {
+        const allNames = cls.allLecturerNames.toLowerCase();
+        if (allNames.includes(uName)) return true;
+        const normAll = normalize(allNames);
+        if (normUser.length >= 4 && normAll.includes(normUser)) return true;
+      }
+
+      if (cls.classLecturerName) {
+        const cName = cls.classLecturerName.toLowerCase();
+        if (cName.includes(uName)) return true;
+      }
+    }
+
+    return false;
+  }
+
   public async fetchClassesFromBackend(): Promise<AcademicClass[]> {
     try {
       const stored = localStorage.getItem('salam_auth_session');
@@ -754,9 +840,9 @@ class AcademicService {
       if (!res.ok) return this.getClasses();
 
       const json = await res.json();
-      const rows = json.data || [];
+      const rows = json.data;
 
-      if (rows.length > 0) {
+      if (Array.isArray(rows)) {
         const mapped: AcademicClass[] = rows.map((r: any) => {
           const classIdentifier = r.classCode || `cls-${r.id}`;
           const rawDay = r.dayOfWeek ? String(r.dayOfWeek).toUpperCase() : 'SENIN';
@@ -774,9 +860,11 @@ class AcademicService {
             courseName: r.courseName || '',
             credits: Number(r.credits) || 2,
             studyProgramCode: r.studyProgramCode || (r.courseCode?.startsWith('PAI') ? 'PAI' : r.courseCode?.startsWith('STAIPD') ? 'PIAUD' : 'MKU'),
-            lecturerId: r.lecturerId ? `usr-dsn-${r.lecturerId}` : 'usr-dsn-01',
-            lecturerName: r.lecturerName || 'Dr. H. M. Ridwan, M.Ag',
-            lecturerNidn: r.lecturerNidn || '2112087501',
+            lecturerId: r.lecturerId ? String(r.lecturerId) : '',
+            lecturerName: r.lecturerName || 'Dosen Belum Ditentukan',
+            lecturerNidn: r.lecturerNidn && r.lecturerNidn !== '-' ? String(r.lecturerNidn) : '',
+            allLecturerNames: r.allLecturerNames || r.lecturerName || '',
+            allLecturerIds: Array.isArray(r.allLecturerIds) ? r.allLecturerIds.map(String) : (r.lecturerId ? [String(r.lecturerId)] : []),
             studentCount: Number(r.enrolledCount) || 0,
             schedules: r.dayOfWeek ? [
               {

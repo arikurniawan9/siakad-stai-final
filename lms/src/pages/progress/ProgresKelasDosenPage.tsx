@@ -54,12 +54,7 @@ export const ProgresKelasDosenPage: React.FC<ProgresKelasDosenPageProps> = ({
     const isLecturer = user?.role === 'dosen' || user?.role === 'dosen_pa';
     let allClasses = academicService.getClasses();
     if (isLecturer && user) {
-      const filtered = allClasses.filter(c =>
-        c.lecturerNidn === user.identityNumber ||
-        c.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
-        c.classLecturerName?.toLowerCase().includes(user.name.toLowerCase())
-      );
-      if (filtered.length > 0) allClasses = filtered;
+      allClasses = allClasses.filter(c => academicService.isLecturerAssignedToClass(c, user));
     }
     setAvailableClasses(allClasses);
     if ((!selectedClassId || !allClasses.some(c => c.id === selectedClassId)) && allClasses.length > 0) {
@@ -69,12 +64,7 @@ export const ProgresKelasDosenPage: React.FC<ProgresKelasDosenPageProps> = ({
     academicService.fetchClassesFromBackend().then(() => {
       let updated = academicService.getClasses();
       if (isLecturer && user) {
-        const filtered = updated.filter(c =>
-          c.lecturerNidn === user.identityNumber ||
-          c.lecturerName.toLowerCase().includes(user.name.toLowerCase()) ||
-          c.classLecturerName?.toLowerCase().includes(user.name.toLowerCase())
-        );
-        if (filtered.length > 0) updated = filtered;
+        updated = updated.filter(c => academicService.isLecturerAssignedToClass(c, user));
       }
       setAvailableClasses(updated);
       if (updated.length > 0 && !selectedClassId) {

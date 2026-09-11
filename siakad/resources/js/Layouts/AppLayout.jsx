@@ -202,6 +202,14 @@ export default function AppLayout({ title, children }) {
                 activeItemBg: 'bg-teal-950/40 text-teal-200 border-l-2 border-teal-400'
             };
         }
+        if (href.includes('/lecturer-assignments')) {
+            return {
+                boxBg: isActive 
+                    ? 'bg-violet-600 text-white shadow-md shadow-violet-500/30' 
+                    : 'bg-violet-500/15 text-violet-400 ring-1 ring-violet-500/30 group-hover:bg-violet-600 group-hover:text-white',
+                activeItemBg: 'bg-violet-950/40 text-violet-200 border-l-2 border-violet-400'
+            };
+        }
         if (href.includes('/lecturers')) {
             return {
                 boxBg: isActive 
@@ -374,6 +382,7 @@ export default function AppLayout({ title, children }) {
         { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
         { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
         { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
+        { label: 'Plotting Dosen Pengampu', href: '/admin/lecturer-assignments', icon: UserCheck, highlight: true },
         { header: 'SETTING & KEBIJAKAN' },
         { label: 'Pengaturan Sistem & Maintenance', href: '/admin/settings', icon: Settings },
         { label: 'Kebijakan Akademik', href: '/admin/academic-settings', icon: Sliders },
@@ -421,6 +430,7 @@ export default function AppLayout({ title, children }) {
         { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
         { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
         { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
+        { label: 'Plotting Dosen Pengampu', href: '/admin/lecturer-assignments', icon: UserCheck, highlight: true },
         { header: 'SETTING & KEBIJAKAN' },
         { label: 'Pengaturan Sistem', href: '/admin/settings', icon: Settings },
         { label: 'Kebijakan Akademik', href: '/admin/academic-settings', icon: Sliders },
@@ -473,6 +483,7 @@ export default function AppLayout({ title, children }) {
                 { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
                 { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
                 { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
+                { label: 'Plotting Dosen Pengampu', href: '/admin/lecturer-assignments', icon: UserCheck, highlight: true },
                 { header: 'KEMAHASISWAAN PRODI' },
                 { label: 'Data Mahasiswa Prodi', href: '/admin/students', icon: GraduationCap },
                 { header: 'AKADEMIK & KRS PRODI' },
