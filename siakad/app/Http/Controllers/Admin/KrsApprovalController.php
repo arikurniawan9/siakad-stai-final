@@ -19,6 +19,11 @@ class KrsApprovalController extends Controller
      */
     public function index(Request $request): Response|JsonResponse
     {
+        $authUser = $request->user();
+        $activeRole = session('active_role', $authUser->role);
+        $isDosenPa = ($activeRole === 'dosen_pa');
+        $isKaprodi = ($activeRole === 'kaprodi');
+
         $prodiFilter = $request->input('study_program');
         $yearFilter = $request->input('academic_year'); // e.g. 2026, 2025, 2024, 2023
         $periodFilter = $request->input('academic_period'); // period ID
@@ -28,11 +33,28 @@ class KrsApprovalController extends Controller
         $perPage = (int) $request->input('per_page', 20);
 
         // Master Data Filter
-        $studyPrograms = DB::table('study_programs')
+        $studyProgramsQuery = DB::table('study_programs')
             ->leftJoin('faculties', 'faculties.id', '=', 'study_programs.faculty_id')
             ->select('study_programs.*', 'faculties.name as faculty_name')
-            ->orderBy('study_programs.id', 'asc')
-            ->get();
+            ->orderBy('study_programs.id', 'asc');
+
+        // Jika Kaprodi, batasi opsi program studi hanya ke program studinya
+        if ($isKaprodi && $authUser->study_program) {
+            $studyProgramsQuery->where(function ($q) use ($authUser) {
+                $q->where('study_programs.name', 'ilike', "%{$authUser->study_program}%")
+                  ->orWhere('study_programs.code', 'ilike', "%{$authUser->study_program}%");
+            });
+            if (empty($prodiFilter)) {
+                $prodiFilter = $authUser->study_program;
+            }
+        }
+
+        // Jika Dosen PA, defaultkan prodi jika ada
+        if ($isDosenPa && $authUser->study_program && empty($prodiFilter)) {
+            $prodiFilter = $authUser->study_program;
+        }
+
+        $studyPrograms = $studyProgramsQuery->get();
 
         $batchYears = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
 
@@ -63,7 +85,8 @@ class KrsApprovalController extends Controller
             });
         }
 
-        $isSelectionComplete = !empty($selectedProdiObj) && !empty($yearFilter);
+        // Bagi Dosen PA, langsung tampilkan mahasiswa bimbingannya tanpa perlu seleksi ketat angkatan
+        $isSelectionComplete = $isDosenPa ? true : (!empty($selectedProdiObj) && !empty($yearFilter));
 
         $studentsData = null;
         $stats = [
@@ -76,25 +99,37 @@ class KrsApprovalController extends Controller
 
         if ($isSelectionComplete) {
             // Ambil seluruh mahasiswa di Prodi & Angkatan terpilih
-            $prefix2 = substr($yearFilter, -2);
-            $prefix4 = substr($yearFilter, 0, 4);
+            $prefix2 = $yearFilter ? substr($yearFilter, -2) : '';
+            $prefix4 = $yearFilter ? substr($yearFilter, 0, 4) : '';
 
             $studentsQuery = User::where('role', 'mahasiswa')
-                ->where(function ($sq) use ($selectedProdiObj) {
-                    $sq->where('study_program', $selectedProdiObj->name)
-                       ->orWhere('study_program', "{$selectedProdiObj->name} ({$selectedProdiObj->degree})")
-                       ->orWhere('study_program', 'ilike', "%{$selectedProdiObj->name}%")
-                       ->orWhere('study_program', 'ilike', "%{$selectedProdiObj->code}%");
+                ->when($isDosenPa, function ($q) use ($authUser) {
+                    // Dosen PA HANYA melihat mahasiswa yang dibimbingnya
+                    $q->where('academic_advisor_id', $authUser->id);
                 })
-                ->where(function ($sq) use ($prefix2, $prefix4) {
-                    $sq->where('identity_number', 'like', "{$prefix2}%")
-                       ->orWhere('identity_number', 'like', "{$prefix4}%")
-                       ->orWhere(function ($fallback) use ($prefix4) {
-                           $fallback->where(function ($emptyNim) {
-                               $emptyNim->whereNull('identity_number')
-                                        ->orWhere('identity_number', '');
-                           })->whereYear('created_at', $prefix4);
-                       });
+                ->when($isKaprodi && $authUser->study_program, function ($q) use ($authUser) {
+                    // Kaprodi HANYA melihat mahasiswa di prodi yang dipegangnya
+                    $q->where('study_program', 'ilike', "%{$authUser->study_program}%");
+                })
+                ->when($selectedProdiObj, function ($sq) use ($selectedProdiObj) {
+                    $sq->where(function ($q) use ($selectedProdiObj) {
+                        $q->where('study_program', $selectedProdiObj->name)
+                           ->orWhere('study_program', "{$selectedProdiObj->name} ({$selectedProdiObj->degree})")
+                           ->orWhere('study_program', 'ilike', "%{$selectedProdiObj->name}%")
+                           ->orWhere('study_program', 'ilike', "%{$selectedProdiObj->code}%");
+                    });
+                })
+                ->when($yearFilter, function ($q) use ($prefix2, $prefix4) {
+                    $q->where(function ($sq) use ($prefix2, $prefix4) {
+                        $sq->where('identity_number', 'like', "{$prefix2}%")
+                           ->orWhere('identity_number', 'like', "{$prefix4}%")
+                           ->orWhere(function ($fallback) use ($prefix4) {
+                               $fallback->where(function ($emptyNim) {
+                                   $emptyNim->whereNull('identity_number')
+                                            ->orWhere('identity_number', '');
+                               })->whereYear('created_at', $prefix4);
+                           });
+                    });
                 })
                 ->when($search, function ($q) use ($search) {
                     $q->where(function ($sq) use ($search) {
@@ -147,12 +182,23 @@ class KrsApprovalController extends Controller
             $advisorIds = $allStudents->pluck('academic_advisor_id')->filter()->unique()->toArray();
             $advisors = User::whereIn('id', $advisorIds)->pluck('name', 'id');
 
+            // Ambil Tagihan Keuangan Mahasiswa untuk periode ini
+            $invoices = DB::table('student_invoices')
+                ->whereIn('user_id', $studentIds)
+                ->get()
+                ->groupBy('user_id');
+
             // Gabungkan status KRS ke setiap mahasiswa
-            $mergedStudents = $allStudents->map(function ($stu) use ($krsSubmissions, $krsItems, $advisors, $yearFilter) {
+            $mergedStudents = $allStudents->map(function ($stu) use ($krsSubmissions, $krsItems, $advisors, $invoices, $yearFilter) {
                 $sub = $krsSubmissions->get($stu->id);
                 $status = $sub ? $sub->status : 'BELUM_KRS';
                 $credits = $sub ? (float)$sub->total_credits : 0.0;
                 $items = $sub ? ($krsItems->get($sub->id) ?? collect()) : collect();
+
+                // Status Finansial
+                $stuInvoices = $invoices->get($stu->id) ?? collect();
+                $isPaid = $stuInvoices->isEmpty() || $stuInvoices->contains(fn($inv) => in_array($inv->status, ['PAID', 'LUNAS']));
+                $vaBsi = '992802' . str_pad($stu->id, 8, '0', STR_PAD_LEFT);
 
                 return (object)[
                     'id' => $stu->id,
@@ -161,7 +207,7 @@ class KrsApprovalController extends Controller
                     'email' => $stu->email,
                     'study_program' => $stu->study_program,
                     'class_type' => $stu->class_type ?: '-',
-                    'batch_year' => $yearFilter,
+                    'batch_year' => $yearFilter ?: 'Semua',
                     'advisor_name' => $advisors->get($stu->academic_advisor_id) ?? '-',
                     'krs_submission_id' => $sub?->id ?? null,
                     'status' => $status,
@@ -171,6 +217,9 @@ class KrsApprovalController extends Controller
                     'submitted_at' => $sub?->submitted_at ?? null,
                     'approved_at' => $sub?->approved_at ?? null,
                     'approval_notes' => $sub?->approval_notes ?? null,
+                    'invoice_status' => $isPaid ? 'LUNAS' : 'BELUM_LUNAS',
+                    'va_number' => $vaBsi,
+                    'is_financial_locked' => !$isPaid,
                 ];
             });
 
@@ -261,11 +310,22 @@ class KrsApprovalController extends Controller
      */
     public function packageView(Request $request): Response
     {
-        $studyPrograms = DB::table('study_programs')
+        $authUser = $request->user();
+        $activeRole = session('active_role', $authUser->role);
+        $isKaprodi = ($activeRole === 'kaprodi');
+
+        $studyProgramsQuery = DB::table('study_programs')
             ->leftJoin('faculties', 'faculties.id', '=', 'study_programs.faculty_id')
             ->select('study_programs.*', 'faculties.name as faculty_name')
-            ->orderBy('study_programs.id', 'asc')
-            ->get();
+            ->orderBy('study_programs.id', 'asc');
+
+        if ($isKaprodi && $authUser->study_program) {
+            $studyProgramsQuery->where(function ($q) use ($authUser) {
+                $q->where('study_programs.name', 'ilike', "%{$authUser->study_program}%")
+                  ->orWhere('study_programs.code', 'ilike', "%{$authUser->study_program}%");
+            });
+        }
+        $studyPrograms = $studyProgramsQuery->get();
 
         $batchYears = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
 
@@ -322,6 +382,20 @@ class KrsApprovalController extends Controller
             return request()->wantsJson() 
                 ? response()->json(['success' => false, 'message' => 'Pengajuan KRS tidak ditemukan.'], 404)
                 : back()->with('error', 'Data pengajuan KRS tidak ditemukan.');
+        }
+
+        $authUser = auth()->user();
+        $activeRole = session('active_role', $authUser->role);
+        $student = User::find($submission->student_id);
+
+        if ($activeRole === 'dosen_pa' && $student && (int)$student->academic_advisor_id !== (int)$authUser->id) {
+            $msg = 'Anda hanya dapat menyetujui KRS mahasiswa yang Anda bimbing.';
+            return request()->wantsJson() ? response()->json(['success' => false, 'message' => $msg], 403) : back()->with('error', $msg);
+        }
+
+        if ($activeRole === 'kaprodi' && $student && $authUser->study_program && stripos($student->study_program, $authUser->study_program) === false && stripos($authUser->study_program, $student->study_program) === false) {
+            $msg = 'Anda hanya dapat mengelola KRS mahasiswa pada program studi Anda.';
+            return request()->wantsJson() ? response()->json(['success' => false, 'message' => $msg], 403) : back()->with('error', $msg);
         }
 
         DB::transaction(function () use ($submission) {

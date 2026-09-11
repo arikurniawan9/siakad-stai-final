@@ -31,6 +31,16 @@ export default function UsersIndex({
     const [userToDelete, setUserToDelete] = useState(null);
     const [userToReset, setUserToReset] = useState(null);
 
+    const ROLE_OPTIONS = [
+        { value: 'mahasiswa', label: 'Mahasiswa' },
+        { value: 'dosen', label: 'Dosen Pengajar' },
+        { value: 'dosen_pa', label: 'Dosen PA (Wali)' },
+        { value: 'kaprodi', label: 'Ketua Prodi (Kaprodi)' },
+        { value: 'admin_akademik', label: 'Admin BAAK' },
+        { value: 'keuangan', label: 'Biro Keuangan' },
+        { value: 'superadmin', label: 'Superadmin' },
+    ];
+
     // Form Create
     const createForm = useForm({
         name: '',
@@ -39,6 +49,7 @@ export default function UsersIndex({
         nik: '',
         email: '',
         role: 'mahasiswa',
+        roles: ['mahasiswa'],
         study_program: 'Pendidikan Agama Islam (S1)',
         gender: 'L',
         phone_number: '',
@@ -53,11 +64,44 @@ export default function UsersIndex({
         nik: '',
         email: '',
         role: 'mahasiswa',
+        roles: ['mahasiswa'],
         study_program: '',
         gender: 'L',
         phone_number: '',
         is_active: true,
     });
+
+    const toggleRoleInCreate = (val) => {
+        const current = createForm.data.roles || [createForm.data.role];
+        let next;
+        if (current.includes(val)) {
+            next = current.filter(r => r !== val);
+            if (next.length === 0) next = [val];
+        } else {
+            next = [...current, val];
+        }
+        createForm.setData(data => ({
+            ...data,
+            role: next[0],
+            roles: next
+        }));
+    };
+
+    const toggleRoleInEdit = (val) => {
+        const current = editForm.data.roles || [editForm.data.role];
+        let next;
+        if (current.includes(val)) {
+            next = current.filter(r => r !== val);
+            if (next.length === 0) next = [val];
+        } else {
+            next = [...current, val];
+        }
+        editForm.setData(data => ({
+            ...data,
+            role: next[0],
+            roles: next
+        }));
+    };
 
     // Batch Import Data State
     const [importRecords, setImportRecords] = useState([]);
@@ -128,6 +172,7 @@ export default function UsersIndex({
             nik: '',
             email: '',
             role: 'mahasiswa',
+            roles: ['mahasiswa'],
             study_program: prodi || studyPrograms[0]?.name || 'Pendidikan Agama Islam (S1)',
             gender: 'L',
             phone_number: '',
@@ -138,6 +183,7 @@ export default function UsersIndex({
 
     const handleOpenEdit = (u) => {
         setSelectedUser(u);
+        const userRoles = (u.roles && u.roles.length > 0) ? u.roles : [u.role];
         editForm.setData({
             name: u.name,
             username: u.username,
@@ -145,6 +191,7 @@ export default function UsersIndex({
             nik: u.nik || '',
             email: u.email,
             role: u.role,
+            roles: userRoles,
             study_program: u.study_program || '',
             gender: u.gender || 'L',
             phone_number: u.phone_number || '',
@@ -547,9 +594,13 @@ export default function UsersIndex({
                                                 </div>
                                             </td>
                                             <td className="py-3 px-4">
-                                                <span className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getRoleBadgeStyle(u.role)}`}>
-                                                    {getRoleLabel(u.role)}
-                                                </span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map((r, rIdx) => (
+                                                        <span key={rIdx} className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getRoleBadgeStyle(r)}`}>
+                                                            {getRoleLabel(r)}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </td>
                                             <td className="py-3 px-4 text-slate-600 font-medium">
                                                 {u.study_program || '-'}
@@ -708,34 +759,51 @@ export default function UsersIndex({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="font-bold text-slate-700 block mb-1">Email:</label>
-                                        <input
-                                            type="email"
-                                            value={createForm.data.email}
-                                            onChange={(e) => createForm.setData('email', e.target.value)}
-                                            placeholder="user@staialittihad.ac.id"
-                                            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                                            required
-                                        />
+                                <div>
+                                    <label className="font-bold text-slate-700 block mb-1">Email:</label>
+                                    <input
+                                        type="email"
+                                        value={createForm.data.email}
+                                        onChange={(e) => createForm.setData('email', e.target.value)}
+                                        placeholder="user@staialittihad.ac.id"
+                                        className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="font-bold text-slate-700">Peran Akun Pengguna (Multi-Role):</label>
+                                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                            {createForm.data.roles?.length || 1} Peran Dipilih
+                                        </span>
                                     </div>
-                                    <div>
-                                        <label className="font-bold text-slate-700 block mb-1">Peran (Role):</label>
-                                        <select
-                                            value={createForm.data.role}
-                                            onChange={(e) => createForm.setData('role', e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                                        >
-                                            <option value="mahasiswa">Mahasiswa</option>
-                                            <option value="dosen">Dosen Pengampu</option>
-                                            <option value="dosen_pa">Dosen PA (Wali)</option>
-                                            <option value="kaprodi">Ketua Prodi</option>
-                                            <option value="keuangan">Keuangan</option>
-                                            <option value="admin_akademik">Admin BAAK</option>
-                                            <option value="superadmin">Superadmin</option>
-                                        </select>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                                        {ROLE_OPTIONS.map((opt) => {
+                                            const isChecked = createForm.data.roles?.includes(opt.value);
+                                            return (
+                                                <label 
+                                                    key={opt.value} 
+                                                    className={`flex items-center space-x-2 p-2 rounded-lg border cursor-pointer transition text-xs font-semibold ${
+                                                        isChecked 
+                                                            ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold shadow-2xs' 
+                                                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                                    }`}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        onChange={() => toggleRoleInCreate(opt.value)}
+                                                        className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                                                    />
+                                                    <span className="truncate">{opt.label}</span>
+                                                </label>
+                                            );
+                                        })}
                                     </div>
+                                    <p className="text-[10px] text-slate-400 mt-1">
+                                        💡 Pengguna dapat memiliki 1, 2, atau lebih peran sekaligus (contoh: Dosen Pengajar & Dosen PA).
+                                    </p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
@@ -872,33 +940,50 @@ export default function UsersIndex({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="font-bold text-slate-700 block mb-1">Email:</label>
-                                        <input
-                                            type="email"
-                                            value={editForm.data.email}
-                                            onChange={(e) => editForm.setData('email', e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                                            required
-                                        />
+                                <div>
+                                    <label className="font-bold text-slate-700 block mb-1">Email:</label>
+                                    <input
+                                        type="email"
+                                        value={editForm.data.email}
+                                        onChange={(e) => editForm.setData('email', e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="font-bold text-slate-700">Peran Akun Pengguna (Multi-Role):</label>
+                                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                            {editForm.data.roles?.length || 1} Peran Terpasang
+                                        </span>
                                     </div>
-                                    <div>
-                                        <label className="font-bold text-slate-700 block mb-1">Peran (Role):</label>
-                                        <select
-                                            value={editForm.data.role}
-                                            onChange={(e) => editForm.setData('role', e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                                        >
-                                            <option value="mahasiswa">Mahasiswa</option>
-                                            <option value="dosen">Dosen Pengampu</option>
-                                            <option value="dosen_pa">Dosen PA (Wali)</option>
-                                            <option value="kaprodi">Ketua Prodi</option>
-                                            <option value="keuangan">Keuangan</option>
-                                            <option value="admin_akademik">Admin BAAK</option>
-                                            <option value="superadmin">Superadmin</option>
-                                        </select>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                                        {ROLE_OPTIONS.map((opt) => {
+                                            const isChecked = editForm.data.roles?.includes(opt.value);
+                                            return (
+                                                <label 
+                                                    key={opt.value} 
+                                                    className={`flex items-center space-x-2 p-2 rounded-lg border cursor-pointer transition text-xs font-semibold ${
+                                                        isChecked 
+                                                            ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold shadow-2xs' 
+                                                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                                    }`}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        onChange={() => toggleRoleInEdit(opt.value)}
+                                                        className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                                                    />
+                                                    <span className="truncate">{opt.label}</span>
+                                                </label>
+                                            );
+                                        })}
                                     </div>
+                                    <p className="text-[10px] text-slate-400 mt-1">
+                                        💡 Centang atau hilangkan centang untuk menambah atau mengurangi peran pengguna ini.
+                                    </p>
                                 </div>
 
                                 <div>

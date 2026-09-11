@@ -23,12 +23,12 @@ class RoleMiddleware
         }
 
         // Superadmin memiliki akses universal ke seluruh modul sistem
-        if ($user->role === 'superadmin') {
+        if ($user->hasRole('superadmin')) {
             return $next($request);
         }
 
         // Normalisasi alias penamaan peran & dukung comma-separated arguments
-        $userRole = strtolower($user->role);
+        $userRoles = $user->getAllRoles();
         $allowedRoles = [];
         foreach ($roles as $roleArg) {
             $parts = explode(',', $roleArg);
@@ -44,7 +44,16 @@ class RoleMiddleware
             }
         }
 
-        if (in_array($userRole, $allowedRoles, true)) {
+        // Cek apakah ada peran pengguna yang cocok dengan peran yang diizinkan
+        $matched = false;
+        foreach ($userRoles as $ur) {
+            if (in_array($ur, $allowedRoles, true)) {
+                $matched = true;
+                break;
+            }
+        }
+
+        if ($matched) {
             return $next($request);
         }
 

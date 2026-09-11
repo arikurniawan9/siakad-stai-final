@@ -109,6 +109,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/impersonate/stop', [ImpersonationController::class, 'stopImpersonating'])->name('impersonate.stop');
     Route::post('/impersonate/{user}', [ImpersonationController::class, 'impersonate'])->whereNumber('user')->name('impersonate.start');
 
+    // Multi-Role Active Role Switcher
+    Route::post('/switch-role', function (\Illuminate\Http\Request $request) {
+        $targetRole = $request->input('role');
+        $user = auth()->user();
+        if ($user && in_array($targetRole, $user->getAllRoles(), true)) {
+            session(['active_role' => $targetRole]);
+            $roleName = strtoupper(str_replace('_', ' ', $targetRole));
+            return back()->with('success', "Peran aktif berhasil dialihkan ke: {$roleName}.");
+        }
+        return back()->with('error', 'Peran yang dipilih tidak terdaftar untuk akun Anda.');
+    })->name('switch.role');
+
     // =====================================================================
     // 3. ADMIN & CIVITAS MODULES (PROTECTED BY ROLE MIDDLEWARE)
     // =====================================================================
@@ -316,11 +328,8 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/positions', [CurriculumController::class, 'index'])->name('positions.index');
 
-            // Data Mahasiswa (Angkatan / Tahun Akademik)
-            Route::get('/students', [StudentAdminController::class, 'index'])->name('students.index');
-            Route::get('/students/export-excel', [StudentAdminController::class, 'exportExcel'])->name('students.export_excel');
+            // Manajemen & Manipulasi Data Mahasiswa (Angkatan / Tahun Akademik)
             Route::get('/students/template-excel', [StudentAdminController::class, 'templateExcel'])->name('students.template_excel');
-            Route::get('/students/print-pdf', [StudentAdminController::class, 'printPdf'])->name('students.print_pdf');
             Route::post('/students/check-import', [StudentAdminController::class, 'checkImport'])->name('students.check_import');
             Route::post('/students/process-import', [StudentAdminController::class, 'processImport'])->name('students.process_import');
             Route::post('/students', [StudentAdminController::class, 'store'])->name('students.store');
@@ -371,6 +380,11 @@ Route::middleware('auth')->group(function () {
         // 🔒 CATATAN: DOSEN PENGAMPU MURNI DIBLOKIR DARI MODUL BIMBINGAN INI
         // -----------------------------------------------------------------
         Route::middleware('role:superadmin,admin_akademik,kaprodi,dosen_pa')->group(function () {
+            // Data & Monitoring Mahasiswa (Bimbingan / Angkatan)
+            Route::get('/students', [StudentAdminController::class, 'index'])->name('students.index');
+            Route::get('/students/export-excel', [StudentAdminController::class, 'exportExcel'])->name('students.export_excel');
+            Route::get('/students/print-pdf', [StudentAdminController::class, 'printPdf'])->name('students.print_pdf');
+
             Route::get('/academic-advising', [AcademicAdvisingController::class, 'index'])->name('academic_advising.index');
             Route::post('/academic-advising/assign', [AcademicAdvisingController::class, 'assignAdvisor'])->name('academic_advising.assign');
             Route::post('/academic-advising/notes', [AcademicAdvisingController::class, 'storeNote'])->name('academic_advising.notes.store');
@@ -394,9 +408,10 @@ Route::middleware('auth')->group(function () {
         });
 
         // -----------------------------------------------------------------
-        // G. PERKULIAHAN, PENILAIAN DPNA & JADWAL (SUPERADMIN, ADMIN AKADEMIK, KAPRODI, DOSEN, DOSEN PA)
+        // G. PERKULIAHAN, PENILAIAN DPNA & JADWAL (SUPERADMIN, ADMIN AKADEMIK, KAPRODI, DOSEN)
+        // 🔒 PERHATIAN: DOSEN PA HANYA DAPAT MENGAKSES MODUL INI JIKA MEMILIKI PERAN SEBAGAI DOSEN PENGAJAR
         // -----------------------------------------------------------------
-        Route::middleware('role:superadmin,admin_akademik,kaprodi,dosen,dosen_pa')->group(function () {
+        Route::middleware('role:superadmin,admin_akademik,kaprodi,dosen')->group(function () {
             // Penilaian Mahasiswa (DPNA)
             Route::get('/grades', [GradeAdminController::class, 'index'])->name('grades.index');
             Route::get('/grades/{id}', [GradeAdminController::class, 'show'])->name('grades.show');
@@ -444,12 +459,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/krs', [KrsController::class, 'index'])->name('krs.index');
         Route::post('/krs/submit', [KrsController::class, 'submit'])->name('krs.submit');
 
-        // KHS & Transkrip
+        // Nilai Mata Kuliah & Komponen Asesmen
+        Route::get('/grades', [\App\Http\Controllers\Student\GradeController::class, 'index'])->name('grades.index');
+
+        // Tagihan Keuangan Mahasiswa & VA BSI
+        Route::get('/bills', [\App\Http\Controllers\Student\BillingController::class, 'index'])->name('bills.index');
+        Route::post('/bills/simulate-pay', [\App\Http\Controllers\Student\BillingController::class, 'simulatePayment'])->name('bills.simulate_pay');
+
+        // Kartu Hasil Studi (KHS) Per Semester
         Route::get('/khs', [KhsController::class, 'index'])->name('khs.index');
 
-        // Tagihan Mahasiswa (Redirect ke Dashboard)
-        Route::get('/bills', function () {
-            return redirect()->route('dashboard');
-        })->name('bills.index');
+        // Transkrip Nilai Akademik Lengkap 8 Semester
+        Route::get('/transcripts', [\App\Http\Controllers\Student\TranscriptController::class, 'index'])->name('transcripts.index');
     });
 });

@@ -23,6 +23,11 @@ class StudentAdminController extends Controller
      */
     public function index(Request $request): Response|JsonResponse
     {
+        $authUser = $request->user();
+        $activeRole = session('active_role', $authUser->role);
+        $isDosenPa = ($activeRole === 'dosen_pa');
+        $isKaprodi = ($activeRole === 'kaprodi');
+
         $search = $request->input('search');
         $yearFilter = $request->input('academic_year'); // e.g. 2026, 2025, 2024, 2023
         $prodiFilter = $request->input('study_program');
@@ -30,6 +35,16 @@ class StudentAdminController extends Controller
         $krsFilter = $request->input('krs_status'); // DISETUJUI, DIAJUKAN, BELUM_KRS
         $invoiceFilter = $request->input('invoice_status'); // LUNAS, BELUM_LUNAS
         $perPage = (int) $request->input('per_page', 15);
+
+        // Jika Kaprodi, batasi atau defaultkan ke program studi yang dipegang
+        if ($isKaprodi && empty($prodiFilter) && $authUser->study_program) {
+            $prodiFilter = $authUser->study_program;
+        }
+
+        // Jika Dosen PA, defaultkan filter prodi jika ada
+        if ($isDosenPa && empty($prodiFilter) && $authUser->study_program) {
+            $prodiFilter = $authUser->study_program;
+        }
 
         $academicYears = DB::table('academic_years')->orderBy('code', 'desc')->get();
         $studyPrograms = DB::table('study_programs')
@@ -69,7 +84,8 @@ class StudentAdminController extends Controller
             });
         }
 
-        $isSelectionComplete = !empty($selectedProdiObj) && !empty($yearFilter);
+        // Bagi Dosen PA, otomatis aktif menampilkan mahasiswa bimbingannya tanpa harus memilih angkatan terlebih dahulu
+        $isSelectionComplete = $isDosenPa ? true : (!empty($selectedProdiObj) && !empty($yearFilter));
 
         $students = null;
         $stats = [
@@ -78,10 +94,21 @@ class StudentAdminController extends Controller
             'inactive' => 0,
             'krs_completed' => 0,
             'paid_invoices' => 0,
+            'unpaid_invoices' => 0,
         ];
 
         if ($isSelectionComplete) {
             $studentsQuery = User::where('role', 'mahasiswa')
+                ->when($isDosenPa, function ($q) use ($authUser) {
+                    // Dosen PA HANYA memonitoring mahasiswa yang dibimbingnya
+                    $q->where('academic_advisor_id', $authUser->id);
+                })
+                ->when($isKaprodi && $authUser->study_program, function ($q) use ($authUser) {
+                    // Kaprodi dibatasi pada prodi yang dipegang
+                    $q->where(function ($sq) use ($authUser) {
+                        $sq->where('study_program', 'ilike', "%{$authUser->study_program}%");
+                    });
+                })
                 ->when($selectedProdiObj, function ($q) use ($selectedProdiObj) {
                     $q->where(function ($sq) use ($selectedProdiObj) {
                         $sq->where('study_program', $selectedProdiObj->name)
@@ -134,13 +161,13 @@ class StudentAdminController extends Controller
                     if ($invoiceFilter === 'LUNAS') {
                         $paidIds = DB::table('student_invoices')
                             ->where('academic_period_id', $activePeriod?->id ?? 1)
-                            ->where('status', 'PAID')
+                            ->whereIn('status', ['PAID', 'LUNAS'])
                             ->pluck('user_id');
                         $q->whereIn('id', $paidIds);
                     } elseif ($invoiceFilter === 'BELUM_LUNAS') {
                         $paidIds = DB::table('student_invoices')
                             ->where('academic_period_id', $activePeriod?->id ?? 1)
-                            ->where('status', 'PAID')
+                            ->whereIn('status', ['PAID', 'LUNAS'])
                             ->pluck('user_id');
                         $q->whereNotIn('id', $paidIds);
                     }
@@ -148,29 +175,76 @@ class StudentAdminController extends Controller
 
             $students = $studentsQuery->orderBy('identity_number', 'asc')->paginate($perPage)->withQueryString();
 
-            // Status KRS, Tagihan, Kurikulum & Dosen Wali Maps
+            // Status KRS, Kurikulum & Dosen Wali Maps
             $studentIds = $students->pluck('id')->toArray();
             $krsMap = DB::table('krs_submissions')
                 ->whereIn('student_id', $studentIds)
                 ->where('academic_period_id', $activePeriod?->id ?? 1)
                 ->pluck('status', 'student_id');
 
-            $invoiceMap = DB::table('student_invoices')
-                ->whereIn('user_id', $studentIds)
-                ->where('academic_period_id', $activePeriod?->id ?? 1)
-                ->pluck('status', 'user_id');
+            // Tagihan Keuangan Mahasiswa Lengkap & VA BSI
+            $invoices = DB::table('student_invoices')
+                ->leftJoin('fee_types', 'student_invoices.fee_type_id', '=', 'fee_types.id')
+                ->whereIn('student_invoices.user_id', $studentIds)
+                ->select(
+                    'student_invoices.*',
+                    'fee_types.name as fee_name',
+                    'fee_types.code as fee_code'
+                )
+                ->orderBy('student_invoices.due_date', 'asc')
+                ->get()
+                ->groupBy('user_id');
 
             $curriculaMap = $curricula->keyBy('id');
             $advisorMap = $lecturers->keyBy('id');
 
-            $students->getCollection()->transform(function ($stu) use ($krsMap, $invoiceMap, $curriculaMap, $advisorMap) {
+            $students->getCollection()->transform(function ($stu) use ($krsMap, $curriculaMap, $advisorMap, $invoices) {
                 $stu->krs_status = $krsMap[$stu->id] ?? 'BELUM_KRS';
-                $stu->invoice_status = $invoiceMap[$stu->id] ?? 'LUNAS';
                 $stu->curriculum = $stu->curriculum_id ? ($curriculaMap[$stu->curriculum_id] ?? null) : null;
                 $stu->advisor = $stu->academic_advisor_id ? ($advisorMap[$stu->academic_advisor_id] ?? null) : null;
                 $nimDigits = preg_replace('/[^0-9]/', '', $stu->identity_number ?? '21');
                 $nimPrefix = substr($nimDigits, 0, 2);
                 $stu->batch_year = strlen($nimPrefix) === 2 ? "20{$nimPrefix}" : '2021';
+
+                // Data Finansial / Tagihan
+                $stuInvoices = $invoices[$stu->id] ?? collect();
+                $totalAmount = (float) $stuInvoices->sum('final_amount');
+                $paidAmount = (float) ($stuInvoices->whereIn('status', ['PAID', 'LUNAS'])->sum('final_amount'));
+                $remainingAmount = max(0, $totalAmount - $paidAmount);
+                $vaBsiNumber = '992802' . str_pad($stu->id, 8, '0', STR_PAD_LEFT);
+
+                $billingStatus = 'LUNAS';
+                if ($stuInvoices->count() > 0) {
+                    if ($remainingAmount <= 0) {
+                        $billingStatus = 'LUNAS';
+                    } elseif ($paidAmount > 0) {
+                        $billingStatus = 'SEBAGIAN';
+                    } else {
+                        $billingStatus = 'BELUM_LUNAS';
+                    }
+                }
+
+                $stu->billing = [
+                    'status' => $billingStatus,
+                    'va_number' => $vaBsiNumber,
+                    'total_invoices' => $stuInvoices->count(),
+                    'total_amount' => $totalAmount,
+                    'paid_amount' => $paidAmount,
+                    'remaining_amount' => $remainingAmount,
+                    'items' => $stuInvoices->map(function ($inv) {
+                        return [
+                            'id' => $inv->id,
+                            'invoice_number' => $inv->invoice_number,
+                            'fee_name' => $inv->fee_name ?? 'UKT / SPP Perkuliahan',
+                            'amount' => (float) $inv->final_amount,
+                            'status' => in_array($inv->status, ['PAID', 'LUNAS']) ? 'LUNAS' : $inv->status,
+                            'due_date' => $inv->due_date ? date('d/m/Y', strtotime($inv->due_date)) : '-',
+                            'paid_at' => $inv->paid_at ? date('d/m/Y H:i', strtotime($inv->paid_at)) : null,
+                        ];
+                    })->values(),
+                ];
+                $stu->invoice_status = $billingStatus;
+
                 return $stu;
             });
 
@@ -178,6 +252,12 @@ class StudentAdminController extends Controller
             $totalInBatch = (clone $studentsQuery)->count();
             $activeInBatch = (clone $studentsQuery)->where('is_active', true)->count();
             $inactiveInBatch = $totalInBatch - $activeInBatch;
+
+            $paidCount = DB::table('student_invoices')
+                ->whereIn('user_id', $studentIds)
+                ->whereIn('status', ['PAID', 'LUNAS'])
+                ->distinct('user_id')
+                ->count('user_id');
 
             $stats = [
                 'total' => $totalInBatch,
@@ -189,12 +269,8 @@ class StudentAdminController extends Controller
                     ->where('status', 'DISETUJUI')
                     ->distinct('student_id')
                     ->count('student_id'),
-                'paid_invoices' => DB::table('student_invoices')
-                    ->whereIn('user_id', $studentIds)
-                    ->where('academic_period_id', $activePeriod?->id ?? 1)
-                    ->where('status', 'PAID')
-                    ->distinct('user_id')
-                    ->count('user_id'),
+                'paid_invoices' => $paidCount,
+                'unpaid_invoices' => max(0, $totalInBatch - $paidCount),
             ];
         }
 
@@ -205,6 +281,8 @@ class StudentAdminController extends Controller
                 'stats' => $stats,
                 'isSelectionComplete' => $isSelectionComplete,
                 'selectedProdiObj' => $selectedProdiObj,
+                'isDosenPa' => $isDosenPa,
+                'isKaprodi' => $isKaprodi,
             ]);
         }
 
@@ -220,6 +298,8 @@ class StudentAdminController extends Controller
             'isSelectionComplete' => $isSelectionComplete,
             'selectedProdiObj' => $selectedProdiObj,
             'stats' => $stats,
+            'isDosenPa' => $isDosenPa,
+            'isKaprodi' => $isKaprodi,
             'filters' => [
                 'search' => $search,
                 'academic_year' => $yearFilter ?: '',
@@ -237,6 +317,10 @@ class StudentAdminController extends Controller
      */
     public function bulkDestroy(Request $request): RedirectResponse
     {
+        if (session('active_role', auth()->user()->role) === 'dosen_pa') {
+            abort(403, 'Akses ditolak. Dosen PA hanya memiliki wewenang untuk memonitoring mahasiswa bimbingan.');
+        }
+
         $ids = $request->input('ids', []);
         if (empty($ids) || !is_array($ids)) {
             return back()->with('error', 'Tidak ada data mahasiswa yang dipilih.');
@@ -264,6 +348,10 @@ class StudentAdminController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        if (session('active_role', auth()->user()->role) === 'dosen_pa') {
+            abort(403, 'Akses ditolak. Dosen PA hanya memiliki wewenang untuk memonitoring mahasiswa bimbingan.');
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'identity_number' => ['required', 'string', 'max:32', 'unique:users,identity_number'],
@@ -296,6 +384,10 @@ class StudentAdminController extends Controller
      */
     public function update(Request $request, int $id): RedirectResponse
     {
+        if (session('active_role', auth()->user()->role) === 'dosen_pa') {
+            abort(403, 'Akses ditolak. Dosen PA hanya memiliki wewenang untuk memonitoring mahasiswa bimbingan.');
+        }
+
         $student = User::where('role', 'mahasiswa')->findOrFail($id);
 
         $validated = $request->validate([
@@ -319,6 +411,10 @@ class StudentAdminController extends Controller
      */
     public function destroy(int $id): RedirectResponse
     {
+        if (session('active_role', auth()->user()->role) === 'dosen_pa') {
+            abort(403, 'Akses ditolak. Dosen PA hanya memiliki wewenang untuk memonitoring mahasiswa bimbingan.');
+        }
+
         $student = User::where('role', 'mahasiswa')->findOrFail($id);
         $name = $student->name;
         $nim = $student->identity_number;

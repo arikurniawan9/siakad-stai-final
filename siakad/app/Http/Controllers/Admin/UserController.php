@@ -37,7 +37,10 @@ class UserController extends Controller
                 });
             })
             ->when($roleFilter, function ($q) use ($roleFilter) {
-                $q->where('role', $roleFilter);
+                $q->where(function ($sq) use ($roleFilter) {
+                    $sq->where('role', $roleFilter)
+                       ->orWhereJsonContains('roles', $roleFilter);
+                });
             })
             ->when($prodiFilter, function ($q) use ($prodiFilter) {
                 $q->where('study_program', $prodiFilter);
@@ -49,9 +52,19 @@ class UserController extends Controller
         $studyPrograms = DB::table('study_programs')->get();
         $totalUsers = User::count();
         $activeUsers = User::where('is_active', true)->count();
-        $mhsCount = User::where('role', 'mahasiswa')->count();
-        $dosenCount = User::whereIn('role', ['dosen', 'dosen_pa', 'kaprodi'])->count();
-        $staffCount = User::whereIn('role', ['superadmin', 'admin_akademik', 'keuangan'])->count();
+        $mhsCount = User::where('role', 'mahasiswa')->orWhereJsonContains('roles', 'mahasiswa')->count();
+        $dosenCount = User::where(function ($q) {
+            $q->whereIn('role', ['dosen', 'dosen_pa', 'kaprodi'])
+              ->orWhereJsonContains('roles', 'dosen')
+              ->orWhereJsonContains('roles', 'dosen_pa')
+              ->orWhereJsonContains('roles', 'kaprodi');
+        })->count();
+        $staffCount = User::where(function ($q) {
+            $q->whereIn('role', ['superadmin', 'admin_akademik', 'keuangan'])
+              ->orWhereJsonContains('roles', 'superadmin')
+              ->orWhereJsonContains('roles', 'admin_akademik')
+              ->orWhereJsonContains('roles', 'keuangan');
+        })->count();
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
@@ -73,7 +86,7 @@ class UserController extends Controller
     }
 
     /**
-     * Tambah Pengguna / Akun Baru
+     * Tambah Pengguna / Akun Baru (Dukung 1 atau Banyak Peran)
      */
     public function store(Request $request): RedirectResponse
     {
@@ -83,12 +96,19 @@ class UserController extends Controller
             'identity_number' => ['nullable', 'string', 'max:32', 'unique:users,identity_number'],
             'nik' => ['nullable', 'string', 'max:20'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'role' => ['required', 'string', 'in:superadmin,admin_akademik,keuangan,kaprodi,dosen_pa,dosen,mahasiswa'],
+            'role' => ['nullable', 'string', 'in:superadmin,admin_akademik,keuangan,kaprodi,dosen_pa,dosen,mahasiswa'],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['string', 'in:superadmin,admin_akademik,keuangan,kaprodi,dosen_pa,dosen,mahasiswa'],
             'study_program' => ['nullable', 'string', 'max:100'],
             'gender' => ['nullable', 'in:L,P'],
             'phone_number' => ['nullable', 'string', 'max:24'],
             'password' => ['nullable', 'string', 'min:6'],
         ]);
+
+        $roles = !empty($validated['roles']) 
+            ? array_values(array_unique($validated['roles'])) 
+            : (!empty($validated['role']) ? [$validated['role']] : ['mahasiswa']);
+        $primaryRole = $roles[0] ?? 'mahasiswa';
 
         User::create([
             'name' => $validated['name'],
@@ -96,7 +116,8 @@ class UserController extends Controller
             'identity_number' => $validated['identity_number'] ?: null,
             'nik' => $validated['nik'] ?: null,
             'email' => $validated['email'],
-            'role' => $validated['role'],
+            'role' => $primaryRole,
+            'roles' => $roles,
             'study_program' => $validated['study_program'] ?: 'Pendidikan Agama Islam (S1)',
             'gender' => $validated['gender'] ?: 'L',
             'phone_number' => $validated['phone_number'] ?: null,
@@ -104,11 +125,11 @@ class UserController extends Controller
             'is_active' => true,
         ]);
 
-        return back()->with('success', "Akun {$validated['name']} ({$validated['username']}) berhasil didaftarkan.");
+        return back()->with('success', "Akun {$validated['name']} ({$validated['username']}) berhasil didaftarkan dengan " . count($roles) . " peran.");
     }
 
     /**
-     * Perbarui Data Pengguna
+     * Perbarui Data Pengguna (Dukung 1 atau Banyak Peran)
      */
     public function update(Request $request, int $id): RedirectResponse
     {
@@ -120,16 +141,35 @@ class UserController extends Controller
             'identity_number' => ['nullable', 'string', 'max:32', Rule::unique('users')->ignore($user->id)],
             'nik' => ['nullable', 'string', 'max:20'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'role' => ['required', 'string', 'in:superadmin,admin_akademik,keuangan,kaprodi,dosen_pa,dosen,mahasiswa'],
+            'role' => ['nullable', 'string', 'in:superadmin,admin_akademik,keuangan,kaprodi,dosen_pa,dosen,mahasiswa'],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['string', 'in:superadmin,admin_akademik,keuangan,kaprodi,dosen_pa,dosen,mahasiswa'],
             'study_program' => ['nullable', 'string', 'max:100'],
             'gender' => ['nullable', 'in:L,P'],
             'phone_number' => ['nullable', 'string', 'max:24'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $user->update($validated);
+        $roles = !empty($validated['roles']) 
+            ? array_values(array_unique($validated['roles'])) 
+            : (!empty($validated['role']) ? [$validated['role']] : $user->getAllRoles());
+        $primaryRole = $roles[0] ?? $user->role;
 
-        return back()->with('success', "Data akun {$user->name} berhasil diperbarui.");
+        $user->update([
+            'name' => $validated['name'],
+            'username' => $validated['username'],
+            'identity_number' => $validated['identity_number'] ?: null,
+            'nik' => $validated['nik'] ?: null,
+            'email' => $validated['email'],
+            'role' => $primaryRole,
+            'roles' => $roles,
+            'study_program' => $validated['study_program'] ?? $user->study_program,
+            'gender' => $validated['gender'] ?: 'L',
+            'phone_number' => $validated['phone_number'] ?: null,
+            'is_active' => $validated['is_active'] ?? $user->is_active,
+        ]);
+
+        return back()->with('success', "Data akun {$user->name} berhasil diperbarui dengan peran: " . implode(', ', $roles) . ".");
     }
 
     /**

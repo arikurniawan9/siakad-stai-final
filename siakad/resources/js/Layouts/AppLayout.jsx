@@ -8,7 +8,7 @@ import {
     Activity, Database, Terminal, ShieldCheck, AlertOctagon, Server,
     Users, ChevronLeft, ChevronRight, HardDrive, Cpu, Radio, Award,
     Megaphone, FileCheck, Sparkles, BookMarked, ArrowRightLeft, Layers, Sliders,
-    KeyRound, Trophy, Zap, TrendingUp
+    KeyRound, Trophy, Zap, TrendingUp, Check
 } from 'lucide-react';
 
 export default function AppLayout({ title, children }) {
@@ -21,6 +21,7 @@ export default function AppLayout({ title, children }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
     const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+    const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
     const isAcademicSettingsActive = pageUrl.includes('/admin/setting') || pageUrl.includes('/admin/academic-settings');
     const isPejabatActive = pageUrl.includes('/admin/setting/data-pejabat') || pageUrl.includes('/admin/setting/pejabat-pengesah') || pageUrl.includes('tab=data-pejabat') || pageUrl.includes('tab=pejabat-pengesah');
@@ -462,7 +463,8 @@ export default function AppLayout({ title, children }) {
             ];
         }
         if (role === 'kaprodi') {
-            return [
+            const hasDosenRole = user.roles?.includes('dosen');
+            const items = [
                 { label: 'Dasbor Kaprodi', href: '/dashboard', icon: LayoutDashboard },
                 { header: 'MASTER & FASILITAS' },
                 { label: 'Gedung & Ruang Kuliah', href: '/admin/facilities', icon: Building2 },
@@ -470,20 +472,31 @@ export default function AppLayout({ title, children }) {
                 { label: 'Data Kurikulum', href: '/admin/curricula', icon: Layers },
                 { label: 'Data Mata Kuliah', href: '/admin/courses', icon: BookMarked },
                 { label: 'Matakuliah - Kurikulum', href: '/admin/course-curriculum', icon: ArrowRightLeft },
-                { header: 'KEMAHASISWAAN & PRODI' },
-                { label: 'Data Mahasiswa', href: '/admin/students', icon: GraduationCap },
-                { header: 'AKADEMIK' },
-                { label: 'Rencana Studi', href: '/admin/krs-approval', icon: BookOpen },
+                { header: 'KEMAHASISWAAN PRODI' },
+                { label: 'Data Mahasiswa Prodi', href: '/admin/students', icon: GraduationCap },
+                { header: 'AKADEMIK & KRS PRODI' },
+                { label: 'Rencana Studi (KRS)', href: '/admin/krs-approval', icon: BookOpen },
                 { label: 'Paket KRS Massal', href: '/admin/krs-approval/package', icon: Zap },
-                { label: 'Penilaian', href: '/admin/grades', icon: Award },
-                { label: 'Hasil Studi', href: '/admin/khs', icon: FileText },
+                { label: 'Hasil Studi (KHS)', href: '/admin/khs', icon: FileText },
                 { label: 'Transkrip', href: '/admin/transcripts', icon: GraduationCap },
                 { label: 'Kelulusan', href: '/admin/graduations', icon: FileCheck },
                 { label: 'Aktivitas Mahasiswa', href: '/admin/activities', icon: Trophy },
                 { label: 'Status Kuliah Mahasiswa', href: '/admin/student-statuses', icon: Users },
-                { label: 'Data Kuisioner', href: '/admin/edom', icon: Star },
                 { label: 'Analitik & Akreditasi', href: '/admin/analytics', icon: TrendingUp, highlight: true },
             ];
+
+            // Jika Kaprodi juga bertugas sebagai Dosen Pengajar
+            if (hasDosenRole) {
+                items.push(
+                    { header: 'PERKULIAHAN & PENILAIAN' },
+                    { label: 'Penilaian (DPNA)', href: '/admin/grades', icon: Award, highlight: true },
+                    { label: 'Jadwal Kuliah', href: '/admin/schedules', icon: School },
+                    { header: 'EVALUASI MUTU' },
+                    { label: 'Hasil Evaluasi EDOM', href: '/admin/edom', icon: Star }
+                );
+            }
+
+            return items;
         }
         if (role === 'dosen') {
             return [
@@ -496,26 +509,37 @@ export default function AppLayout({ title, children }) {
             ];
         }
         if (role === 'dosen_pa') {
-            return [
+            const hasDosenRole = user.roles?.includes('dosen');
+            const items = [
                 { label: 'Dasbor Dosen PA', href: '/dashboard', icon: LayoutDashboard },
-                { header: 'BIMBINGAN & PERWALIAN' },
-                { label: 'Bimbingan Akademik (Wali)', href: '/admin/academic-advising', icon: UserCheck },
+                { header: 'BIMBINGAN & MONITORING' },
+                { label: 'Mahasiswa Bimbingan & Tagihan', href: '/admin/students', icon: UserCheck },
                 { label: 'Rencana Studi (KRS)', href: '/admin/krs-approval', icon: BookOpen },
                 { label: 'Paket KRS Massal', href: '/admin/krs-approval/package', icon: Zap },
-                { header: 'PERKULIAHAN & PENILAIAN' },
-                { label: 'Penilaian (DPNA)', href: '/admin/grades', icon: Award, highlight: true },
-                { label: 'Jadwal Kuliah', href: '/admin/schedules', icon: School },
-                { header: 'EVALUASI MUTU' },
-                { label: 'Hasil Evaluasi EDOM', href: '/admin/edom', icon: Star },
             ];
+
+            // Jika Dosen PA juga sebagai Dosen Pengajar
+            if (hasDosenRole) {
+                items.push(
+                    { header: 'PERKULIAHAN & PENILAIAN' },
+                    { label: 'Penilaian (DPNA)', href: '/admin/grades', icon: Award, highlight: true },
+                    { label: 'Jadwal Kuliah', href: '/admin/schedules', icon: School },
+                    { header: 'EVALUASI MUTU' },
+                    { label: 'Hasil Evaluasi EDOM', href: '/admin/edom', icon: Star }
+                );
+            }
+
+            return items;
         }
-        // Mahasiswa
+        // Mahasiswa Portal
         return [
             { label: 'Dasbor Mahasiswa', href: '/dashboard', icon: LayoutDashboard },
             { header: 'STUDI AKADEMIK' },
             { label: 'KRS Online', href: '/student/krs', icon: BookOpen },
+            { label: 'Nilai Mata Kuliah', href: '/student/grades', icon: Award },
+            { label: 'Tagihan Keuangan (VA BSI)', href: '/student/bills', icon: CreditCard, highlight: true },
             { label: 'Kartu Hasil Studi (KHS)', href: '/student/khs', icon: FileText },
-            { label: 'Tagihan VA BSI Saya', href: '/student/bills', icon: CreditCard },
+            { label: 'Transkrip Nilai (8 Semester)', href: '/student/transcripts', icon: GraduationCap },
         ];
     };
 
@@ -792,6 +816,48 @@ export default function AppLayout({ title, children }) {
                                 }`}>
                                     {role?.replace('_', ' ')}
                                 </span>
+
+                                {user.roles && user.roles.length > 1 && (
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
+                                            className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition flex items-center space-x-1 cursor-pointer"
+                                            title="Ganti Peran Aktif Akun Anda"
+                                        >
+                                            <ArrowRightLeft className="w-3 h-3" />
+                                            <span className="hidden sm:inline">Ganti Peran ({user.roles.length})</span>
+                                            <ChevronDown className={`w-2.5 h-2.5 transition-transform ${roleSwitcherOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+                                        {roleSwitcherOpen && (
+                                            <div className="absolute left-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-50 animate-in fade-in zoom-in-95 duration-150">
+                                                <div className="px-3 py-1 text-[9px] font-black uppercase text-slate-400 border-b border-slate-100 flex items-center justify-between">
+                                                    <span>Peran Aktif</span>
+                                                    <span className="text-[8px] bg-amber-100 text-amber-800 px-1 rounded">Multi-Role</span>
+                                                </div>
+                                                {user.roles.map((r) => (
+                                                    <button
+                                                        key={r}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setRoleSwitcherOpen(false);
+                                                            router.post('/switch-role', { role: r });
+                                                        }}
+                                                        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold transition text-left cursor-pointer ${
+                                                            r === role
+                                                                ? 'bg-emerald-50 text-emerald-800 font-black'
+                                                                : 'text-slate-700 hover:bg-slate-100'
+                                                        }`}
+                                                    >
+                                                        <span>{r.replace('_', ' ').toUpperCase()}</span>
+                                                        {r === role && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {academic?.active_period && (
                                     <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
                                         📅 {academic.active_period.name}
@@ -858,6 +924,36 @@ export default function AppLayout({ title, children }) {
                                                 </p>
                                             )}
                                         </div>
+
+                                        {/* Multi-Role Quick Switch in Dropdown */}
+                                        {user.roles && user.roles.length > 1 && (
+                                            <div className="px-3 py-2 border-b border-slate-100 bg-amber-50/60">
+                                                <p className="text-[9px] font-black text-amber-900 uppercase tracking-wider mb-1.5 flex items-center space-x-1">
+                                                    <ArrowRightLeft className="w-3 h-3 text-amber-700" />
+                                                    <span>Ganti Peran ({user.roles.length} Tersedia)</span>
+                                                </p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {user.roles.map((r) => (
+                                                        <button
+                                                            key={r}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setUserDropdownOpen(false);
+                                                                router.post('/switch-role', { role: r });
+                                                            }}
+                                                            className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase transition cursor-pointer flex items-center space-x-1 ${
+                                                                r === role
+                                                                    ? 'bg-emerald-600 text-white shadow-xs'
+                                                                    : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                                                            }`}
+                                                        >
+                                                            <span>{r.replace('_', ' ')}</span>
+                                                            {r === role && <Check className="w-2.5 h-2.5" />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Action Items */}
                                         <div className="p-1.5 space-y-0.5">
