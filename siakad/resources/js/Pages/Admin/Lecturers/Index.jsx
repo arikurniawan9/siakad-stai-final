@@ -1805,9 +1805,9 @@ export default function LecturersIndex({
                 {/* MODAL IMPORT EXCEL / CSV */}
                 {isImportOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
-                        <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden">
+                        <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                             {/* Modal Header */}
-                            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-4 sm:p-5 text-white flex items-center justify-between">
+                            <div className="shrink-0 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-4 text-white sm:p-5 flex items-center justify-between">
                                 <div>
                                     <div className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black mb-1">
                                         <Upload className="w-3 h-3 text-emerald-400" />
@@ -1831,7 +1831,7 @@ export default function LecturersIndex({
                             </div>
 
                             {/* Modal Body */}
-                            <div className="p-4 sm:p-5 space-y-4 text-xs">
+                            <div className="min-h-0 flex-1 overflow-y-auto p-4 text-xs sm:p-5 space-y-4">
                                 {/* Box 1: Panduan & Unduh Template Resmi */}
                                 <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                     <div>
@@ -2028,7 +2028,7 @@ export default function LecturersIndex({
                                 </div>
 
                                 {/* Modal Footer */}
-                                <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                                <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex justify-end space-x-2 border-t border-slate-200 bg-white px-4 pb-4 pt-3 sm:-mx-5 sm:-mb-5 sm:px-5 sm:pb-5">
                                     <button 
                                         type="button" 
                                         onClick={() => setIsImportOpen(false)} 
