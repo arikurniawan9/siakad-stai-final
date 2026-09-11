@@ -839,6 +839,39 @@ class DatabaseController extends Controller
             'audit_logs' => [
                 'total' => DB::getSchemaBuilder()->hasTable('audit_logs') ? DB::table('audit_logs')->count() : 0,
             ],
+            'admin_protection' => [
+                'users_to_delete' => DB::getSchemaBuilder()->hasTable('users') 
+                    ? DB::table('users')
+                        ->whereNotIn('role', ['superadmin', 'admin_akademik'])
+                        ->whereNotIn('username', ['superadmin', 'adminakademik'])
+                        ->where(function ($q) {
+                            $q->whereNull('roles')
+                              ->orWhereRaw("NOT (roles::text LIKE '%superadmin%' OR roles::text LIKE '%admin_akademik%')");
+                        })
+                        ->count() 
+                    : 0,
+                'preserved_admins' => DB::getSchemaBuilder()->hasTable('users') 
+                    ? DB::table('users')
+                        ->where(function ($q) {
+                            $q->whereIn('role', ['superadmin', 'admin_akademik'])
+                              ->orWhereIn('username', ['superadmin', 'adminakademik'])
+                              ->orWhereRaw("roles::text LIKE '%superadmin%'")
+                              ->orWhereRaw("roles::text LIKE '%admin_akademik%'");
+                        })
+                        ->count() 
+                    : 0,
+                'admin_names' => DB::getSchemaBuilder()->hasTable('users')
+                    ? DB::table('users')
+                        ->where(function ($q) {
+                            $q->whereIn('role', ['superadmin', 'admin_akademik'])
+                              ->orWhereIn('username', ['superadmin', 'adminakademik'])
+                              ->orWhereRaw("roles::text LIKE '%superadmin%'")
+                              ->orWhereRaw("roles::text LIKE '%admin_akademik%'");
+                        })
+                        ->pluck('name', 'username')
+                        ->toArray()
+                    : [],
+            ],
         ];
 
         return Inertia::render('Admin/Database/Index', [
@@ -1404,6 +1437,9 @@ class DatabaseController extends Controller
                         $msg = '💥 RESET TOTAL SUKSES! Seluruh data transaksi PMB, Keuangan, KRS, Nilai, Presensi, dan EDOM percobaan berhasil dibersihkan. Master Data kurikulum, fakultas, prodi, gedung, dan akun staf tetap utuh & aman.';
                         break;
 
+                    case 'all_except_admin':
+                        return $this->purgeAllExceptAdmin($request);
+
                     default:
                         throw new \Exception("Modul '{$module}' tidak dikenali.");
                 }
@@ -1428,6 +1464,208 @@ class DatabaseController extends Controller
         } catch (\Exception $e) {
             Log::error("Purge Module {$module} Error: " . $e->getMessage());
             return back()->with('error', "Gagal membersihkan data modul {$module}: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hapus Semua Data Kecuali Akun Superadmin dan Admin (Clean Slate Production Reset)
+     */
+    public function purgeAllExceptAdmin(Request $request): RedirectResponse
+    {
+        if (Auth::user()?->role !== 'superadmin') {
+            abort(403, 'Akses ditolak. Fitur pembersihan total database hanya dapat dieksekusi oleh Super Administrator.');
+        }
+
+        $confirmPhrase = trim((string) $request->input('confirm_phrase'));
+        if ($confirmPhrase !== 'HAPUS SEMUA KECUALI ADMIN') {
+            return back()->with('error', 'Konfirmasi keamanan gagal. Anda harus mengetik persis "HAPUS SEMUA KECUALI ADMIN".');
+        }
+
+        $keepFacultiesAndPrograms = $request->boolean('keep_faculties_and_programs', true);
+        $keepFeeTypes = $request->boolean('keep_fee_types', true);
+
+        try {
+            $deletedUsersCount = 0;
+            $preservedAdminNames = [];
+
+            DB::transaction(function () use ($keepFacultiesAndPrograms, $keepFeeTypes, &$deletedUsersCount, &$preservedAdminNames) {
+                // 1. Ambil ID akun Superadmin & Admin yang DILINDUNGI
+                $adminQuery = DB::table('users')->where(function ($q) {
+                    $q->whereIn('role', ['superadmin', 'admin_akademik'])
+                      ->orWhereIn('username', ['superadmin', 'adminakademik'])
+                      ->orWhereRaw("roles::text LIKE '%superadmin%'")
+                      ->orWhereRaw("roles::text LIKE '%admin_akademik%'");
+                });
+
+                $adminIds = $adminQuery->pluck('id')->toArray();
+                if (Auth::id() && !in_array(Auth::id(), $adminIds)) {
+                    $adminIds[] = Auth::id();
+                }
+
+                $preservedAdminNames = DB::table('users')
+                    ->whereIn('id', $adminIds)
+                    ->pluck('username')
+                    ->toArray();
+
+                // 2. Putus relasi Foreign Key self-referencing & kurikulum pada tabel users
+                DB::table('users')->update([
+                    'academic_advisor_id' => null,
+                    'curriculum_id' => null,
+                ]);
+
+                // 3. Putus relasi Kaprodi & Sekprodi pada tabel study_programs
+                if (DB::getSchemaBuilder()->hasTable('study_programs')) {
+                    DB::table('study_programs')->update([
+                        'head_of_program_id' => null,
+                        'secretary_id' => null,
+                    ]);
+                }
+
+                // 4. Daftar tabel operasional, transaksi, akademik, nilai, presensi, kurikulum, log
+                $tablesToTruncate = [
+                    // LMS & Tugas
+                    'assignment_submissions',
+                    'assignments',
+
+                    // Presensi & Pertemuan
+                    'student_attendances',
+                    'lecturer_attendances',
+                    'attendances',
+                    'meeting_attendance_sessions',
+                    'class_meetings',
+
+                    // Nilai & KHS & Transkrip
+                    'course_grades',
+                    'khs_records',
+                    'transcripts',
+                    'transfer_grade_conversions',
+                    'grade_weights',
+                    'grading_scales',
+                    'sks_limits',
+                    'graduation_predicates',
+                    'study_program_degrees',
+
+                    // Bimbingan, Skripsi, Yudisium & Aktivitas
+                    'academic_advising_logs',
+                    'thesis_submissions',
+                    'yudisium_applicants',
+                    'yudisium_periods',
+                    'student_activities',
+                    'student_leave_requests',
+
+                    // EDOM
+                    'edom_responses',
+                    'student_edom_completions',
+                    'edom_questions',
+                    'edom_questionnaires',
+
+                    // Keuangan & Billing
+                    'va_bsi_transactions',
+                    'winpay_transactions',
+                    'fee_dispensations',
+                    'student_invoices',
+                    'fee_tariffs',
+
+                    // KRS & Perkuliahan & Jadwal
+                    'krs_items',
+                    'krs_submissions',
+                    'class_enrollments',
+                    'class_lecturers',
+                    'exam_schedules',
+                    'class_schedules',
+                    'course_classes',
+
+                    // PMB
+                    'pmb_documents',
+                    'pmb_applicants',
+                    'pmb_periods',
+
+                    // Kurikulum & Matakuliah
+                    'course_prerequisites',
+                    'courses',
+                    'curricula',
+
+                    // Periode & Tahun Akademik
+                    'academic_periods',
+                    'academic_years',
+
+                    // Pejabat & Jabatan & Tanda Tangan
+                    'structural_positions',
+                    'lecturer_positions',
+                    'institutional_signatories',
+
+                    // Sarana & Prasarana
+                    'rooms',
+                    'buildings',
+
+                    // Komunikasi, Log, dan Job Queue
+                    'announcements',
+                    'notifications',
+                    'lms_sync_logs',
+                    'pddikti_sync_logs',
+                    'audit_logs',
+                    'failed_jobs',
+                    'password_reset_tokens',
+                    'jobs',
+                    'job_batches',
+                ];
+
+                if (!$keepFeeTypes) {
+                    $tablesToTruncate[] = 'fee_types';
+                }
+
+                if (!$keepFacultiesAndPrograms) {
+                    $tablesToTruncate[] = 'study_programs';
+                    $tablesToTruncate[] = 'faculties';
+                }
+
+                // Truncate tabel-tabel operasional dengan CASCADE
+                foreach ($tablesToTruncate as $tbl) {
+                    if (DB::getSchemaBuilder()->hasTable($tbl)) {
+                        DB::statement("TRUNCATE TABLE {$tbl} CASCADE");
+                    }
+                }
+
+                // 5. Hapus semua akun user KECUALI Superadmin dan Admin
+                $deletedUsersCount = DB::table('users')
+                    ->whereNotIn('id', $adminIds)
+                    ->delete();
+
+                // 6. Bersihkan sesi pengguna lain (pertahankan sesi superadmin aktif saat ini)
+                $currentSessionId = session()->getId();
+                if (DB::getSchemaBuilder()->hasTable('sessions') && !empty($currentSessionId)) {
+                    DB::table('sessions')->where('id', '!=', $currentSessionId)->delete();
+                }
+
+                // 7. Resync PostgreSQL Sequences
+                $this->resyncSequences();
+            });
+
+            // Catat audit log pembersihan total
+            try {
+                DB::table('audit_logs')->insert([
+                    'user_id' => Auth::id(),
+                    'action' => 'DATABASE_PURGE_ALL_EXCEPT_ADMIN',
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'target_entity' => 'Database',
+                    'target_id' => 'ALL_EXCEPT_ADMIN',
+                    'details' => json_encode([
+                        'deleted_users_count' => $deletedUsersCount,
+                        'preserved_admins' => $preservedAdminNames,
+                        'keep_faculties_and_programs' => $keepFacultiesAndPrograms,
+                        'keep_fee_types' => $keepFeeTypes,
+                    ]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } catch (\Throwable $e) {}
+
+            $adminNamesStr = implode(', ', $preservedAdminNames);
+            return back()->with('success', "⚡ PEMBERSIHAN TOTAL BERHASIL! Seluruh data operasional, akademik, keuangan, dan {$deletedUsersCount} akun pengguna telah dibersihkan. HANYA akun admin [{$adminNamesStr}] yang dipertahankan. Sistem kini bersih dan siap untuk produksi (Clean Slate)!");
+        } catch (\Throwable $e) {
+            Log::error('Purge All Except Admin Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return back()->with('error', 'Gagal melakukan pembersihan database: ' . $e->getMessage());
         }
     }
 

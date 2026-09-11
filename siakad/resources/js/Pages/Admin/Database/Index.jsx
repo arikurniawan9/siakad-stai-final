@@ -31,6 +31,12 @@ export default function DatabaseIndex({
     const [truncateModal, setTruncateModal] = useState({ isOpen: false, table: null });
     const [purgeModal, setPurgeModal] = useState({ isOpen: false, module: null, title: '', description: '', affectedRows: '' });
     const [totalResetModal, setTotalResetModal] = useState({ isOpen: false, inputConfirm: '' });
+    const [purgeAllExceptAdminModal, setPurgeAllExceptAdminModal] = useState({
+        isOpen: false,
+        inputConfirm: '',
+        keepFacultiesAndPrograms: true,
+        keepFeeTypes: true,
+    });
     const [isPurging, setIsPurging] = useState(false);
 
     // 4. Data Viewer Modal (View Data in Table + Delete 1-1 or Multi)
@@ -273,6 +279,27 @@ export default function DatabaseIndex({
             onFinish: () => {
                 setIsPurging(false);
                 setTotalResetModal({ isOpen: false, inputConfirm: '' });
+            }
+        });
+    };
+
+    const handleExecutePurgeAllExceptAdmin = () => {
+        if (purgeAllExceptAdminModal.inputConfirm !== 'HAPUS SEMUA KECUALI ADMIN') return;
+        setIsPurging(true);
+        router.post('/admin/database/purge-all-except-admin', {
+            keep_faculties_and_programs: purgeAllExceptAdminModal.keepFacultiesAndPrograms,
+            keep_fee_types: purgeAllExceptAdminModal.keepFeeTypes,
+            confirm_phrase: purgeAllExceptAdminModal.inputConfirm,
+        }, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsPurging(false);
+                setPurgeAllExceptAdminModal({
+                    isOpen: false,
+                    inputConfirm: '',
+                    keepFacultiesAndPrograms: true,
+                    keepFeeTypes: true,
+                });
             }
         });
     };
@@ -709,6 +736,62 @@ export default function DatabaseIndex({
                 {/* ========================================================================= */}
                 {activeTab === 'purge' && (
                     <div className="space-y-4">
+                        {/* 1. ULTRA PRODUCTION PURGE: HAPUS SEMUA DATA KECUALI AKUN SUPERADMIN DAN ADMIN */}
+                        <div className="bg-gradient-to-r from-red-950 via-rose-950 to-slate-950 rounded-2xl p-5 sm:p-6 text-white border-2 border-red-600/80 shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative overflow-hidden">
+                            <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-red-600/20 rounded-full blur-3xl pointer-events-none" />
+                            
+                            <div className="space-y-2 relative z-10 max-w-2xl">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/30 text-red-200 rounded-full text-[10px] font-black border border-red-500/50 uppercase tracking-widest animate-pulse">
+                                        <AlertOctagon className="w-3.5 h-3.5 text-red-400" />
+                                        PRODUCTION CLEAN SLATE ENGINE
+                                    </span>
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full text-[10px] font-bold border border-emerald-500/30">
+                                        <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                                        Proteksi: Superadmin &amp; Admin Tetap Utuh
+                                    </span>
+                                </div>
+                                
+                                <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+                                    Hapus Semua Data (Kecuali Akun Superadmin &amp; Admin)
+                                </h3>
+                                
+                                <p className="text-xs text-slate-300 leading-relaxed">
+                                    Mengosongkan seluruh database untuk persiapan rilis produksi: menghapus semua akun pengguna dummy ({purgeStats.admin_protection?.users_to_delete || 0} akun mahasiswa, dosen, keuangan), seluruh transaksi PMB, invoice tagihan, KRS, nilai, jadwal, absensi, skripsi, dan LMS. 
+                                    <span className="text-emerald-300 font-bold block mt-1">
+                                        🛡️ HANYA akun Super Administrator ('superadmin') dan Admin Akademik ('adminakademik') yang dipertahankan.
+                                    </span>
+                                </p>
+
+                                <div className="flex flex-wrap items-center gap-2.5 pt-1 text-[11px] text-slate-300">
+                                    <div className="px-2.5 py-1 bg-slate-900/80 rounded-lg border border-slate-700/80 flex items-center gap-1.5">
+                                        <Users className="w-3.5 h-3.5 text-rose-400" />
+                                        <span>Akun Dihapus: <strong className="text-rose-300 font-bold">{purgeStats.admin_protection?.users_to_delete || 0}</strong></span>
+                                    </div>
+                                    <div className="px-2.5 py-1 bg-slate-900/80 rounded-lg border border-slate-700/80 flex items-center gap-1.5">
+                                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                                        <span>Akun Terlindungi: <strong className="text-emerald-300 font-bold">{purgeStats.admin_protection?.preserved_admins || 2}</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="relative z-10 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setPurgeAllExceptAdminModal({
+                                        isOpen: true,
+                                        inputConfirm: '',
+                                        keepFacultiesAndPrograms: true,
+                                        keepFeeTypes: true,
+                                    })}
+                                    className="w-full sm:w-auto px-5 py-3 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black rounded-xl text-xs shadow-xl shadow-red-950/50 transition cursor-pointer flex items-center justify-center gap-2.5 border border-red-400/50 uppercase tracking-wider"
+                                >
+                                    <AlertOctagon className="w-4 h-4 text-amber-300" />
+                                    <span>Hapus Semua Kecuali Admin</span>
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Master Reset Banner Card */}
                         <div className="bg-gradient-to-r from-red-950 via-rose-900 to-slate-900 rounded-2xl p-5 sm:p-6 text-white border border-rose-700/60 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div className="space-y-1">
@@ -1486,6 +1569,163 @@ export default function DatabaseIndex({
                                 className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5"
                             >
                                 {isPurging ? 'Sedang Mengosongkan...' : 'Ya, Kosongkan Tabel'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* MODAL: HAPUS SEMUA DATA KECUALI AKUN SUPERADMIN DAN ADMIN */}
+            {/* ========================================================================= */}
+            {purgeAllExceptAdminModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
+                    <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-red-300 space-y-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-start gap-3">
+                            <div className="p-3 bg-red-100 text-red-600 rounded-xl shrink-0">
+                                <AlertOctagon className="w-7 h-7 text-red-600 animate-pulse" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 font-black text-[9px] uppercase tracking-wider rounded">Tindakan Irreversibel</span>
+                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-black text-[9px] uppercase tracking-wider rounded">Admin Safe</span>
+                                </div>
+                                <h3 className="text-base font-black text-slate-900 mt-1">Hapus Semua Data Kecuali Superadmin &amp; Admin</h3>
+                                <p className="text-xs text-slate-600 mt-0.5">
+                                    Pembersihan total sistem untuk persiapan rilis produksi (Clean Slate Production).
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Impact Comparison Box */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            {/* Dipertahankan */}
+                            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                                <div className="flex items-center gap-1.5 font-bold text-emerald-800 text-[11px] uppercase tracking-wider">
+                                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                    <span>Tetap Aman &amp; Utuh</span>
+                                </div>
+                                <ul className="space-y-1 text-slate-700 text-[11px]">
+                                    <li className="flex items-start gap-1.5">
+                                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                        <span><strong>Akun Superadmin</strong> ('superadmin')</span>
+                                    </li>
+                                    <li className="flex items-start gap-1.5">
+                                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                        <span><strong>Akun Admin</strong> ('adminakademik')</span>
+                                    </li>
+                                    <li className="flex items-start gap-1.5">
+                                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                        <span>Pengaturan Sistem &amp; Logo Portal</span>
+                                    </li>
+                                    <li className="flex items-start gap-1.5">
+                                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                        <span>Skema &amp; Migrasi Database</span>
+                                    </li>
+                                    <li className="flex items-start gap-1.5">
+                                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                        <span>Sesi Login Anda (Tidak logout)</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            {/* Dihapus Total */}
+                            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
+                                <div className="flex items-center gap-1.5 font-bold text-rose-800 text-[11px] uppercase tracking-wider">
+                                    <Trash2 className="w-4 h-4 text-rose-600" />
+                                    <span>Dihapus Total (Bersih)</span>
+                                </div>
+                                <ul className="space-y-1 text-slate-700 text-[11px]">
+                                    <li className="flex items-start gap-1.5">
+                                        <X className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                                        <span>Akun Mahasiswa, Dosen, Kaprodi, Keuangan</span>
+                                    </li>
+                                    <li className="flex items-start gap-1.5">
+                                        <X className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                                        <span>KRS, KHS, Nilai, Transkrip &amp; Bobot</span>
+                                    </li>
+                                    <li className="flex items-start gap-1.5">
+                                        <X className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                                        <span>Tagihan Invoice, VA BSI &amp; Winpay</span>
+                                    </li>
+                                    <li className="flex items-start gap-1.5">
+                                        <X className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                                        <span>Jadwal, Kelas, Absensi, Sesi Kuliah, LMS</span>
+                                    </li>
+                                    <li className="flex items-start gap-1.5">
+                                        <X className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                                        <span>PMB, Skripsi, Yudisium, EDOM, Audit Log</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* Opsi Tambahan Checkbox */}
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">Opsi Struktur Master:</span>
+                            
+                            <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-700 font-medium">
+                                <input 
+                                    type="checkbox"
+                                    checked={purgeAllExceptAdminModal.keepFacultiesAndPrograms}
+                                    onChange={(e) => setPurgeAllExceptAdminModal(prev => ({ ...prev, keepFacultiesAndPrograms: e.target.checked }))}
+                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                                />
+                                <span>Pertahankan Struktur Fakultas &amp; Program Studi (FTK, FEB, FDK, PIAUD, MPI, ES, BKI)</span>
+                            </label>
+
+                            <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-700 font-medium">
+                                <input 
+                                    type="checkbox"
+                                    checked={purgeAllExceptAdminModal.keepFeeTypes}
+                                    onChange={(e) => setPurgeAllExceptAdminModal(prev => ({ ...prev, keepFeeTypes: e.target.checked }))}
+                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                                />
+                                <span>Pertahankan Standar Master Jenis Biaya Keuangan (SPP, Formulir PMB)</span>
+                            </label>
+                        </div>
+
+                        {/* Input konfirmasi */}
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-slate-700">
+                                Ketik teks konfirmasi untuk menyetujui: <span className="font-mono text-red-600 font-black select-all">HAPUS SEMUA KECUALI ADMIN</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={purgeAllExceptAdminModal.inputConfirm}
+                                onChange={(e) => setPurgeAllExceptAdminModal(prev => ({ ...prev, inputConfirm: e.target.value }))}
+                                placeholder="HAPUS SEMUA KECUALI ADMIN"
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold text-red-700 tracking-wider focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white"
+                            />
+                        </div>
+
+                        {/* Tombol aksi */}
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                            <button
+                                type="button"
+                                onClick={() => setPurgeAllExceptAdminModal(prev => ({ ...prev, isOpen: false, inputConfirm: '' }))}
+                                disabled={isPurging}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition cursor-pointer"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleExecutePurgeAllExceptAdmin}
+                                disabled={isPurging || purgeAllExceptAdminModal.inputConfirm !== 'HAPUS SEMUA KECUALI ADMIN'}
+                                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xs transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                            >
+                                {isPurging ? (
+                                    <>
+                                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                        <span>Sedang Menghapus Database...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <AlertOctagon className="w-3.5 h-3.5" />
+                                        <span>Hapus Semua Data Sekarang</span>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>

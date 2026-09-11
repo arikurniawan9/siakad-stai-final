@@ -298,8 +298,11 @@ class AuthService {
   }
 
   public async loginWithSiakadSso(code: string): Promise<{ user: UserAuthProfile; session: UserSession }> {
-    const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
-    const baseUrl = apiBase.endsWith('/api') ? `${apiBase}/v1` : apiBase;
+    const apiBase = (import.meta as any).env?.VITE_API_URL || (import.meta as any).env?.VITE_API_BASE_URL || '/api/v1';
+    let baseUrl = apiBase.replace(/\/+$/, '');
+    if (baseUrl.endsWith('/api')) {
+      baseUrl = `${baseUrl}/v1`;
+    }
 
     const res = await fetch(`${baseUrl}/auth/siakad/exchange`, {
       method: 'POST',
@@ -319,9 +322,20 @@ class AuthService {
     const ssoUser = json.data.user;
     const token = json.data.token;
 
-    let mappedRole: UserRole = ssoUser.role;
-    if (ssoUser.role === 'superadmin' || ssoUser.role === 'administrator_sistem') {
+    let mappedRole: UserRole = 'mahasiswa';
+    const rawRole = (ssoUser.role || '').toLowerCase();
+    if (rawRole === 'superadmin' || rawRole === 'administrator_sistem') {
       mappedRole = 'administrator_sistem';
+    } else if (rawRole === 'admin_akademik' || rawRole === 'adminakademik' || rawRole === 'keuangan') {
+      mappedRole = 'admin_akademik';
+    } else if (rawRole === 'kaprodi') {
+      mappedRole = 'kaprodi';
+    } else if (rawRole === 'dosen_pa' || rawRole === 'dosenpa') {
+      mappedRole = 'dosen_pa';
+    } else if (rawRole === 'dosen') {
+      mappedRole = 'dosen';
+    } else if (rawRole === 'pimpinan') {
+      mappedRole = 'pimpinan';
     }
 
     const userProfile: UserAuthProfile = {

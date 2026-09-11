@@ -99,7 +99,7 @@ export const LoginPage: React.FC = () => {
   }, [loginWithSso]);
 
   const handleSiakadSsoRedirect = () => {
-    const rawHost = (import.meta as any).env?.VITE_SIAKAD_URL || 'http://localhost:8000';
+    const rawHost = (import.meta as any).env?.VITE_SIAKAD_URL || 'https://salam.stai-alittihad.ac.id';
     const siakadHost = rawHost.replace(/\/+$/, '');
     const redirectUri = window.location.origin + window.location.pathname;
     window.location.href = `${siakadHost}/oauth/authorize?client_id=salam_lms&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
@@ -445,7 +445,7 @@ export const LoginPage: React.FC = () => {
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: '8px' }}>
             Untuk administrasi KRS, KHS, dan Keuangan SPP:{' '}
             <a 
-              href="http://salam.stai-alittihad.ac.id/" 
+              href="https://salam.stai-alittihad.ac.id" 
               target="_blank" 
               rel="noopener noreferrer" 
               style={{ fontWeight: 700, color: 'var(--color-primary-700)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}

@@ -99,7 +99,7 @@ function MainAppContent() {
       const current = window.location.pathname || '/';
       if (!isAuthenticated) {
         if (current !== '/login') {
-          window.history.replaceState(null, '', '/login');
+          window.history.replaceState(null, '', '/login' + window.location.search);
         }
       } else {
         if (current === '/login') {
@@ -126,7 +126,7 @@ function MainAppContent() {
   useEffect(() => {
     if (!isAuthenticated) {
       if (window.location.pathname !== '/login') {
-        window.history.replaceState(null, '', '/login');
+        window.history.replaceState(null, '', '/login' + window.location.search);
       }
     } else {
       if (window.location.pathname === '/login' || activePath === '/login') {

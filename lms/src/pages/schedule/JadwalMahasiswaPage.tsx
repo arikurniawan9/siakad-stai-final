@@ -949,7 +949,7 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
                 <div style={{ color: '#64748b' }}>
                   Dokumen ini diterbitkan secara sah oleh<br />
                   <strong>SALAM Academic System STAI AL-ITTIHAD</strong><br />
-                  Verifikasi: salam.stai-alittihad.ac.id/verify/sch-21010042
+                  Verifikasi: https://salam.stai-alittihad.ac.id/verify/sch-21010042
                 </div>
               </div>
 

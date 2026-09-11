@@ -5,6 +5,7 @@ import { UserRole } from '../../types/roles';
 import { ROLE_LABELS } from '../../constants/permissions';
 import { REGISTERED_USERS } from '../../services/authService';
 import { NotificationDropdown } from './NotificationDropdown';
+import { SIAKAD_PORTAL_URL } from '../../constants/navigation';
 
 export interface HeaderProps {
   activePath: string;
@@ -135,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="header-right">
         {/* Direct Link / Bridge to SALAM SIAKAD */}
         <a
-          href="http://salam.stai-alittihad.ac.id/"
+          href={SIAKAD_PORTAL_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-outline btn-sm hidden sm:inline-flex items-center gap-1.5"

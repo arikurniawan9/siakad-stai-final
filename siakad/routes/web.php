@@ -98,6 +98,11 @@ Route::prefix('api/v1/oauth')->group(function () {
     Route::get('/userinfo', [OAuthController::class, 'userInfo'])->name('oauth.userinfo');
 });
 
+Route::prefix('oauth')->group(function () {
+    Route::post('/token', [OAuthController::class, 'issueToken']);
+    Route::get('/userinfo', [OAuthController::class, 'userInfo']);
+});
+
 // =========================================================================
 // 2. AUTHENTICATED ROUTES
 // =========================================================================
@@ -153,6 +158,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/database/restore', [DatabaseController::class, 'restoreBackup'])->name('database.restore');
             Route::post('/database/seeder', [DatabaseController::class, 'runSeeder'])->name('database.seeder');
             Route::post('/database/purge-module', [DatabaseController::class, 'purgeModule'])->name('database.purge_module');
+            Route::post('/database/purge-all-except-admin', [DatabaseController::class, 'purgeAllExceptAdmin'])->name('database.purge_all_except_admin');
             Route::post('/database/truncate-table', [DatabaseController::class, 'truncateTable'])->name('database.truncate_table');
             Route::get('/database/table-data', [DatabaseController::class, 'getTableData'])->name('database.table_data');
             Route::post('/database/table-data/delete-rows', [DatabaseController::class, 'deleteTableRows'])->name('database.delete_rows');

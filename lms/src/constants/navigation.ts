@@ -28,7 +28,7 @@ import { UserRole } from '../types/roles';
 /**
  * Tautan resmi portal induk SALAM SIAKAD STAI Al-Ittihad Cianjur
  */
-export const SIAKAD_PORTAL_URL = 'http://salam.stai-alittihad.ac.id/';
+export const SIAKAD_PORTAL_URL = ((import.meta as any).env?.VITE_SIAKAD_URL || 'https://salam.stai-alittihad.ac.id').replace(/\/+$/, '');
 
 // =========================================================================
 // 1. NAVIGASI KHUSUS MAHASISWA (PEMBELAJARAN DARING)

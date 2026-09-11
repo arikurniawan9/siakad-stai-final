@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardSubtitle, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { SIAKAD_PORTAL_URL } from '../../constants/navigation';
 import { Badge } from '../../components/ui/Badge';
 import { Table, Column } from '../../components/ui/Table';
 import { Input } from '../../components/ui/Input';
@@ -575,7 +576,7 @@ export const NilaiAdminPage: React.FC = () => {
         </div>
 
         <a
-          href="http://salam.stai-alittihad.ac.id/"
+          href={SIAKAD_PORTAL_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-sm inline-flex items-center gap-1.5 flex-shrink-0"

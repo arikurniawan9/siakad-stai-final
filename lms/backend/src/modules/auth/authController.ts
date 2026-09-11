@@ -243,8 +243,12 @@ export async function siakadSsoExchange(req: Request, res: Response, next: NextF
     }
 
     // Panggil SIAKAD SSO Token Endpoint
-    const siakadUrl = ENV.SIAKAD_API_URL || 'https://salam.stai-alittihad.ac.id/api/v1';
-    const tokenResponse = await fetch(`${siakadUrl}/oauth/token`, {
+    const rawSiakadUrl = (ENV.SIAKAD_API_URL || 'https://salam.stai-alittihad.ac.id').replace(/\/+$/, '');
+    const tokenEndpoint = rawSiakadUrl.endsWith('/api/v1') 
+      ? `${rawSiakadUrl}/oauth/token` 
+      : `${rawSiakadUrl}/api/v1/oauth/token`;
+    
+    let tokenResponse = await fetch(tokenEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -255,10 +259,34 @@ export async function siakadSsoExchange(req: Request, res: Response, next: NextF
         client_secret: 'salam_lms_secret_2026',
         code: code
       })
-    });
+    }).catch(() => null);
 
-    if (!tokenResponse.ok) {
-      const errData = await tokenResponse.json().catch(() => ({}));
+    // Fallback jika endpoint pertama gagal/404
+    if (!tokenResponse || !tokenResponse.ok) {
+      const altEndpoint = rawSiakadUrl.endsWith('/api/v1')
+        ? `${rawSiakadUrl.replace(/\/api\/v1$/, '')}/oauth/token`
+        : `${rawSiakadUrl}/oauth/token`;
+      
+      const altRes = await fetch(altEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          client_id: 'salam_lms',
+          client_secret: 'salam_lms_secret_2026',
+          code: code
+        })
+      }).catch(() => null);
+
+      if (altRes && altRes.ok) {
+        tokenResponse = altRes;
+      }
+    }
+
+    if (!tokenResponse || !tokenResponse.ok) {
+      const errData = tokenResponse ? await tokenResponse.json().catch(() => ({})) : {};
       res.status(401).json({
         error: {
           code: 'SSO_EXCHANGE_FAILED',
@@ -281,9 +309,22 @@ export async function siakadSsoExchange(req: Request, res: Response, next: NextF
       return;
     }
 
-    // Role mapping: superadmin -> administrator_sistem
-    let mappedRole = siakadUser.role;
-    if (mappedRole === 'superadmin') mappedRole = 'administrator_sistem';
+    // Role mapping terpadu (SIAKAD -> LMS)
+    let mappedRole = 'mahasiswa';
+    const rawRole = (siakadUser.role || '').toLowerCase();
+    if (rawRole === 'superadmin' || rawRole === 'administrator_sistem') {
+      mappedRole = 'administrator_sistem';
+    } else if (rawRole === 'admin_akademik' || rawRole === 'adminakademik' || rawRole === 'keuangan') {
+      mappedRole = 'admin_akademik';
+    } else if (rawRole === 'kaprodi') {
+      mappedRole = 'kaprodi';
+    } else if (rawRole === 'dosen_pa' || rawRole === 'dosenpa') {
+      mappedRole = 'dosen_pa';
+    } else if (rawRole === 'dosen') {
+      mappedRole = 'dosen';
+    } else if (rawRole === 'pimpinan') {
+      mappedRole = 'pimpinan';
+    }
 
     // Cari user di database LMS
     let localUserResult = await db.query(

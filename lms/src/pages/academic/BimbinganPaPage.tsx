@@ -21,6 +21,7 @@ import {
 import { Card, CardHeader, CardTitle, CardSubtitle, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { SIAKAD_PORTAL_URL } from '../../constants/navigation';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Pagination } from '../../components/ui/Pagination';
@@ -315,7 +316,7 @@ export const BimbinganPaPage: React.FC = () => {
         </div>
 
         <a
-          href="http://salam.stai-alittihad.ac.id/"
+          href={SIAKAD_PORTAL_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-sm inline-flex items-center gap-1.5 flex-shrink-0"

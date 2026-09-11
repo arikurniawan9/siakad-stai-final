@@ -13,6 +13,7 @@ import { Card, CardHeader, CardTitle, CardSubtitle, CardBody } from '../../compo
 import { Table, Column } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { SIAKAD_PORTAL_URL } from '../../constants/navigation';
 import { Modal } from '../../components/ui/Modal';
 import { AcademicClass, SyncRunLog } from '../../types/academic';
 import { academicService } from '../../services/academicService';
@@ -250,7 +251,7 @@ export const SinkronisasiPage: React.FC = () => {
 
         <div className="flex items-center gap-2 flex-wrap">
           <a
-            href="http://salam.stai-alittihad.ac.id/"
+            href={SIAKAD_PORTAL_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-outline inline-flex items-center gap-1.5"

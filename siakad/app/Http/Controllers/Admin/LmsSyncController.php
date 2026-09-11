@@ -39,7 +39,7 @@ class LmsSyncController extends Controller
                 'total_classes' => $totalClasses,
                 'total_enrollments' => $totalEnrollments,
                 'total_grades' => $totalGrades,
-                'lms_api_url' => env('LMS_API_URL', 'http://localhost:5000/api/v1'),
+                'lms_api_url' => env('LMS_API_URL', 'https://lms.stai-alittihad.ac.id/api/v1'),
                 'lms_frontend_url' => env('LMS_FRONTEND_URL', 'https://lms.stai-alittihad.ac.id'),
             ],
         ]);
@@ -50,7 +50,7 @@ class LmsSyncController extends Controller
      */
     public function testConnection(): JsonResponse
     {
-        $lmsUrl = env('LMS_API_URL', 'http://localhost:5000/api/v1');
+        $lmsUrl = env('LMS_API_URL', 'https://lms.stai-alittihad.ac.id/api/v1');
         $baseUrl = str_replace('/api/v1', '', $lmsUrl);
         $startTime = microtime(true);
 
@@ -160,7 +160,7 @@ class LmsSyncController extends Controller
             'courses' => $courses,
         ];
 
-        $lmsUrl = env('LMS_API_URL', 'http://localhost:5000/api/v1');
+        $lmsUrl = env('LMS_API_URL', 'https://lms.stai-alittihad.ac.id/api/v1');
         $syncKey = env('LMS_SYNC_KEY', 'secret_siakad_sync_token_2026');
         $syncStatus = 'SUCCESS';
         $errorMessage = null;

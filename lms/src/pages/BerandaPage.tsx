@@ -24,6 +24,7 @@ import {
 import { Card, CardHeader, CardTitle, CardSubtitle, CardBody, CardFooter } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { SIAKAD_PORTAL_URL } from '../constants/navigation';
 import { UserAuthProfile } from '../types/auth';
 import { progressService } from '../services/progressService';
 import { calendarService } from '../services/calendarService';
@@ -168,7 +169,7 @@ export const BerandaPage: React.FC<BerandaPageProps> = ({ user, onNavigate }) =>
               Sinkronisasi Data
             </Button>
             <a
-              href="http://salam.stai-alittihad.ac.id/"
+              href={SIAKAD_PORTAL_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-sm inline-flex items-center gap-1.5"

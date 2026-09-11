@@ -42,6 +42,7 @@ class OAuthController extends Controller
                 'email' => $user->email,
                 'identity_number' => $user->identity_number,
                 'role' => $user->role,
+                'roles' => method_exists($user, 'getAllRoles') ? $user->getAllRoles() : [$user->role],
                 'study_program' => $user->study_program,
                 'gender' => $user->gender,
                 'phone_number' => $user->phone_number,

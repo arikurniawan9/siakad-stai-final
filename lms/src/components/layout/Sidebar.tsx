@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut, PanelLeftClose, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getNavigationByRole } from '../../constants/navigation';
+import { getNavigationByRole, SIAKAD_PORTAL_URL } from '../../constants/navigation';
 import { academicService } from '../../services/academicService';
 import { KAMUS_UI } from '../../constants/dictionary';
 
@@ -189,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!isCollapsed ? (
           <div style={{ padding: '8px 12px', margin: '0 8px 8px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-50)', border: '1px solid var(--color-primary-200)' }}>
             <a
-              href="http://salam.stai-alittihad.ac.id/"
+              href={SIAKAD_PORTAL_URL}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -215,7 +215,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
             <a
-              href="http://salam.stai-alittihad.ac.id/"
+              href={SIAKAD_PORTAL_URL}
               target="_blank"
               rel="noopener noreferrer"
               style={{

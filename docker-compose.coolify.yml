@@ -145,7 +145,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-siakad_user}:${POSTGRES_PASSWORD:-SuperSecretPassword2026!}@siakad-postgres:5432/${POSTGRES_DB:-siakad_stai_db}
       JWT_SECRET: ${JWT_SECRET:-salam_jwt_secret_production_stai_alittihad}
       
-      SIAKAD_API_URL: ${SIAKAD_APP_URL:-https://salam.stai-alittihad.ac.id}
+      SIAKAD_API_URL: ${SIAKAD_API_URL:-https://salam.stai-alittihad.ac.id/api/v1}
+      SIAKAD_APP_URL: ${SIAKAD_APP_URL:-https://salam.stai-alittihad.ac.id}
       SIAKAD_CLIENT_ID: ${LMS_CLIENT_ID:-salam_lms_client}
       SIAKAD_CLIENT_SECRET: ${LMS_CLIENT_SECRET:-salam_lms_client_secret_key}
       
@@ -177,6 +178,9 @@ services:
       context: ./lms
       dockerfile: Dockerfile
       target: production
+      args:
+        VITE_API_URL: ${LMS_API_URL:-https://lms.stai-alittihad.ac.id/api/v1}
+        VITE_SIAKAD_URL: ${SIAKAD_APP_URL:-https://salam.stai-alittihad.ac.id}
     restart: unless-stopped
     expose:
       - "80"

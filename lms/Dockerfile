@@ -14,6 +14,12 @@ RUN npm ci
 # Salin seluruh kode sumber proyek
 COPY . .
 
+# Build Arguments untuk Vite Production Build
+ARG VITE_API_URL=/api/v1
+ARG VITE_SIAKAD_URL=https://salam.stai-alittihad.ac.id
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_SIAKAD_URL=$VITE_SIAKAD_URL
+
 # Kompilasi aplikasi (TypeScript Typecheck & Vite Production Build)
 RUN npm run build
 

@@ -1188,7 +1188,7 @@ export default function Dashboard({
                                 <p className="text-xs font-black text-slate-900">Jadwal Kuliah</p>
                                 <p className="text-[10px] text-slate-500">Waktu & Ruangan</p>
                             </Link>
-                            <a href="https://lms.stai-alittihad.ac.id" target="_blank" rel="noreferrer" className="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition text-left space-y-1">
+                            <a href="/sso/lms" target="_blank" rel="noreferrer" className="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition text-left space-y-1">
                                 <GraduationCap className="w-5 h-5 text-emerald-700" />
                                 <p className="text-xs font-black text-emerald-900">SALAM LMS</p>
                                 <p className="text-[10px] text-emerald-700">E-Learning Kampus</p>
@@ -1220,7 +1220,7 @@ export default function Dashboard({
                             <Link href="/admin/facilities" className="p-3 bg-slate-50 hover:bg-emerald-50 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-800">
                                 🏛️ Gedung & Ruang
                             </Link>
-                            <a href="https://lms.stai-alittihad.ac.id" target="_blank" rel="noreferrer" className="p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 text-[11px] font-bold text-center transition">
+                            <a href="/sso/lms" target="_blank" rel="noreferrer" className="p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 text-[11px] font-bold text-center transition">
                                 💻 SALAM LMS
                             </a>
                         </div>
