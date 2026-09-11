@@ -43,6 +43,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\PmbController;
 use App\Http\Controllers\PublicVerificationController;
+use App\Http\Controllers\SetupSuperadminController;
 use App\Http\Controllers\Student\KhsController;
 use App\Http\Controllers\Student\KrsController;
 use Illuminate\Support\Facades\Route;
@@ -61,10 +62,14 @@ Route::get('/', function () {
 // Captcha Generator
 Route::get('/captcha/generate', [CaptchaController::class, 'generate'])->name('captcha.generate');
 
-// Authentication Routes
+// Authentication & First-Time Setup Routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
+
+    // Setup Super Administrator (Saat belum ada akun Superadmin di database)
+    Route::get('/setup/superadmin', [SetupSuperadminController::class, 'show'])->name('setup.superadmin');
+    Route::post('/setup/superadmin', [SetupSuperadminController::class, 'store']);
 });
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 

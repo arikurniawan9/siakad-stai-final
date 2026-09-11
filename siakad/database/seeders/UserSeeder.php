@@ -203,7 +203,7 @@ class UserSeeder extends Seeder
             $userData['updated_at'] = $now;
 
             if ($hasRolesCol) {
-                $userData['roles'] = json_encode($roles);
+                $userData['roles'] = $roles;
             }
 
             $user = User::where('username', $username)->first();

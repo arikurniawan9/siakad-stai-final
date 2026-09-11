@@ -22,6 +22,17 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
 
+        // Jika akun Superadmin belum ada di database, arahkan langsung ke setup superadmin
+        $hasSuperadmin = User::where(function ($q) {
+            $q->where('role', 'superadmin')
+              ->orWhere('username', 'superadmin')
+              ->orWhereRaw("roles::text LIKE '%superadmin%'");
+        })->exists();
+
+        if (!$hasSuperadmin) {
+            return redirect()->route('setup.superadmin');
+        }
+
         return Inertia::render('Auth/Login');
     }
 

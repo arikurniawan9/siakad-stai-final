@@ -28,8 +28,50 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'roles' => 'array',
         ];
+    }
+
+    /**
+     * Accessor untuk roles agar selalu mengembalikan array bersih
+     */
+    public function getRolesAttribute($value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_string($decoded)) {
+                $decoded = json_decode($decoded, true);
+            }
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+            if (!empty($decoded)) {
+                return [(string) $decoded];
+            }
+        }
+        $primary = $this->attributes['role'] ?? 'mahasiswa';
+        return [$primary];
+    }
+
+    /**
+     * Mutator untuk roles agar selalu disimpan sebagai JSON valid tanpa double-encoding
+     */
+    public function setRolesAttribute($value): void
+    {
+        if (is_array($value)) {
+            $this->attributes['roles'] = json_encode(array_values(array_unique($value)));
+        } elseif (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                $this->attributes['roles'] = json_encode(array_values(array_unique($decoded)));
+            } else {
+                $this->attributes['roles'] = json_encode([$value]);
+            }
+        } else {
+            $this->attributes['roles'] = json_encode(['mahasiswa']);
+        }
     }
 
     /**

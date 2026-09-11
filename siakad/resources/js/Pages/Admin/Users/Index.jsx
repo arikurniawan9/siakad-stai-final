@@ -72,7 +72,7 @@ export default function UsersIndex({
     });
 
     const toggleRoleInCreate = (val) => {
-        const current = createForm.data.roles || [createForm.data.role];
+        const current = Array.isArray(createForm.data.roles) ? createForm.data.roles : [createForm.data.role];
         let next;
         if (current.includes(val)) {
             next = current.filter(r => r !== val);
@@ -88,7 +88,7 @@ export default function UsersIndex({
     };
 
     const toggleRoleInEdit = (val) => {
-        const current = editForm.data.roles || [editForm.data.role];
+        const current = Array.isArray(editForm.data.roles) ? editForm.data.roles : [editForm.data.role];
         let next;
         if (current.includes(val)) {
             next = current.filter(r => r !== val);
@@ -183,7 +183,7 @@ export default function UsersIndex({
 
     const handleOpenEdit = (u) => {
         setSelectedUser(u);
-        const userRoles = (u.roles && u.roles.length > 0) ? u.roles : [u.role];
+        const userRoles = getUserRoles(u);
         editForm.setData({
             name: u.name,
             username: u.username,
@@ -258,6 +258,24 @@ export default function UsersIndex({
                 setImportRecords([]);
             },
         });
+    };
+
+    const getUserRoles = (u) => {
+        let r = u?.roles;
+        if (typeof r === 'string') {
+            try {
+                r = JSON.parse(r);
+                if (typeof r === 'string') {
+                    r = JSON.parse(r);
+                }
+            } catch (e) {
+                r = null;
+            }
+        }
+        if (Array.isArray(r) && r.length > 0) {
+            return r.filter(Boolean);
+        }
+        return u?.role ? [u.role] : ['mahasiswa'];
     };
 
     const getRoleBadgeStyle = (userRole) => {
@@ -568,15 +586,15 @@ export default function UsersIndex({
                                             <td className="py-3 px-4">
                                                 <div className="flex items-center space-x-2.5">
                                                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center font-black text-white text-xs shadow-2xs shrink-0">
-                                                        {u.name.charAt(0)}
+                                                        {u?.name ? u.name.charAt(0) : (u?.username ? u.username.charAt(0).toUpperCase() : 'U')}
                                                     </div>
                                                     <div>
-                                                        <p className="font-bold text-slate-900">{u.name}</p>
+                                                        <p className="font-bold text-slate-900">{u?.name || u?.username || 'Pengguna'}</p>
                                                         <div className="flex items-center space-x-2 text-[11px] text-slate-400 mt-0.5">
                                                             <span className="font-mono text-emerald-700 bg-emerald-50 px-1 rounded">
-                                                                @{u.username}
+                                                                @{u?.username || '-'}
                                                             </span>
-                                                            <span className="font-mono">{u.email}</span>
+                                                            <span className="font-mono">{u?.email || '-'}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -584,9 +602,9 @@ export default function UsersIndex({
                                             <td className="py-3 px-4">
                                                 <div className="flex flex-col space-y-1">
                                                     <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px] w-fit">
-                                                        {u.identity_number || '-'}
+                                                        {u?.identity_number || '-'}
                                                     </span>
-                                                    {u.nik && (
+                                                    {u?.nik && (
                                                         <span className="font-mono text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 w-fit">
                                                             NIK: {u.nik}
                                                         </span>
@@ -595,7 +613,7 @@ export default function UsersIndex({
                                             </td>
                                             <td className="py-3 px-4">
                                                 <div className="flex flex-wrap gap-1">
-                                                    {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map((r, rIdx) => (
+                                                    {getUserRoles(u).map((r, rIdx) => (
                                                         <span key={rIdx} className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getRoleBadgeStyle(r)}`}>
                                                             {getRoleLabel(r)}
                                                         </span>
