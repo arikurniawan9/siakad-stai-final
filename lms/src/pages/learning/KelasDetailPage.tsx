@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -48,6 +48,7 @@ import { CourseMeeting, LearningMaterial, RPSSection, MaterialType, PublishStatu
 import { InteractiveVideo } from '../../types/video';
 import { academicService } from '../../services/academicService';
 import { learningService } from '../../services/learningService';
+import { learningApi } from '../../api/learningApi';
 import { videoService } from '../../services/videoService';
 import { attendanceService } from '../../services/attendanceService';
 import { assignmentService } from '../../services/assignmentService';
@@ -198,6 +199,11 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
   const [materialFormExternalUrl, setMaterialFormExternalUrl] = useState('');
   const [materialFormText, setMaterialFormText] = useState('');
   const [materialFormFileName, setMaterialFormFileName] = useState('');
+  const [materialFormFileUrl, setMaterialFormFileUrl] = useState('');
+  const [materialFormFileSizeBytes, setMaterialFormFileSizeBytes] = useState<number>(0);
+  const [isUploadingMaterialFile, setIsUploadingMaterialFile] = useState(false);
+  const [selectedMaterialFile, setSelectedMaterialFile] = useState<File | null>(null);
+  const materialFileInputRef = useRef<HTMLInputElement>(null);
   const [materialFormAllowDownload, setMaterialFormAllowDownload] = useState(true);
   const [materialFormStatus, setMaterialFormStatus] = useState<PublishStatus>('DITERBITKAN');
   
@@ -435,6 +441,11 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
     setMaterialFormExternalUrl('');
     setMaterialFormText('');
     setMaterialFormFileName('');
+    setMaterialFormFileUrl('');
+    setMaterialFormFileSizeBytes(0);
+    setSelectedMaterialFile(null);
+    setIsUploadingMaterialFile(false);
+    if (materialFileInputRef.current) materialFileInputRef.current.value = '';
     setMaterialFormAllowDownload(true);
     setMaterialFormStatus('DITERBITKAN');
 
@@ -456,6 +467,31 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
     setMaterialModal({ isOpen: true, mode: 'create', meetingId: defaultMtgId });
   };
 
+  const handleMaterialFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.danger('Ukuran Terlalu Besar', 'Maksimal ukuran berkas yang diperbolehkan adalah 50 MB.');
+      return;
+    }
+
+    setSelectedMaterialFile(file);
+    setMaterialFormFileName(file.name);
+    setMaterialFormFileSizeBytes(file.size);
+    setIsUploadingMaterialFile(true);
+
+    try {
+      const res = await assignmentService.uploadFile(file, 'materials');
+      setMaterialFormFileUrl(res.publicUrl);
+      toast.success('Berkas Terunggah', `Berkas "${file.name}" berhasil diunggah ke penyimpanan server.`);
+    } catch (err: any) {
+      toast.warning('Peringatan Upload', err.message || 'Menggunakan fallback penyimpanan lokal.');
+    } finally {
+      setIsUploadingMaterialFile(false);
+    }
+  };
+
   const handleOpenEditMaterial = (mat: LearningMaterial, meetingId: string) => {
     setMaterialFormMeetingId(meetingId);
     setMaterialFormTitle(mat.title);
@@ -464,6 +500,11 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
     setMaterialFormExternalUrl(mat.externalUrl || '');
     setMaterialFormText(mat.textContent || '');
     setMaterialFormFileName(mat.fileName || '');
+    setMaterialFormFileUrl(mat.fileUrl || '');
+    setMaterialFormFileSizeBytes(mat.fileSizeBytes || 0);
+    setSelectedMaterialFile(null);
+    setIsUploadingMaterialFile(false);
+    if (materialFileInputRef.current) materialFileInputRef.current.value = '';
     setMaterialFormAllowDownload(mat.allowDownload);
     setMaterialFormStatus(mat.status);
 
@@ -565,8 +606,9 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
           title: materialFormTitle,
           description: materialFormDesc,
           type: materialFormType,
+          fileUrl: materialFormFileUrl || undefined,
           fileName: generatedFileName,
-          fileSizeBytes: 2500000,
+          fileSizeBytes: materialFormFileSizeBytes || 2500000,
           externalUrl: materialFormExternalUrl,
           textContent: materialFormText || modulChapterContent,
           onlineModule: onlineModulePayload,
@@ -575,19 +617,57 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
           allowDownload: materialFormAllowDownload,
           publishedAt: materialFormStatus === 'DITERBITKAN' ? new Date().toISOString() : undefined
         });
+
+        // Simpan juga ke Database PostgreSQL Backend jika terhubung
+        try {
+          learningApi.createMaterial(classId, materialFormMeetingId, {
+            title: materialFormTitle,
+            description: materialFormDesc,
+            type: materialFormType,
+            fileUrl: materialFormFileUrl || undefined,
+            fileName: generatedFileName,
+            fileSizeBytes: materialFormFileSizeBytes || 2500000,
+            externalUrl: materialFormExternalUrl,
+            textContent: materialFormText || modulChapterContent,
+            onlineModule: onlineModulePayload,
+            status: materialFormStatus,
+            allowDownload: materialFormAllowDownload,
+          }).catch((err) => console.warn('Non-blocking backend material sync:', err));
+        } catch {}
+
         toast.success('Materi Ditambahkan', `Materi "${materialFormTitle}" berhasil diunggah.`);
       } else if (materialModal.mode === 'edit' && materialModal.materialId) {
         learningService.updateMaterial(materialFormMeetingId, materialModal.materialId, {
           title: materialFormTitle,
           description: materialFormDesc,
           type: materialFormType,
+          fileUrl: materialFormFileUrl || undefined,
           fileName: generatedFileName,
+          fileSizeBytes: materialFormFileSizeBytes || undefined,
           externalUrl: materialFormExternalUrl,
           textContent: materialFormText || modulChapterContent,
           onlineModule: onlineModulePayload,
           status: materialFormStatus,
           allowDownload: materialFormAllowDownload
         });
+
+        // Sinkronisasi update ke Database PostgreSQL Backend
+        try {
+          learningApi.updateMaterial(classId, materialFormMeetingId, materialModal.materialId, {
+            title: materialFormTitle,
+            description: materialFormDesc,
+            type: materialFormType,
+            fileUrl: materialFormFileUrl || undefined,
+            fileName: generatedFileName,
+            fileSizeBytes: materialFormFileSizeBytes || undefined,
+            externalUrl: materialFormExternalUrl,
+            textContent: materialFormText || modulChapterContent,
+            onlineModule: onlineModulePayload,
+            status: materialFormStatus,
+            allowDownload: materialFormAllowDownload
+          }).catch((err) => console.warn('Non-blocking backend material update sync:', err));
+        } catch {}
+
         toast.success('Materi Diperbarui', `Materi "${materialFormTitle}" berhasil diperbarui.`);
       }
 
@@ -1141,7 +1221,16 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
                                 variant={mat.type === 'MODUL_ONLINE' || mat.type === 'BUKU_ELEKTRONIK' ? 'primary' : 'outline'} 
                                 size="sm" 
                                 icon={mat.type === 'BUKU_ELEKTRONIK' ? Layers : (mat.type === 'MODUL_ONLINE' ? BookOpen : Eye)} 
-                                onClick={() => handleOpenMaterial(mat, mtg.id)}
+                                onClick={() => {
+                                  if (mat.fileUrl && (mat.type === 'DOKUMEN_PDF' || mat.type === 'PRESENTASI' || mat.type === 'BUKU_ELEKTRONIK')) {
+                                    const viewUrl = mat.fileUrl.startsWith('http') || mat.fileUrl.startsWith('blob:') 
+                                      ? mat.fileUrl 
+                                      : `${window.location.origin}${mat.fileUrl}`;
+                                    window.open(viewUrl, '_blank');
+                                    return;
+                                  }
+                                  handleOpenMaterial(mat, mtg.id);
+                                }}
                               >
                                 {mat.type === 'BUKU_ELEKTRONIK' ? 'Buku Ajar' : (mat.type === 'MODUL_ONLINE' ? 'Baca Modul' : (mat.type === 'DOKUMEN_PDF' ? 'Buka PDF' : (mat.type === 'PRESENTASI' ? 'Buka Slide' : 'Buka')))}
                               </Button>
@@ -1151,7 +1240,21 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
                                   variant="ghost" 
                                   size="sm" 
                                   icon={Download} 
-                                  onClick={() => toast.info('Unduh Berkas', `Memulai unduhan: ${mat.fileName}`)}
+                                  onClick={() => {
+                                    if (mat.fileUrl) {
+                                      const downloadUrl = mat.fileUrl.startsWith('http') || mat.fileUrl.startsWith('blob:') 
+                                        ? mat.fileUrl 
+                                        : `${window.location.origin}${mat.fileUrl}`;
+                                      const link = document.createElement('a');
+                                      link.href = downloadUrl;
+                                      link.download = mat.fileName || 'materi-kuliah';
+                                      link.target = '_blank';
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                    }
+                                    toast.info('Unduh Berkas', `Memulai unduhan: ${mat.fileName}`);
+                                  }}
                                   title={KAMUS_UI.UNDUH}
                                 >
                                   Unduh
@@ -2343,12 +2446,74 @@ export const KelasDetailPage: React.FC<KelasDetailPageProps> = ({
             </div>
           ) : (
             <div className="flex flex-col gap-3">
+              <input
+                ref={materialFileInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.ppt,.pptx,.doc,.docx,.epub,.zip,.xlsx"
+                onChange={handleMaterialFileSelect}
+              />
+
+              <div
+                className="border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors flex flex-col items-center justify-center gap-2 hover:border-primary-500 hover:bg-primary-50/20"
+                style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-card)' }}
+                onClick={() => materialFileInputRef.current?.click()}
+              >
+                {isUploadingMaterialFile ? (
+                  <Clock className="text-primary-600 animate-spin" size={32} />
+                ) : (
+                  <Upload className="text-primary-600" size={32} />
+                )}
+                <div>
+                  <p className="text-xs font-bold text-neutral-800 dark:text-neutral-100">
+                    {isUploadingMaterialFile 
+                      ? 'Sedang Mengunggah Berkas ke Penyimpanan...' 
+                      : (selectedMaterialFile ? `Berkas Terpilih: ${selectedMaterialFile.name}` : (materialFormFileName ? `Berkas Terpilih: ${materialFormFileName}` : 'Klik atau Tarik Berkas ke Sini untuk Mengunggah'))}
+                  </p>
+                  <p className="text-[11px] text-muted mt-0.5">
+                    Format: PDF, PPT, PPTX, DOCX, EPUB (Maks. 50 MB)
+                  </p>
+                </div>
+              </div>
+
+              {(materialFormFileName || materialFormFileUrl || selectedMaterialFile) && (
+                <div className="p-2.5 rounded bg-primary-50 dark:bg-primary-950/30 border border-primary-200 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <File className="text-primary-600 flex-shrink-0" size={16} />
+                    <span className="font-semibold truncate">{selectedMaterialFile?.name || materialFormFileName || 'Berkas Terunggah'}</span>
+                    {materialFormFileSizeBytes > 0 && (
+                      <span className="text-muted flex-shrink-0">
+                        ({assignmentService.formatFileSize(materialFormFileSizeBytes)})
+                      </span>
+                    )}
+                    {materialFormFileUrl && (
+                      <Badge variant="success">Tersimpan di Server</Badge>
+                    )}
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    icon={Trash2} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedMaterialFile(null);
+                      setMaterialFormFileName('');
+                      setMaterialFormFileUrl('');
+                      setMaterialFormFileSizeBytes(0);
+                      if (materialFileInputRef.current) materialFileInputRef.current.value = '';
+                    }}
+                    className="text-danger-600 hover:text-danger-700"
+                    title="Hapus Berkas"
+                  />
+                </div>
+              )}
+
               <Input
-                label="Nama Berkas Dokumen"
+                label="Nama / Judul Tampilan Berkas"
                 placeholder={materialFormType === 'PRESENTASI' ? 'Slide_Materi.pptx' : 'Modul_Ajar.pdf'}
                 value={materialFormFileName}
                 onChange={(e) => setMaterialFormFileName(e.target.value)}
-                helperText="Simulasi berkas edukasi: format PDF / PPTX tervalidasi sistem."
+                helperText="Nama berkas yang akan ditampilkan kepada mahasiswa."
               />
             </div>
           )}

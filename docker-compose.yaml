@@ -155,6 +155,8 @@ services:
       S3_BUCKET: salam-uploads
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-MinioAdminSecret2026!}
+    volumes:
+      - lms-uploads:/app/uploads
     depends_on:
       siakad-postgres:
         condition: service_healthy
@@ -207,6 +209,8 @@ volumes:
     name: salam-siakad-minio-data
   siakad-storage:
     name: salam-siakad-storage-data
+  lms-uploads:
+    name: salam-siakad-lms-uploads-data
 
 networks:
   app-network:
