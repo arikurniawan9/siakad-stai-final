@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -193,6 +194,94 @@ class LecturerAssignmentController extends Controller
     }
 
     /**
+     * Pastikan sequence PostgreSQL untuk tabel tertentu berada di atas MAX(id)
+     */
+    private function syncPostgresSequence(string $table, string $column = 'id'): void
+    {
+        if (DB::getDriverName() === 'pgsql') {
+            try {
+                DB::statement("SELECT setval(pg_get_serial_sequence('{$table}', '{$column}'), COALESCE((SELECT MAX({$column}) FROM \"{$table}\"), 1), (SELECT MAX({$column}) FROM \"{$table}\") IS NOT NULL)");
+            } catch (\Throwable $e) {
+                Log::warning("Gagal menyinkronkan sequence {$table}.{$column}: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Membuat course_classes secara sequence-safe
+     */
+    private function createCourseClass(array $data): int
+    {
+        $this->syncPostgresSequence('course_classes');
+
+        try {
+            return DB::table('course_classes')->insertGetId($data);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            if (str_contains($e->getMessage(), 'course_classes_pkey') && DB::getDriverName() === 'pgsql') {
+                $maxId = (int) (DB::table('course_classes')->max('id') ?? 0);
+                $newId = $maxId + 1;
+                $data['id'] = $newId;
+                DB::table('course_classes')->insert($data);
+                $this->syncPostgresSequence('course_classes');
+                return $newId;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Menugaskan dosen ke kelas secara aman (idempotent & sequence-safe)
+     */
+    private function assignLecturerToClass(int $classId, int $lecturerId, bool $isPrimary): void
+    {
+        // 1. Cek apakah relasi sudah ada
+        $existing = DB::table('class_lecturers')
+            ->where('course_class_id', $classId)
+            ->where('lecturer_id', $lecturerId)
+            ->first();
+
+        if ($existing) {
+            DB::table('class_lecturers')
+                ->where('id', $existing->id)
+                ->update([
+                    'is_primary' => $isPrimary,
+                    'updated_at' => now(),
+                ]);
+            return;
+        }
+
+        // 2. Jika belum ada, pastikan sequence PostgreSQL tersinkronisasi sebelum INSERT
+        $this->syncPostgresSequence('class_lecturers');
+
+        try {
+            DB::table('class_lecturers')->insert([
+                'course_class_id' => $classId,
+                'lecturer_id' => $lecturerId,
+                'is_primary' => $isPrimary,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Jika terjadi tabrakan primary key akibat sequence di PostgreSQL,
+            // lakukan resync paksa ke max(id) lalu coba sekali lagi
+            if (str_contains($e->getMessage(), 'class_lecturers_pkey') && DB::getDriverName() === 'pgsql') {
+                $maxId = (int) (DB::table('class_lecturers')->max('id') ?? 0);
+                DB::table('class_lecturers')->insert([
+                    'id' => $maxId + 1,
+                    'course_class_id' => $classId,
+                    'lecturer_id' => $lecturerId,
+                    'is_primary' => $isPrimary,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                $this->syncPostgresSequence('class_lecturers');
+            } else {
+                throw $e;
+            }
+        }
+    }
+
+    /**
      * Tugaskan Satu Dosen ke Berbagai Mata Kuliah atau Kelas
      */
     public function assign(Request $request): RedirectResponse
@@ -212,20 +301,15 @@ class LecturerAssignmentController extends Controller
         $isPrimary = $validated['is_primary'] ?? true;
         $assignedCount = 0;
 
+        // Pastikan sequence PostgreSQL up-to-date sebelum transaksi penugasan
+        $this->syncPostgresSequence('course_classes');
+        $this->syncPostgresSequence('class_lecturers');
+
         DB::transaction(function () use ($validated, $lecturer, $periodId, $isPrimary, &$assignedCount) {
             // 1. Jika menugaskan berdasarkan kelas yang sudah ada
             if (!empty($validated['course_class_ids'])) {
                 foreach ($validated['course_class_ids'] as $classId) {
-                    DB::table('class_lecturers')->updateOrInsert(
-                        [
-                            'course_class_id' => $classId,
-                            'lecturer_id' => $lecturer->id,
-                        ],
-                        [
-                            'is_primary' => $isPrimary,
-                            'updated_at' => now(),
-                        ]
-                    );
+                    $this->assignLecturerToClass((int) $classId, (int) $lecturer->id, (bool) $isPrimary);
                     $assignedCount++;
                 }
             }
@@ -249,7 +333,7 @@ class LecturerAssignmentController extends Controller
                         $codeSlug = strtolower(preg_replace('/[^A-Za-z0-9]/', '', $course->code));
                         $classCode = "cls-{$periodId}-{$codeSlug}-a-" . Str::random(4);
 
-                        $classId = DB::table('course_classes')->insertGetId([
+                        $classId = $this->createCourseClass([
                             'academic_period_id' => $periodId,
                             'course_id' => $courseId,
                             'name' => 'Kelas A',
@@ -262,16 +346,7 @@ class LecturerAssignmentController extends Controller
                         ]);
                     }
 
-                    DB::table('class_lecturers')->updateOrInsert(
-                        [
-                            'course_class_id' => $classId,
-                            'lecturer_id' => $lecturer->id,
-                        ],
-                        [
-                            'is_primary' => $isPrimary,
-                            'updated_at' => now(),
-                        ]
-                    );
+                    $this->assignLecturerToClass((int) $classId, (int) $lecturer->id, (bool) $isPrimary);
                     $assignedCount++;
                 }
             }
@@ -338,8 +413,11 @@ class LecturerAssignmentController extends Controller
         $nameSlug = strtolower(preg_replace('/[^A-Za-z0-9]/', '', $validated['class_name']));
         $classCode = "cls-{$validated['academic_period_id']}-{$codeSlug}-{$nameSlug}-" . Str::random(4);
 
+        $this->syncPostgresSequence('course_classes');
+        $this->syncPostgresSequence('class_lecturers');
+
         DB::transaction(function () use ($validated, $classCode, $lecturer) {
-            $classId = DB::table('course_classes')->insertGetId([
+            $classId = $this->createCourseClass([
                 'academic_period_id' => $validated['academic_period_id'],
                 'course_id' => $validated['course_id'],
                 'name' => $validated['class_name'],
@@ -351,16 +429,10 @@ class LecturerAssignmentController extends Controller
                 'updated_at' => now(),
             ]);
 
-            DB::table('class_lecturers')->updateOrInsert(
-                [
-                    'course_class_id' => $classId,
-                    'lecturer_id' => $lecturer->id,
-                ],
-                [
-                    'is_primary' => $validated['is_primary'] ?? true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]
+            $this->assignLecturerToClass(
+                (int) $classId,
+                (int) $lecturer->id,
+                (bool) ($validated['is_primary'] ?? true)
             );
         });
 

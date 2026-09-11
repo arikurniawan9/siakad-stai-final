@@ -348,5 +348,18 @@ class KrsReferenceSeeder extends Seeder
                 );
             }
         }
+
+        // Resync PostgreSQL sequences jika menggunakan driver pgsql
+        if (DB::getDriverName() === 'pgsql') {
+            $tables = ['class_lecturers', 'course_classes', 'class_schedules', 'class_enrollments', 'krs_items', 'users'];
+            foreach ($tables as $table) {
+                try {
+                    $max = DB::table($table)->max('id');
+                    if ($max !== null && $max > 0) {
+                        DB::statement("SELECT setval(pg_get_serial_sequence('{$table}', 'id'), {$max}, true)");
+                    }
+                } catch (\Throwable $e) {}
+            }
+        }
     }
 }

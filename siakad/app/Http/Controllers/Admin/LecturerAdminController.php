@@ -527,4 +527,36 @@ class LecturerAdminController extends Controller
 
         return back()->with('success', "Data dosen {$name} berhasil dihapus dari sistem.");
     }
+
+    /**
+     * Hapus Banyak Dosen Sekaligus (Batch / Multi Delete)
+     */
+    public function batchDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        $currentUserId = auth()->id();
+        $idsToDelete = array_values(array_filter($validated['ids'], fn($id) => (int)$id !== (int)$currentUserId));
+
+        if (empty($idsToDelete)) {
+            return back()->with('error', 'Tidak ada data dosen yang dapat dihapus atau Anda mencoba menghapus akun Anda sendiri.');
+        }
+
+        $deletedCount = 0;
+        DB::transaction(function () use ($idsToDelete, &$deletedCount) {
+            $lecturers = User::whereIn('id', $idsToDelete)
+                ->whereIn('role', ['dosen', 'dosen_pa', 'kaprodi'])
+                ->get();
+
+            foreach ($lecturers as $lec) {
+                $lec->delete();
+                $deletedCount++;
+            }
+        });
+
+        return back()->with('success', "Berhasil menghapus {$deletedCount} data dosen terpilih dari sistem.");
+    }
 }

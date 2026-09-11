@@ -237,6 +237,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/lecturers', [LecturerAdminController::class, 'store'])->name('lecturers.store');
             Route::put('/lecturers/{id}', [LecturerAdminController::class, 'update'])->name('lecturers.update');
             Route::delete('/lecturers/{id}', [LecturerAdminController::class, 'destroy'])->name('lecturers.destroy');
+            Route::post('/lecturers/batch-delete', [LecturerAdminController::class, 'batchDestroy'])->name('lecturers.batch_destroy');
             Route::post('/lecturers/import-batch', [LecturerAdminController::class, 'importBatch'])->name('lecturers.import_batch');
 
             // Kurikulum Mahasiswa & User Portal Mahasiswa
@@ -334,6 +335,11 @@ Route::middleware('auth')->group(function () {
             Route::delete('/curricula/{id}', [CurriculumController::class, 'destroy'])->name('curricula.destroy');
 
             Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
+            Route::get('/courses/template-excel', [CourseController::class, 'templateExcel'])->name('courses.template_excel');
+            Route::post('/courses/check-import', [CourseController::class, 'checkImport'])->name('courses.check_import');
+            Route::post('/courses/process-import', [CourseController::class, 'processImport'])->name('courses.process_import');
+            Route::get('/courses/export-excel', [CourseController::class, 'exportExcel'])->name('courses.export_excel');
+            Route::get('/courses/print-pdf', [CourseController::class, 'printPdf'])->name('courses.print_pdf');
             Route::post('/courses', [CourseController::class, 'store'])->name('courses.store');
             Route::put('/courses/{id}', [CourseController::class, 'update'])->name('courses.update');
             Route::delete('/courses/{id}', [CourseController::class, 'destroy'])->name('courses.destroy');

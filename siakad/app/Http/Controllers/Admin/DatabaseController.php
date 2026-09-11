@@ -99,12 +99,16 @@ class DatabaseController extends Controller
 
             foreach ($sequences as $seq) {
                 try {
-                    $maxVal = DB::table($seq->table_name)->max($seq->col_name) ?? 0;
-                    $nextVal = max($maxVal, 1);
-                    DB::statement("SELECT setval('{$seq->seq_name}', {$nextVal})");
-                } catch (\Exception $e) {}
+                    $maxVal = DB::table($seq->table_name)->max($seq->col_name);
+                    $maxValInt = (int) ($maxVal ?? 0);
+                    if ($maxValInt > 0) {
+                        DB::statement("SELECT setval('{$seq->seq_name}', {$maxValInt}, true)");
+                    } else {
+                        DB::statement("SELECT setval('{$seq->seq_name}', 1, false)");
+                    }
+                } catch (\Throwable $e) {}
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning('Sequence resync warning: ' . $e->getMessage());
         }
     }
