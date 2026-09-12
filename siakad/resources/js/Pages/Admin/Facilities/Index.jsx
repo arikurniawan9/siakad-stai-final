@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../../Layouts/AppLayout';
 import { 
@@ -159,7 +160,11 @@ export default function FacilitiesIndex({
     const [buildingId, setBuildingId] = useState(initialBuildingId || '');
     const [isMobileFabOpen, setIsMobileFabOpen] = useState(false);
     const [isBuildingDropdownOpen, setIsBuildingDropdownOpen] = useState(false);
+    const [isFacilityDropdownOpen, setIsFacilityDropdownOpen] = useState(false);
+    const [facilityDropdownPosition, setFacilityDropdownPosition] = useState(null);
     const buildingDropdownRef = useRef(null);
+    const facilityDropdownRef = useRef(null);
+    const facilityDropdownMenuRef = useRef(null);
 
     // Modals
     const [showBuildingModal, setShowBuildingModal] = useState(false);
@@ -199,11 +204,16 @@ export default function FacilitiesIndex({
         is_active: true,
     });
 
-    // Close dropdown on click outside
+    // Close dropdowns on click outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (buildingDropdownRef.current && !buildingDropdownRef.current.contains(event.target)) {
                 setIsBuildingDropdownOpen(false);
+            }
+            const isFacilityTrigger = facilityDropdownRef.current?.contains(event.target);
+            const isFacilityMenu = facilityDropdownMenuRef.current?.contains(event.target);
+            if (!isFacilityTrigger && !isFacilityMenu) {
+                setIsFacilityDropdownOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -216,6 +226,8 @@ export default function FacilitiesIndex({
             if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
                 if (isBuildingDropdownOpen) {
                     setIsBuildingDropdownOpen(false);
+                } else if (isFacilityDropdownOpen) {
+                    setIsFacilityDropdownOpen(false);
                 } else if (showRoomModal) {
                     setShowRoomModal(false);
                 } else if (showBuildingModal) {
@@ -232,7 +244,49 @@ export default function FacilitiesIndex({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [showRoomModal, showBuildingModal, showDeleteRoomModal, showDeleteBuildingModal, isMobileFabOpen, isBuildingDropdownOpen]);
+    }, [showRoomModal, showBuildingModal, showDeleteRoomModal, showDeleteBuildingModal, isMobileFabOpen, isBuildingDropdownOpen, isFacilityDropdownOpen]);
+
+    const updateFacilityDropdownPosition = () => {
+        const trigger = facilityDropdownRef.current;
+        if (!trigger) return;
+
+        const rect = trigger.getBoundingClientRect();
+        const top = rect.bottom + 6;
+        const maxHeight = Math.max(128, window.innerHeight - top - 12);
+
+        setFacilityDropdownPosition({
+            top,
+            left: rect.left,
+            width: rect.width,
+            maxHeight,
+        });
+    };
+
+    const handleFacilityDropdownToggle = () => {
+        if (!isFacilityDropdownOpen) {
+            updateFacilityDropdownPosition();
+        }
+        setIsFacilityDropdownOpen((isOpen) => !isOpen);
+    };
+
+    useEffect(() => {
+        if (!isFacilityDropdownOpen) return undefined;
+
+        updateFacilityDropdownPosition();
+        window.addEventListener('resize', updateFacilityDropdownPosition);
+        window.addEventListener('scroll', updateFacilityDropdownPosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updateFacilityDropdownPosition);
+            window.removeEventListener('scroll', updateFacilityDropdownPosition, true);
+        };
+    }, [isFacilityDropdownOpen]);
+
+    useEffect(() => {
+        if (!showRoomModal) {
+            setIsFacilityDropdownOpen(false);
+        }
+    }, [showRoomModal]);
 
     const handleBuildingChange = (newBId) => {
         setBuildingId(newBId);
@@ -1383,28 +1437,27 @@ export default function FacilitiesIndex({
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1.5 text-[11px]">Checklist Fasilitas Ruangan:</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {availableFacilities.map((fac, idx) => {
-                                            const isSelected = Array.isArray(roomForm.data.facilities) && roomForm.data.facilities.includes(fac);
-                                            return (
-                                                <button
-                                                    key={idx}
-                                                    type="button"
-                                                    onClick={() => toggleFacility(fac)}
-                                                    className={`p-2 rounded-lg border text-left flex items-center justify-between transition cursor-pointer text-xs ${
-                                                        isSelected 
-                                                            ? 'bg-emerald-50 border-emerald-400 text-emerald-900 font-bold shadow-2xs' 
-                                                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                                                    }`}
-                                                >
-                                                    <span className="truncate">{fac}</span>
-                                                    {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
-                                                </button>
-                                            );
-                                        })}
+                                <div ref={facilityDropdownRef} className="relative">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="block font-bold text-slate-700 text-[11px]">Fasilitas Ruangan</label>
+                                        <span className="text-[9px] font-black text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                            {roomForm.data.facilities?.length || 0} dipilih
+                                        </span>
                                     </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleFacilityDropdownToggle}
+                                        aria-haspopup="listbox"
+                                        aria-expanded={isFacilityDropdownOpen}
+                                        className="w-full min-h-10 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-left text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition flex items-center justify-between gap-3 cursor-pointer hover:border-slate-400"
+                                    >
+                                        <span className="truncate">
+                                            {roomForm.data.facilities?.length
+                                                ? roomForm.data.facilities.join(', ')
+                                                : '-- Pilih fasilitas ruangan --'}
+                                        </span>
+                                        <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${isFacilityDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </button>
                                 </div>
 
                                 <div className="pt-2 flex justify-end space-x-2 border-t border-slate-100 shrink-0">
@@ -1575,6 +1628,61 @@ export default function FacilitiesIndex({
                     </button>
                 </div>
             </div>
+
+            {isFacilityDropdownOpen && facilityDropdownPosition && createPortal(
+                <div
+                    ref={facilityDropdownMenuRef}
+                    role="listbox"
+                    aria-label="Pilih fasilitas ruangan"
+                    className="fixed overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20"
+                    style={{
+                        top: facilityDropdownPosition.top,
+                        left: facilityDropdownPosition.left,
+                        width: facilityDropdownPosition.width,
+                        maxHeight: facilityDropdownPosition.maxHeight,
+                        zIndex: 70,
+                    }}
+                >
+                    <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Pilih fasilitas</span>
+                        {!!roomForm.data.facilities?.length && (
+                            <button
+                                type="button"
+                                onClick={() => roomForm.setData('facilities', [])}
+                                className="text-[10px] font-bold text-rose-600 hover:text-rose-700 cursor-pointer"
+                            >
+                                Hapus semua
+                            </button>
+                        )}
+                    </div>
+                    <div
+                        className="overflow-y-auto p-1.5"
+                        style={{ maxHeight: Math.max(80, facilityDropdownPosition.maxHeight - 37) }}
+                    >
+                        {availableFacilities.map((fac) => {
+                            const isSelected = Array.isArray(roomForm.data.facilities) && roomForm.data.facilities.includes(fac);
+                            return (
+                                <button
+                                    key={fac}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={isSelected}
+                                    onClick={() => toggleFacility(fac)}
+                                    className={`w-full rounded-lg px-2.5 py-2 text-left text-xs transition flex items-center justify-between gap-3 cursor-pointer ${
+                                        isSelected
+                                            ? 'bg-emerald-50 text-emerald-900 font-bold'
+                                            : 'text-slate-700 hover:bg-slate-50'
+                                    }`}
+                                >
+                                    <span>{fac}</span>
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>,
+                document.body,
+            )}
         </AppLayout>
     );
 }

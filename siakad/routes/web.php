@@ -251,6 +251,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/academic-periods', [AcademicPeriodController::class, 'index'])->name('academic_periods.index');
             Route::post('/academic-periods/years', [AcademicPeriodController::class, 'storeYear'])->name('academic_periods.years.store');
             Route::post('/academic-periods/periods', [AcademicPeriodController::class, 'storePeriod'])->name('academic_periods.periods.store');
+            Route::put('/academic-periods/periods/{id}', [AcademicPeriodController::class, 'updatePeriod'])->name('academic_periods.periods.update');
+            Route::delete('/academic-periods/periods/{id}', [AcademicPeriodController::class, 'destroyPeriod'])->name('academic_periods.periods.destroy');
             Route::post('/academic-periods/{id}/activate', [AcademicPeriodController::class, 'activate'])->name('academic_periods.activate');
 
             // Master Program Studi & Fakultas

@@ -5,7 +5,7 @@ import {
     School, Calendar, CheckCircle2, Clock, 
     Plus, Sparkles, AlertCircle, ArrowRight, 
     Layers, BookOpen, CreditCard, Star, FileText, Check, X,
-    LayoutGrid, List, ChevronLeft, ChevronRight, Search, Save
+    LayoutGrid, List, ChevronLeft, ChevronRight, Search, Save, Edit2, Trash2
 } from 'lucide-react';
 
 export default function AcademicPeriodsIndex({ academicYears = [], academicPeriods = [], activePeriod = null }) {
@@ -13,6 +13,7 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
     const [yearsViewMode, setYearsViewMode] = useState('grid'); // 'grid' | 'list'
     const [showYearModal, setShowYearModal] = useState(false);
     const [showPeriodModal, setShowPeriodModal] = useState(false);
+    const [isEditingPeriod, setIsEditingPeriod] = useState(false);
 
     // Pagination & Filter untuk Periode Semester
     const [periodPerPage, setPeriodPerPage] = useState(10);
@@ -55,6 +56,7 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
 
     // Form Periode Semester
     const periodForm = useForm({
+        id: null,
         academic_year_id: academicYears[0]?.id || '',
         code: '20262',
         name: 'Semester Genap 2026/2027',
@@ -76,7 +78,7 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
         const handleKeyDown = (e) => {
             if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
                 if (showPeriodModal) {
-                    setShowPeriodModal(false);
+                    closePeriodModal();
                 } else if (showYearModal) {
                     setShowYearModal(false);
                 }
@@ -99,12 +101,81 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
 
     const submitPeriod = (e) => {
         e.preventDefault();
+        if (isEditingPeriod) {
+            periodForm.put(`/admin/academic-periods/periods/${periodForm.data.id}`, {
+                onSuccess: () => closePeriodModal(),
+            });
+            return;
+        }
+
         periodForm.post('/admin/academic-periods/periods', {
-            onSuccess: () => {
-                setShowPeriodModal(false);
-                periodForm.reset();
-            },
+            onSuccess: () => closePeriodModal(),
         });
+    };
+
+    const closePeriodModal = () => {
+        setShowPeriodModal(false);
+        setIsEditingPeriod(false);
+        periodForm.clearErrors();
+    };
+
+    const handleOpenCreatePeriod = () => {
+        setIsEditingPeriod(false);
+        periodForm.clearErrors();
+        periodForm.setData({
+            id: null,
+            academic_year_id: academicYears[0]?.id || '',
+            code: '20262',
+            name: 'Semester Genap 2026/2027',
+            semester_type: 'GENAP',
+            start_date: '2027-02-01',
+            end_date: '2027-07-31',
+            krs_start_date: '2027-01-15',
+            krs_end_date: '2027-02-10',
+            payment_start_date: '2027-01-05',
+            payment_end_date: '2027-02-05',
+            grading_start_date: '2027-07-01',
+            grading_end_date: '2027-07-25',
+            edom_start_date: '2027-06-15',
+            edom_end_date: '2027-07-15',
+        });
+        setShowPeriodModal(true);
+    };
+
+    const handleOpenEditPeriod = (period) => {
+        const dateValue = (value) => value ? String(value).slice(0, 10) : '';
+
+        setIsEditingPeriod(true);
+        periodForm.clearErrors();
+        periodForm.setData({
+            id: period.id,
+            academic_year_id: String(period.academic_year_id ?? ''),
+            code: period.code ?? '',
+            name: period.name ?? '',
+            semester_type: period.semester_type ?? 'GANJIL',
+            start_date: dateValue(period.start_date),
+            end_date: dateValue(period.end_date),
+            krs_start_date: dateValue(period.krs_start_date),
+            krs_end_date: dateValue(period.krs_end_date),
+            payment_start_date: dateValue(period.payment_start_date),
+            payment_end_date: dateValue(period.payment_end_date),
+            grading_start_date: dateValue(period.grading_start_date),
+            grading_end_date: dateValue(period.grading_end_date),
+            edom_start_date: dateValue(period.edom_start_date),
+            edom_end_date: dateValue(period.edom_end_date),
+        });
+        setShowPeriodModal(true);
+    };
+
+    const handleDeletePeriod = (period) => {
+        if (period.is_active) {
+            alert('Periode semester aktif tidak dapat dihapus. Aktifkan periode lain terlebih dahulu.');
+            return;
+        }
+
+        if (confirm(`Hapus periode semester "${period.name}"? Data ini hanya dapat dihapus jika belum memiliki data akademik terkait.`)) {
+            router.delete(`/admin/academic-periods/periods/${period.id}`);
+        }
     };
 
     const handleActivatePeriod = (periodId, periodName) => {
@@ -144,7 +215,7 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                                 <span>+ Tahun Akademik</span>
                             </button>
                             <button
-                                onClick={() => setShowPeriodModal(true)}
+                                onClick={handleOpenCreatePeriod}
                                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-black transition flex items-center space-x-1 shadow cursor-pointer"
                             >
                                 <Plus className="w-3.5 h-3.5" />
@@ -399,14 +470,34 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                                                     )}
                                                 </td>
                                                 <td className="py-2.5 px-3 text-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenEditPeriod(p)}
+                                                        className="mr-1 p-1.5 text-sky-700 bg-sky-50 border border-sky-200 hover:bg-sky-100 rounded-md transition cursor-pointer"
+                                                        title="Edit periode semester"
+                                                        aria-label="Edit periode semester"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
                                                     {!p.is_active ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleActivatePeriod(p.id, p.name)}
-                                                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-[10px] font-bold transition shadow-2xs cursor-pointer"
-                                                        >
-                                                            Aktifkan
-                                                        </button>
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleActivatePeriod(p.id, p.name)}
+                                                                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-[10px] font-bold transition shadow-2xs cursor-pointer"
+                                                            >
+                                                                Aktifkan
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeletePeriod(p)}
+                                                                className="ml-1 p-1.5 text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-md transition cursor-pointer"
+                                                                title="Hapus periode semester"
+                                                                aria-label="Hapus periode semester"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </>
                                                     ) : (
                                                         <span className="text-[10px] text-emerald-700 font-black">✓ Berjalan</span>
                                                     )}
@@ -743,7 +834,7 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                 {showPeriodModal && (
                     <div 
                         onClick={(e) => {
-                            if (e.target === e.currentTarget) setShowPeriodModal(false);
+                            if (e.target === e.currentTarget) closePeriodModal();
                         }}
                         className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-2xs animate-fadeIn"
                     >
@@ -754,8 +845,8 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                                         <Calendar className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-xs text-white">Tambah Periode Semester</h3>
-                                        <p className="text-[10px] text-slate-300">Atur jadwal perkuliahan, pengisian KRS, dan billing SPP.</p>
+                                        <h3 className="font-bold text-xs text-white">{isEditingPeriod ? 'Edit Periode Semester' : 'Tambah Periode Semester'}</h3>
+                                        <p className="text-[10px] text-slate-300">Atur jadwal perkuliahan, KRS, billing SPP, input nilai, dan EDOM.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center space-x-1.5">
@@ -764,7 +855,7 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                                     </span>
                                     <button 
                                         type="button"
-                                        onClick={() => setShowPeriodModal(false)} 
+                                        onClick={closePeriodModal}
                                         className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
                                     >
                                         <X className="w-4 h-4" />
@@ -773,6 +864,11 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                             </div>
 
                             <form onSubmit={submitPeriod} className="p-5 overflow-y-auto space-y-3.5 text-xs flex-1">
+                                {Object.keys(periodForm.errors).length > 0 && (
+                                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-medium text-rose-800">
+                                        {Object.values(periodForm.errors)[0]}
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     <div>
                                         <label className="block font-bold text-slate-700 mb-1 text-[11px]">
@@ -894,10 +990,51 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                                     </div>
                                 </div>
 
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                    <div className="p-2.5 bg-sky-50/70 rounded-xl border border-sky-200 space-y-1.5">
+                                        <p className="font-bold text-sky-900 text-[10px] uppercase">4. Masa Input Nilai <span className="normal-case font-medium">(opsional)</span></p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input
+                                                type="date"
+                                                value={periodForm.data.grading_start_date}
+                                                onChange={(e) => periodForm.setData('grading_start_date', e.target.value)}
+                                                aria-label="Tanggal mulai input nilai"
+                                                className="w-full p-1.5 bg-white border border-sky-300 rounded-lg text-xs focus:outline-sky-500"
+                                            />
+                                            <input
+                                                type="date"
+                                                value={periodForm.data.grading_end_date}
+                                                onChange={(e) => periodForm.setData('grading_end_date', e.target.value)}
+                                                aria-label="Tanggal akhir input nilai"
+                                                className="w-full p-1.5 bg-white border border-sky-300 rounded-lg text-xs focus:outline-sky-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="p-2.5 bg-rose-50/70 rounded-xl border border-rose-200 space-y-1.5">
+                                        <p className="font-bold text-rose-900 text-[10px] uppercase">5. Masa EDOM <span className="normal-case font-medium">(opsional)</span></p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input
+                                                type="date"
+                                                value={periodForm.data.edom_start_date}
+                                                onChange={(e) => periodForm.setData('edom_start_date', e.target.value)}
+                                                aria-label="Tanggal mulai EDOM"
+                                                className="w-full p-1.5 bg-white border border-rose-300 rounded-lg text-xs focus:outline-rose-500"
+                                            />
+                                            <input
+                                                type="date"
+                                                value={periodForm.data.edom_end_date}
+                                                onChange={(e) => periodForm.setData('edom_end_date', e.target.value)}
+                                                aria-label="Tanggal akhir EDOM"
+                                                className="w-full p-1.5 bg-white border border-rose-300 rounded-lg text-xs focus:outline-rose-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="pt-2 flex justify-end space-x-2 border-t border-slate-100 shrink-0">
                                     <button
                                         type="button"
-                                        onClick={() => setShowPeriodModal(false)}
+                                        onClick={closePeriodModal}
                                         className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
                                     >
                                         Batal
@@ -908,7 +1045,7 @@ export default function AcademicPeriodsIndex({ academicYears = [], academicPerio
                                         className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-xs flex items-center space-x-1.5 cursor-pointer"
                                     >
                                         <Save className="w-3.5 h-3.5" />
-                                        <span>{periodForm.processing ? 'Menyimpan...' : 'Simpan Periode Semester'}</span>
+                                        <span>{periodForm.processing ? 'Menyimpan...' : (isEditingPeriod ? 'Simpan Perubahan' : 'Simpan Periode Semester')}</span>
                                     </button>
                                 </div>
                             </form>
