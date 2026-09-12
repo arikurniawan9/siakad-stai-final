@@ -38,12 +38,12 @@ export class RoleAdminService {
         {
           id: 'administrator_sistem',
           name: 'Administrator Sistem',
-          description: 'Akses penuh ke seluruh konfigurasi server, otorisasi RBAC, sinkronisasi SIAKAD, dan audit sistem.',
+          description: 'Akses konfigurasi server, otorisasi RBAC, audit keamanan, dan operasional LMS.',
           isSystemRole: true,
           isActive: true,
           usersCount: 1,
-          permissionsCount: 28,
-          permissions: ['materials:view', 'materials:manage', 'materials:publish', 'video:watch', 'video:manage', 'quizzes:attempt', 'quizzes:manage', 'assignments:submit', 'assignments:grade', 'assignments:manage', 'discussions:view', 'discussions:post', 'discussions:moderate', 'progress:view_own', 'progress:view_class', 'progress:export', 'academic:view_schedule', 'academic:manage_schedule', 'academic:view_periods', 'academic:manage_periods', 'academic:view_krs_khs', 'academic:input_final_grades', 'sync:execute', 'sync:view_logs', 'users:manage', 'roles:manage', 'audit:view', 'system:configure']
+          permissionsCount: 20,
+          permissions: ['materials:view', 'materials:manage', 'materials:publish', 'video:watch', 'video:manage', 'quizzes:attempt', 'quizzes:manage', 'assignments:submit', 'assignments:grade', 'assignments:manage', 'discussions:view', 'discussions:post', 'discussions:moderate', 'progress:view_own', 'progress:view_class', 'progress:export', 'academic:view_schedule', 'roles:manage', 'audit:view', 'system:configure']
         },
         {
           id: 'dosen',
@@ -68,22 +68,22 @@ export class RoleAdminService {
         {
           id: 'kaprodi',
           name: 'Ketua Program Studi (Kaprodi)',
-          description: 'Pengelolaan kurikulum prodi, persetujuan RPS, monitoring pengajaran dosen, dan penetapan Dosen PA.',
+          description: 'Persetujuan RPS, monitoring pengajaran dosen, dan penetapan Dosen PA di LMS.',
           isSystemRole: true,
           isActive: true,
           usersCount: 5,
-          permissionsCount: 13,
-          permissions: ['materials:view', 'materials:manage', 'video:manage', 'quizzes:manage', 'assignments:manage', 'discussions:view', 'progress:view_class', 'progress:export', 'academic:view_schedule', 'academic:manage_schedule', 'academic:view_periods', 'academic:input_final_grades', 'audit:view']
+          permissionsCount: 11,
+          permissions: ['materials:view', 'materials:manage', 'video:manage', 'quizzes:manage', 'assignments:manage', 'discussions:view', 'progress:view_class', 'progress:export', 'academic:view_schedule', 'academic:input_final_grades', 'audit:view']
         },
         {
           id: 'admin_akademik',
           name: 'Administrator Akademik',
-          description: 'Pengelolaan data master akademik, penjadwalan kuliah, prodi, mahasiswa, dan pemantauan nilai institusi.',
+          description: 'Operasional pembelajaran daring, monitoring aktivitas, laporan, dan broadcast LMS.',
           isSystemRole: true,
           isActive: true,
           usersCount: 1,
-          permissionsCount: 13,
-          permissions: ['materials:view', 'progress:view_class', 'progress:export', 'academic:view_schedule', 'academic:manage_schedule', 'academic:view_periods', 'academic:manage_periods', 'academic:view_krs_khs', 'academic:input_final_grades', 'sync:execute', 'sync:view_logs', 'users:manage', 'audit:view']
+          permissionsCount: 6,
+          permissions: ['materials:view', 'progress:view_class', 'progress:export', 'academic:view_schedule', 'academic:input_final_grades', 'audit:view']
         },
         {
           id: 'mahasiswa',
@@ -98,12 +98,12 @@ export class RoleAdminService {
         {
           id: 'pimpinan',
           name: 'Pimpinan / Rektorat',
-          description: 'Akses tinjauan eksekutif terhadap capaian akademik, evaluasi prodi, audit log, dan laporan institusional.',
+          description: 'Akses tinjauan eksekutif terhadap capaian LMS, audit log, dan laporan institusional.',
           isSystemRole: true,
           isActive: true,
           usersCount: 1,
-          permissionsCount: 7,
-          permissions: ['materials:view', 'academic:view_periods', 'academic:view_schedule', 'progress:view_class', 'progress:export', 'audit:view', 'sync:view_logs']
+          permissionsCount: 5,
+          permissions: ['materials:view', 'academic:view_schedule', 'progress:view_class', 'progress:export', 'audit:view']
         }
       ];
     }

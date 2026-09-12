@@ -70,6 +70,7 @@ const INITIAL_STUDENTS: StudentProfileItem[] = [
     enrolledClassesCount: 1
   }
 ];
+void INITIAL_STUDENTS;
 
 export class StudentAdminService {
   private getLocalStudents(): StudentProfileItem[] {
@@ -81,8 +82,7 @@ export class StudentAdminService {
     } catch {
       // fallback
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_STUDENTS));
-    return INITIAL_STUDENTS;
+    return [];
   }
 
   private saveLocalStudents(students: StudentProfileItem[]): void {
@@ -124,7 +124,7 @@ export class StudentAdminService {
       }
       prodiMap[code].count++;
 
-      const y = s.entryYear || 2024;
+      const y = s.entryYear;
       yearMap[y] = (yearMap[y] || 0) + 1;
     });
 

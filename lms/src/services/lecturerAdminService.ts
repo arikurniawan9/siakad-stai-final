@@ -67,6 +67,7 @@ const INITIAL_LECTURERS: LecturerProfileItem[] = [
     adviseesCount: 12
   }
 ];
+void INITIAL_LECTURERS;
 
 export class LecturerAdminService {
   private getLocalLecturers(): LecturerProfileItem[] {
@@ -76,8 +77,7 @@ export class LecturerAdminService {
     } catch {
       // fallback
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_LECTURERS));
-    return INITIAL_LECTURERS;
+    return [];
   }
 
   private saveLocalLecturers(lecturers: LecturerProfileItem[]): void {

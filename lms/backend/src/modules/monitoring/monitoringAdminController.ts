@@ -35,16 +35,16 @@ export async function getMonitoringSummary(
 
     res.json({
       data: {
-        totalInteractions: totalInteractions > 0 ? totalInteractions : 142,
-        totalMaterialAccesses: parseInt(materialAccessRes.rows[0]?.count || '48', 10),
-        avgVideoProgressPercent: parseFloat(parseFloat(videoProgressRes.rows[0]?.avgProgress || '82.5').toFixed(1)),
-        totalAssignmentSubmissions: parseInt(submissionRes.rows[0]?.count || '35', 10),
-        avgAssignmentScore: parseFloat(parseFloat(submissionRes.rows[0]?.avgScore || '86.4').toFixed(1)),
-        totalQuizAttempts: parseInt(quizRes.rows[0]?.count || '42', 10),
-        avgQuizScore: parseFloat(parseFloat(quizRes.rows[0]?.avgQuizScore || '84.8').toFixed(1)),
-        totalForumPosts: parseInt(forumRes.rows[0]?.count || '17', 10),
-        averageEngagementRate: 88.5,
-        atRiskCount: 2
+        totalInteractions,
+        totalMaterialAccesses: parseInt(materialAccessRes.rows[0]?.count || '0', 10),
+        avgVideoProgressPercent: parseFloat(parseFloat(videoProgressRes.rows[0]?.avgProgress || '0').toFixed(1)),
+        totalAssignmentSubmissions: parseInt(submissionRes.rows[0]?.count || '0', 10),
+        avgAssignmentScore: parseFloat(parseFloat(submissionRes.rows[0]?.avgScore || '0').toFixed(1)),
+        totalQuizAttempts: parseInt(quizRes.rows[0]?.count || '0', 10),
+        avgQuizScore: parseFloat(parseFloat(quizRes.rows[0]?.avgQuizScore || '0').toFixed(1)),
+        totalForumPosts: parseInt(forumRes.rows[0]?.count || '0', 10),
+        averageEngagementRate: 0,
+        atRiskCount: 0
       }
     });
   } catch (err) {
@@ -136,7 +136,7 @@ export async function getRealtimeActivityFeed(
     let rows = logsRes.rows;
 
     // Jika database baru kosong, berikan feed log demonstrasi yang realistis
-    if (rows.length === 0) {
+    if (rows.length === 0 && false) {
       const now = new Date();
       rows = [
         {

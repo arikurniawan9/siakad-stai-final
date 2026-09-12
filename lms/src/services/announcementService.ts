@@ -224,9 +224,10 @@ const INITIAL_ANNOUNCEMENTS: AnnouncementItem[] = [
     tags: ['Server', 'Maintenance', 'PTIPD']
   }
 ];
+void INITIAL_ANNOUNCEMENTS;
 
 class AnnouncementService {
-  private announcements: AnnouncementItem[] = INITIAL_ANNOUNCEMENTS;
+  private announcements: AnnouncementItem[] = [];
 
   private memoryStates: Record<string, Record<string, StudentAnnouncementState>> = {};
 

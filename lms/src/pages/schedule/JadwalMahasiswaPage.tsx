@@ -29,7 +29,7 @@ import {
   StudentScheduleSummary, 
   StudentTimetableDay 
 } from '../../types/studentSchedule';
-import { studentScheduleService, STUDENT_SCHEDULES_MOCK } from '../../services/studentScheduleService';
+import { studentScheduleService } from '../../services/studentScheduleService';
 import { KAMUS_UI } from '../../constants/dictionary';
 
 export interface JadwalMahasiswaPageProps {
@@ -60,7 +60,7 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
 
   // Load data
   useEffect(() => {
-    const studentId = user?.id || 'usr-mhs-01';
+    const studentId = user?.id || '';
     const sumData = studentScheduleService.getScheduleSummary(studentId, user?.role, user?.identityNumber, user?.name);
     const tableData = studentScheduleService.getWeeklyTimetable(studentId, user?.role, user?.identityNumber, user?.name);
     const rawSchedules = studentScheduleService.getStudentSchedules(studentId, user?.role, user?.identityNumber, user?.name);
@@ -82,7 +82,7 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
 
   const handleDownloadIcs = () => {
     try {
-      studentScheduleService.downloadIcsFile(user?.id || 'usr-mhs-01');
+      studentScheduleService.downloadIcsFile(user?.id || '');
       toast.success('Kalender Diekspor', 'Berkas kalender .ics berhasil diunduh. Anda dapat membukanya di Google Calendar, Apple Calendar, atau Outlook.');
     } catch {
       toast.danger('Gagal Ekspor', 'Terjadi kendala saat membuat berkas kalender.');
@@ -115,8 +115,8 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
   // Konfigurasi Ekspor Jadwal Kuliah Mahasiswa
   const scheduleExportConfig: ExportConfig<StudentScheduleItem> = useMemo(() => ({
     filename: `SALAM_Jadwal_Kuliah_${user?.identityNumber || 'Mahasiswa'}`,
-    title: 'JADWAL KULIAH MAHASISWA — SEMESTER GANJIL 2026/2027',
-    subtitle: `Mahasiswa: ${user?.name || 'Mahasiswa'} (${user?.identityNumber || '21.01.0042'}) — STAI AL-ITTIHAD CIANJUR`,
+    title: `JADWAL KULIAH ${isLecturer ? 'DOSEN' : 'MAHASISWA'}`,
+    subtitle: `${isLecturer ? 'Dosen' : 'Mahasiswa'}: ${user?.name || '-'} (${user?.identityNumber || '-'})`,
     data: allSchedules,
     columns: [
       { key: 'dayOfWeek', header: 'Hari', width: '90px', align: 'center' },
@@ -143,7 +143,7 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
     metadata: {
       'Nama Mahasiswa': user?.name || '-',
       'NIM': user?.identityNumber || '-',
-      'Total SKS': `${summary?.totalCredits || 21} SKS`,
+      'Total SKS': `${summary?.totalCredits || 0} SKS`,
       'Total Mata Kuliah': `${allSchedules.length} MK`,
       'Waktu Unduh': new Date().toLocaleString('id-ID')
     }
@@ -155,8 +155,8 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap" style={{ marginBottom: 'var(--space-1)' }}>
-            <Badge variant="primary">Semester Ganjil 2026/2027</Badge>
-            <Badge variant="default">Tahun Akademik 2026/2027</Badge>
+            <Badge variant="primary">{summary?.academicPeriodName || 'Periode belum tersedia'}</Badge>
+            <Badge variant="default">{summary?.academicYear || 'Tahun akademik belum tersedia'}</Badge>
             <Badge variant="success">Status: {isLecturer ? 'Dosen Aktif Mengajar' : 'Aktif Kuliah'}</Badge>
           </div>
           <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)' }}>
@@ -528,7 +528,7 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
         <div className="flex flex-col gap-4">
           <div className="flex justify-between items-center">
             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
-              Menampilkan seluruh mata kuliah terdaftar pada Semester Ganjil 2026/2027
+              Menampilkan seluruh mata kuliah terdaftar pada {summary?.academicPeriodName || 'periode aktif'}
             </span>
           </div>
 
@@ -661,7 +661,7 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
             </CardHeader>
             <CardBody className="flex flex-col gap-4">
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                Berkas standar <code>.ics</code> (iCalendar) berisi seluruh waktu perkuliahan mingguan Anda selama Semester Ganjil 2026/2027 lengkap dengan nama dosen, alokasi ruangan, mode hybrid, dan notifikasi pengingat 15 menit sebelum kuliah dimulai.
+                Berkas standar <code>.ics</code> (iCalendar) berisi seluruh waktu perkuliahan mingguan Anda dari data periode aktif.
               </p>
 
               <div style={{ padding: 'var(--space-3) var(--space-4)', backgroundColor: 'var(--color-primary-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-primary-200)' }}>
@@ -887,21 +887,21 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
                 JADWAL PERKULIAHAN MAHASISWA
               </div>
               <div style={{ fontSize: '0.75rem', color: '#334155' }}>
-                SEMESTER GANJIL TAHUN AKADEMIK 2026/2027
+                {(summary?.academicPeriodName || 'PERIODE AKADEMIK BELUM TERSEDIA').toUpperCase()}
               </div>
             </div>
 
             {/* Student Info Table */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.75rem', marginBottom: 'var(--space-4)' }}>
               <div>
-                <div><strong>Nama Mahasiswa:</strong> Ahmad Fauzi Rahman</div>
-                <div><strong>NIM:</strong> 21.01.0042</div>
-                <div><strong>Program Studi:</strong> Pendidikan Agama Islam (PAI)</div>
+                <div><strong>Nama Mahasiswa:</strong> {user?.name || '-'}</div>
+                <div><strong>NIM:</strong> {user?.identityNumber || user?.username || '-'}</div>
+                <div><strong>Program Studi:</strong> {user?.studyProgram || '-'}</div>
               </div>
               <div>
                 <div><strong>Jenjang:</strong> Strata Satu (S-1)</div>
-                <div><strong>Semester / Kelas:</strong> V (Lima) / Kelas A</div>
-                <div><strong>Dosen Wali (PA):</strong> Dr. H. M. Ridwan, M.Ag</div>
+                <div><strong>Semester / Kelas:</strong> {summary?.academicPeriodName || '-'} / {allSchedules[0]?.className || '-'}</div>
+                <div><strong>Dosen Wali (PA):</strong> {summary?.academicAdvisorName || '-'}</div>
               </div>
             </div>
 
@@ -918,7 +918,7 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {STUDENT_SCHEDULES_MOCK.map((s, idx) => (
+                {allSchedules.map((s, idx) => (
                   <tr key={s.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
                     <td style={{ padding: '6px 8px', textAlign: 'center' }}>{idx + 1}</td>
                     <td style={{ padding: '6px 8px' }}>
@@ -928,7 +928,7 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
                       <strong>{s.courseCode}</strong> - {s.courseName}
                     </td>
                     <td style={{ padding: '6px 8px', textAlign: 'center' }}>{s.credits}</td>
-                    <td style={{ padding: '6px 8px' }}>{s.roomName}</td>
+                      <td style={{ padding: '6px 8px' }}>{s.roomName || '-'}</td>
                     <td style={{ padding: '6px 8px' }}>{s.lecturerName}</td>
                   </tr>
                 ))}
@@ -936,8 +936,8 @@ export const JadwalMahasiswaPage: React.FC<JadwalMahasiswaPageProps> = ({
               <tfoot>
                 <tr style={{ fontWeight: 'bold', borderTop: '2px solid #0f172a' }}>
                   <td colSpan={3} style={{ padding: '6px 8px', textAlign: 'right' }}>Total Beban Studi:</td>
-                  <td style={{ padding: '6px 8px', textAlign: 'center' }}>21 SKS</td>
-                  <td colSpan={2} style={{ padding: '6px 8px' }}>7 Mata Kuliah</td>
+                  <td style={{ padding: '6px 8px', textAlign: 'center' }}>{summary?.totalCredits || 0} SKS</td>
+                  <td colSpan={2} style={{ padding: '6px 8px' }}>{allSchedules.length} Mata Kuliah</td>
                 </tr>
               </tfoot>
             </table>

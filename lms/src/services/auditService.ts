@@ -31,7 +31,7 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
 ];
 
 class AuditService {
-  private memoryLogs: AuditLogEntry[] = [...INITIAL_AUDIT_LOGS];
+  private memoryLogs: AuditLogEntry[] = [];
 
   public getLogs(): AuditLogEntry[] {
     try {
@@ -40,8 +40,7 @@ class AuditService {
       }
       const data = localStorage.getItem(STORAGE_KEY);
       if (!data) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_AUDIT_LOGS));
-        return INITIAL_AUDIT_LOGS;
+        return [];
       }
       return JSON.parse(data);
     } catch {

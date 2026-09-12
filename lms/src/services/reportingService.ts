@@ -27,8 +27,8 @@ class ReportingService {
         studentId: s.studentId,
         studentNim: s.studentNim,
         studentName: s.studentName,
-        courseCode: 'PAI-301',
-        courseName: 'Ushul Fiqih & Qawaid Fiqhiyyah',
+        courseCode: '',
+        courseName: '',
         progressPercentage: s.overallPercentage,
         uncompletedActivitiesCount: s.totalActivities - s.completedActivities,
         riskFactor: 'PROGRES_RENDAH',
@@ -40,10 +40,11 @@ class ReportingService {
     const draftCount = meetings.filter((m: CourseMeeting) => m.status === 'DRAF').length;
     const pendingAsg = submissions.filter((sub) => sub.status !== 'SUDAH_DINILAI').length;
     const pendingQz = attempts.filter((att) => att.needsManualGrading).length;
-
     const complianceRate = meetings.length > 0 ? Math.round((publishedCount / meetings.length) * 100) : 0;
+    void draftCount; void complianceRate;
 
-    const lecturerCompliances: LecturerComplianceItem[] = [
+    const lecturerCompliances: LecturerComplianceItem[] = [];
+    /* const lecturerCompliances: LecturerComplianceItem[] = [
       {
         lecturerId: 'usr-dsn-01',
         lecturerName: 'Dr. H. M. Ridwan, M.Ag',
@@ -68,7 +69,7 @@ class ReportingService {
         pendingQuizGradingCount: 0,
         complianceRate: 75
       }
-    ];
+    ]; */
 
     const totalStudents = studentProgressList.length;
     const avgProgress = totalStudents > 0 
@@ -76,22 +77,22 @@ class ReportingService {
       : 0;
 
     return {
-      academicYear: 'Semester Ganjil 2026/2027',
-      totalActiveClasses: 2,
+      academicYear: '',
+      totalActiveClasses: 0,
       totalEnrolledStudents: totalStudents,
-      totalActiveLecturers: 2,
+      totalActiveLecturers: 0,
       averageStudentProgress: avgProgress,
       totalAtRiskStudents: atRiskStudents.length,
       totalPendingGrading: pendingAsg + pendingQz,
       atRiskStudents,
       lecturerCompliances,
       syncHealth: {
-        lastSyncAt: '2026-09-02T08:30:00Z',
+        lastSyncAt: '',
         overallStatus: 'SEHAT',
-        totalSyncedEntities: 142,
-        successRate: 98.6,
+        totalSyncedEntities: 0,
+        successRate: 0,
         conflictsCount: 0,
-        recentSyncRunsCount: 12
+        recentSyncRunsCount: 0
       }
     };
   }

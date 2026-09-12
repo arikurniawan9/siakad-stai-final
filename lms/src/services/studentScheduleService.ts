@@ -274,16 +274,8 @@ export class StudentScheduleService {
   }
 
   private mapClassToSchedules(cls: AcademicClass, now: Date): StudentScheduleItem[] {
-    const schs = cls.schedules && cls.schedules.length > 0 ? cls.schedules : [
-      {
-        id: `sch-${cls.id}`,
-        dayOfWeek: 'SENIN' as any,
-        startTime: '08:00',
-        endTime: '09:40',
-        room: 'Ruang Kuliah',
-        isOnline: false
-      }
-    ];
+    // Kelas tanpa jadwal resmi SIAKAD tidak boleh dibuatkan jadwal contoh.
+    const schs = cls.schedules && cls.schedules.length > 0 ? cls.schedules : [];
 
     return schs.map((s: any, idx: number) => {
       const [sh, sm] = (s.startTime || '08:00').split(':').map(Number);
@@ -312,14 +304,14 @@ export class StudentScheduleService {
         roomType: s.room && s.room.toLowerCase().includes('lab') ? 'LABORATORIUM' : 'TEORI',
         lecturerId: cls.lecturerId,
         lecturerName: cls.lecturerName,
-        lecturerNidn: cls.lecturerNidn || '2112087501',
+         lecturerNidn: cls.lecturerNidn || '-',
         deliveryMode: s.isOnline ? 'DARING' : 'TATAP_MUKA',
         status: 'AKAN_DATANG',
         nextTopicTitle: `Materi Perkuliahan: ${cls.courseName}`,
         nextMeetingNumber: 1,
-        activeAssignmentCount: 1,
+         activeAssignmentCount: 0,
         activeQuizCount: 0,
-        enrolledCount: cls.studentCount || 1
+         enrolledCount: cls.studentCount || 0
       };
 
       item.status = this.computeRealtimeStatus(item, now);
@@ -376,12 +368,12 @@ export class StudentScheduleService {
         const matchName = userName && c.lecturerName && c.lecturerName.toLowerCase().includes(userName.toLowerCase().trim());
         return matchNidn || matchId || matchName;
       });
-      targetClasses = filtered.length > 0 ? filtered : allClasses.slice(0, 4);
+      targetClasses = filtered;
     } else if (isStudent) {
       const filtered = allClasses.filter((c) => 
-        academicService.isStudentEnrolledInClass(c.id, identityNumber || '21.01.0042', userIdentifier)
+        academicService.isStudentEnrolledInClass(c.id, identityNumber || '', userIdentifier)
       );
-      targetClasses = filtered.length > 0 ? filtered : allClasses.slice(0, 4);
+      targetClasses = filtered;
     }
 
     const items: StudentScheduleItem[] = [];
@@ -389,10 +381,7 @@ export class StudentScheduleService {
       items.push(...this.mapClassToSchedules(c, now));
     });
 
-    return items.length > 0 ? items : STUDENT_SCHEDULES_MOCK.map((m) => ({
-      ...m,
-      status: this.computeRealtimeStatus(m, now)
-    }));
+    return items;
   }
 
   /**
@@ -445,15 +434,15 @@ export class StudentScheduleService {
 
     return {
       studentId,
-      studentName: userName || (userRole === 'dosen' ? 'Dr. H. M. Ridwan, M.Ag' : 'Ahmad Fauzi Rahman'),
-      studentNim: identityNumber || '21.01.0042',
-      studyProgram: 'Pendidikan Agama Islam (PAI)',
-      studyProgramCode: 'PAI',
-      academicPeriodName: 'Semester Ganjil 2026/2027',
-      academicYear: '2026/2027',
-      semesterNumber: 5,
-      academicAdvisorName: 'Dr. H. M. Ridwan, M.Ag',
-      academicAdvisorNidn: '2112087501',
+       studentName: userName || '-',
+       studentNim: identityNumber || '-',
+       studyProgram: '-',
+       studyProgramCode: '-',
+       academicPeriodName: '-',
+       academicYear: '-',
+       semesterNumber: 0,
+       academicAdvisorName: '-',
+       academicAdvisorNidn: '-',
       totalCredits,
       totalCourses: schedules.length,
       todaySchedules,

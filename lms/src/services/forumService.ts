@@ -109,7 +109,7 @@ class ForumService {
   public getThreads(classId?: string, meetingId?: string): DiscussionThread[] {
     try {
       const raw = localStorage.getItem(THREADS_STORAGE_KEY);
-      let list: DiscussionThread[] = raw ? JSON.parse(raw) : INITIAL_THREADS;
+      let list: DiscussionThread[] = raw ? JSON.parse(raw) : [];
       if (classId) {
         list = list.filter((t) => 
           t.classId === classId || 
@@ -126,7 +126,7 @@ class ForumService {
         return new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime();
       });
     } catch {
-      return INITIAL_THREADS;
+      return [];
     }
   }
 
@@ -141,7 +141,7 @@ class ForumService {
   public getPostsByThread(threadId: string): DiscussionPost[] {
     try {
       const raw = localStorage.getItem(POSTS_STORAGE_KEY);
-      const all: DiscussionPost[] = raw ? JSON.parse(raw) : INITIAL_POSTS;
+      const all: DiscussionPost[] = raw ? JSON.parse(raw) : [];
       const threadPosts = all.filter((p) => p.threadId === threadId);
 
       // Susun struktur balasan berulir (Nested Threads)
@@ -156,7 +156,7 @@ class ForumService {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       });
     } catch {
-      return INITIAL_POSTS.filter((p) => p.threadId === threadId && !p.parentPostId);
+      return [];
     }
   }
 
@@ -216,7 +216,7 @@ class ForumService {
     }
 
     const raw = localStorage.getItem(POSTS_STORAGE_KEY);
-    const allPosts: DiscussionPost[] = raw ? JSON.parse(raw) : INITIAL_POSTS;
+    const allPosts: DiscussionPost[] = raw ? JSON.parse(raw) : [];
 
     const now = new Date().toISOString();
     const newPost: DiscussionPost = {
@@ -312,7 +312,7 @@ class ForumService {
    */
   public toggleBestAnswer(postId: string, actorLecturerName: string): DiscussionPost {
     const raw = localStorage.getItem(POSTS_STORAGE_KEY);
-    const allPosts: DiscussionPost[] = raw ? JSON.parse(raw) : INITIAL_POSTS;
+    const allPosts: DiscussionPost[] = raw ? JSON.parse(raw) : [];
 
     const post = allPosts.find((p) => p.id === postId);
     if (!post) throw new Error('Komentar tidak ditemukan.');
@@ -339,7 +339,7 @@ class ForumService {
    */
   public hidePost(postId: string, reason: string, actorLecturerName: string): DiscussionPost {
     const raw = localStorage.getItem(POSTS_STORAGE_KEY);
-    const allPosts: DiscussionPost[] = raw ? JSON.parse(raw) : INITIAL_POSTS;
+    const allPosts: DiscussionPost[] = raw ? JSON.parse(raw) : [];
 
     const post = allPosts.find((p) => p.id === postId);
     if (!post) throw new Error('Komentar tidak ditemukan.');
@@ -368,7 +368,7 @@ class ForumService {
    */
   public toggleUpvote(postId: string, userId: string): DiscussionPost {
     const raw = localStorage.getItem(POSTS_STORAGE_KEY);
-    const allPosts: DiscussionPost[] = raw ? JSON.parse(raw) : INITIAL_POSTS;
+    const allPosts: DiscussionPost[] = raw ? JSON.parse(raw) : [];
 
     const post = allPosts.find((p) => p.id === postId);
     if (!post) throw new Error('Komentar tidak ditemukan.');

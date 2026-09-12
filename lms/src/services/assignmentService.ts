@@ -391,22 +391,6 @@ class AssignmentService {
       const raw = localStorage.getItem(ASSIGNMENTS_STORAGE_KEY);
       let list: Assignment[] = raw ? JSON.parse(raw) : [];
       
-      if (!list || list.length === 0) {
-        list = [...INITIAL_ASSIGNMENTS];
-        this.saveAssignments(list);
-      } else {
-        let hasNew = false;
-        for (const init of INITIAL_ASSIGNMENTS) {
-          if (!list.some(a => a.id === init.id)) {
-            list.push(init);
-            hasNew = true;
-          }
-        }
-        if (hasNew) {
-          this.saveAssignments(list);
-        }
-      }
-
       if (classId) {
         list = list.filter((a) => 
           a.classId === classId || 
@@ -419,7 +403,7 @@ class AssignmentService {
       }
       return list;
     } catch {
-      return INITIAL_ASSIGNMENTS;
+      return [];
     }
   }
 
@@ -598,7 +582,7 @@ class AssignmentService {
   public getSubmissions(assignmentId?: string): AssignmentSubmission[] {
     try {
       if (typeof localStorage === 'undefined') {
-        let list = [...INITIAL_SUBMISSIONS];
+        let list: AssignmentSubmission[] = [];
         if (assignmentId) {
           list = list.filter((s) => s.assignmentId === assignmentId);
         }
@@ -607,28 +591,12 @@ class AssignmentService {
       const raw = localStorage.getItem(SUBMISSIONS_STORAGE_KEY);
       let list: AssignmentSubmission[] = raw ? JSON.parse(raw) : [];
       
-      if (!list || list.length === 0) {
-        list = [...INITIAL_SUBMISSIONS];
-        this.saveSubmissions(list);
-      } else {
-        let hasNew = false;
-        for (const init of INITIAL_SUBMISSIONS) {
-          if (!list.some(s => s.id === init.id)) {
-            list.push(init);
-            hasNew = true;
-          }
-        }
-        if (hasNew) {
-          this.saveSubmissions(list);
-        }
-      }
-
       if (assignmentId) {
         list = list.filter((s) => s.assignmentId === assignmentId);
       }
       return list;
     } catch {
-      return INITIAL_SUBMISSIONS;
+      return [];
     }
   }
 

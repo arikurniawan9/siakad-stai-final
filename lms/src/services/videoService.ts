@@ -8,7 +8,6 @@ import {
 const VIDEOS_STORAGE_KEY = 'salam_interactive_videos';
 const PROGRESS_STORAGE_KEY = 'salam_video_progress';
 
-const SCHEMA_VERSION_KEY = 'salam_video_service_v7_real_academic_data';
 
 export const INITIAL_INTERACTIVE_VIDEOS: InteractiveVideo[] = [
   // 1. PAI-301: Fiqih Mawaris (3 SKS)
@@ -255,35 +254,22 @@ export const INITIAL_INTERACTIVE_VIDEOS: InteractiveVideo[] = [
 ];
 
 class VideoService {
-  private inMemoryVideos: InteractiveVideo[] = JSON.parse(JSON.stringify(INITIAL_INTERACTIVE_VIDEOS));
   private inMemoryProgress: StudentVideoProgress[] = [];
 
   private getVideos(): InteractiveVideo[] {
     try {
-      if (typeof localStorage === 'undefined') return this.inMemoryVideos;
-
-      const version = localStorage.getItem(SCHEMA_VERSION_KEY);
-      if (version !== 'true') {
-        // MIGRASI TOTAL: Bersihkan data dummy lama (kartun/BigBuckBunny) dan terapkan kurikulum riil STAI
-        localStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(INITIAL_INTERACTIVE_VIDEOS));
-        localStorage.setItem(SCHEMA_VERSION_KEY, 'true');
-        return INITIAL_INTERACTIVE_VIDEOS;
-      }
+      if (typeof localStorage === 'undefined') return [];
 
       const raw = localStorage.getItem(VIDEOS_STORAGE_KEY);
-      if (!raw) {
-        localStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(INITIAL_INTERACTIVE_VIDEOS));
-        return INITIAL_INTERACTIVE_VIDEOS;
-      }
+      if (!raw) return [];
       const parsed: InteractiveVideo[] = JSON.parse(raw);
-      return parsed.length > 0 ? parsed : INITIAL_INTERACTIVE_VIDEOS;
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return this.inMemoryVideos;
+      return [];
     }
   }
 
   private saveVideos(videos: InteractiveVideo[]): void {
-    this.inMemoryVideos = videos;
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(videos));

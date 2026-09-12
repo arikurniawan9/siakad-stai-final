@@ -19,15 +19,12 @@ export async function getInstitutionalReport(req: AuthenticatedRequest, res: Res
     const riskThreshold = parseInt(req.query.riskThreshold as string, 10) || 50;
 
     const summary = {
-      academicYear: 'Semester Ganjil 2026/2027',
+      academicYear: '',
       appliedRiskThreshold: riskThreshold,
-      totalActiveClasses: 2,
-      totalEnrolledStudents: 5,
-      totalActiveLecturers: 2,
-      averageStudentProgress: 65,
-      totalAtRiskStudents: 1,
-      totalPendingGrading: 3,
-      atRiskStudents: [
+      totalActiveClasses: 0, totalEnrolledStudents: 0, totalActiveLecturers: 0,
+      averageStudentProgress: 0, totalAtRiskStudents: 0, totalPendingGrading: 0,
+      atRiskStudents: [],
+      /* atRiskStudents: [
         {
           studentId: 'usr-mhs-05',
           studentNim: '21.01.0046',
@@ -38,8 +35,9 @@ export async function getInstitutionalReport(req: AuthenticatedRequest, res: Res
           uncompletedActivitiesCount: 4,
           riskFactor: 'PROGRES_RENDAH'
         }
-      ],
-      lecturerCompliances: [
+      ], */
+      lecturerCompliances: [],
+      /* lecturerCompliances: [
         {
           lecturerId: 'usr-dsn-01',
           lecturerName: 'Dr. H. M. Ridwan, M.Ag',
@@ -52,14 +50,14 @@ export async function getInstitutionalReport(req: AuthenticatedRequest, res: Res
           pendingQuizGradingCount: 1,
           complianceRate: 88
         }
-      ],
+      ], */
       syncHealth: {
-        lastSyncAt: new Date().toISOString(),
+        lastSyncAt: '',
         overallStatus: 'SEHAT',
-        totalSyncedEntities: 142,
-        successRate: 98.6,
+        totalSyncedEntities: 0,
+        successRate: 0,
         conflictsCount: 0,
-        recentSyncRunsCount: 12
+        recentSyncRunsCount: 0
       }
     };
 
@@ -71,12 +69,14 @@ export async function getInstitutionalReport(req: AuthenticatedRequest, res: Res
 
 export async function exportProgressCsv(_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const rawRows = [
+    const rawRows: Array<{ nim: string; name: string; done: number; total: number; pct: string; status: string }> = [
+      /*
       { nim: '21.01.0042', name: 'Ahmad Fauzi', done: 3, total: 6, pct: '50%', status: 'BERJALAN_NORMAL' },
       { nim: '21.01.0043', name: 'Siti Nurhaliza', done: 5, total: 6, pct: '83%', status: 'SELESAI' },
       { nim: '21.01.0044', name: 'Muhammad Rizki', done: 4, total: 6, pct: '67%', status: 'BERJALAN_NORMAL' },
       { nim: '21.01.0045', name: 'Dewi Lestari', done: 4, total: 6, pct: '67%', status: 'BERJALAN_NORMAL' },
       { nim: '21.01.0046', name: 'Bambang Sudarsono', done: 2, total: 6, pct: '33%', status: 'TERTINGGAL' }
+      */
     ];
 
     const header = ['NIM', 'Nama Mahasiswa', 'Aktivitas Selesai', 'Total Aktivitas', 'Persentase Ketercapaian', 'Status Belajar'];

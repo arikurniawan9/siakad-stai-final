@@ -576,9 +576,7 @@ export class KrsService {
     } catch {
       // ignore
     }
-    // Set initial
-    this.saveStoredStudents(INITIAL_STUDENTS_KRS);
-    return INITIAL_STUDENTS_KRS;
+    return {};
   }
 
   /**
@@ -634,32 +632,13 @@ export class KrsService {
     let data = students[studentId];
 
     if (!data) {
-      // Buat data default jika baru
       data = {
-        id: `krs-20261-${studentId}`,
-        studentId,
-        studentName: 'Mahasiswa STAI Al-Ittihad',
-        studentNim: '21.01.0099',
-        studyProgram: 'Pendidikan Agama Islam (PAI)',
-        studyProgramCode: 'PAI',
-        academicDegree: 'Strata Satu (S-1)',
-        semesterNumber: 5,
-        academicPeriodId: 'prd-20261',
-        academicPeriodName: 'Semester Ganjil 2026/2027',
-        academicYear: '2026/2027',
-        previousSemesterGpa: 3.50,
-        cumulativeGpa: 3.50,
-        maxCreditQuota: 24,
-        totalCreditsTaken: 21,
-        totalCumulativeCreditsEarned: 80,
-        krsStatus: 'DRAF',
-        academicAdvisorId: 'usr-dsn-01',
-        academicAdvisorName: 'Dr. H. M. Ridwan, M.Ag',
-        academicAdvisorNidn: '2112087501',
-        courses: MASTER_COURSE_CATALOG.slice(0, 7)
+        id: '', studentId, studentName: '', studentNim: '', studyProgram: '', studyProgramCode: '',
+        academicDegree: '', semesterNumber: 0, academicPeriodId: '', academicPeriodName: '', academicYear: '',
+        previousSemesterGpa: 0, cumulativeGpa: 0, maxCreditQuota: 0, totalCreditsTaken: 0,
+        totalCumulativeCreditsEarned: 0, krsStatus: 'DRAF', academicAdvisorId: '', academicAdvisorName: '',
+        academicAdvisorNidn: '', courses: []
       };
-      students[studentId] = data;
-      this.saveStoredStudents(students);
     }
 
     // Pastikan deteksi jadwal bentrok di-refresh
@@ -673,23 +652,17 @@ export class KrsService {
    * Mengambil katalog seluruh mata kuliah yang ditawarkan
    */
   getCatalogCourses(studentId = 'usr-mhs-01'): KrsCourseItem[] {
-    const studentKrs = this.getStudentKrs(studentId);
-    const selectedIds = new Set(studentKrs.courses.map(c => c.courseId));
-
-    return MASTER_COURSE_CATALOG.map(c => {
-      const isSelected = selectedIds.has(c.courseId);
-      return {
-        ...c,
-        isSelected,
-        isLocked: isSelected && studentKrs.krsStatus === 'DISETUJUI'
-      };
-    });
+    void studentId;
+    return [];
   }
 
   /**
    * Menambahkan mata kuliah dari katalog ke rencana studi mahasiswa
    */
   addCourseToKrs(studentId: string, courseId: string): { success: boolean; message: string; krs?: StudentKrsData } {
+    void studentId; void courseId;
+    return { success: false, message: 'Katalog KRS belum tersedia dari SIAKAD.' };
+    /*
     const students = this.getStoredStudents();
     const student = students[studentId] || this.getStudentKrs(studentId);
 
@@ -738,6 +711,7 @@ export class KrsService {
       message: `Mata kuliah ${courseToAdd.courseName} (${courseToAdd.credits} SKS) berhasil ditambahkan ke KRS.`,
       krs: student
     };
+    */
   }
 
   /**
@@ -1041,7 +1015,7 @@ export class KrsService {
    * Mengambil riwayat KRS semester sebelumnya
    */
   getKrsHistory(_studentId = 'usr-mhs-01'): KrsHistoryItem[] {
-    return INITIAL_KRS_HISTORY;
+    return [];
   }
 
   /**
@@ -1059,7 +1033,7 @@ export class KrsService {
     } catch {
       // Fallback
     }
-    return INITIAL_CONSULTATION_MESSAGES[studentId] || [];
+    return [];
   }
 
   /**
@@ -1082,7 +1056,7 @@ export class KrsService {
       allMessages = {};
     }
 
-    const current = allMessages[studentId] || INITIAL_CONSULTATION_MESSAGES[studentId] || [];
+    const current = allMessages[studentId] || [];
     const newMsg: KrsConsultationMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       senderId,

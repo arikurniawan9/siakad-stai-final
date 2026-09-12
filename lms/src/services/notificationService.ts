@@ -322,11 +322,11 @@ class NotificationService {
    */
   private getCachedNotifications(): InAppNotification[] {
     try {
-      if (typeof window === 'undefined') return INITIAL_NOTIFICATIONS;
+      if (typeof window === 'undefined') return [];
       const raw = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : INITIAL_NOTIFICATIONS;
+      return raw ? JSON.parse(raw) : [];
     } catch {
-      return INITIAL_NOTIFICATIONS;
+      return [];
     }
   }
 
@@ -395,7 +395,7 @@ class NotificationService {
 
       return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch {
-      return INITIAL_NOTIFICATIONS.filter((n) => n.userId === userId);
+      return [];
     }
   }
 

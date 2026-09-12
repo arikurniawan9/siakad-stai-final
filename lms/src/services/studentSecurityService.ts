@@ -107,6 +107,7 @@ const INITIAL_SETTINGS: StudentSecuritySettings = {
     'SALAM-9902-3481'
   ]
 };
+void INITIAL_SETTINGS;
 
 class StudentSecurityService {
   /**
@@ -121,7 +122,15 @@ class StudentSecurityService {
     } catch {
       // ignore
     }
-    return INITIAL_SETTINGS;
+    return {
+      twoFactorEnabled: false,
+      twoFactorMethod: 'EMAIL_KAMPUS',
+      twoFactorEmail: '',
+      lastPasswordChange: '',
+      activeSessions: [],
+      securityLogs: [],
+      backupCodes: []
+    };
   }
 
   /**

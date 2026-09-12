@@ -305,10 +305,10 @@ class ProgressService {
       (classId === 'cls-pai301-a' && a.classId === 'cls-20261-pai301-a')
     );
 
-    // Jika aktivitas belum dikonfigurasi khusus, sediakan aktivitas standar per pertemuan
+    // Aktivitas harus berasal dari konfigurasi/API, tanpa membuat aktivitas contoh.
     if (activities.length === 0) {
-      const courseTitle = targetClass ? `${targetClass.courseCode} - ${targetClass.courseName}` : 'Mata Kuliah';
-      activities = [
+      activities = [];
+      /* activities = [
         {
           id: `act-${classId}-01`,
           classId,
@@ -345,7 +345,7 @@ class ProgressService {
           isMandatory: true,
           rule: { type: 'TUGAS', requiresSubmission: true }
         }
-      ];
+      ]; */
     }
 
     const meetingMap: Record<number, LearningActivityItem[]> = {};
@@ -399,8 +399,8 @@ class ProgressService {
 
     return {
       classId,
-      courseCode: targetClass ? targetClass.courseCode : 'PAI-301',
-      courseName: targetClass ? `${targetClass.courseName} (${targetClass.className || targetClass.section || 'Kelas A'})` : 'Ushul Fiqih & Qawaid Fiqhiyyah (Kelas A)',
+      courseCode: targetClass?.courseCode || '',
+      courseName: targetClass ? `${targetClass.courseName} (${targetClass.className || targetClass.section || ''})` : '',
       studentId,
       studentNim,
       studentName,
@@ -417,11 +417,7 @@ class ProgressService {
    */
   public getClassProgressList(classId: string): StudentClassProgressSummary[] {
     const members = academicService.getClassMembers(classId);
-    const students = members.length > 0 
-      ? members.map(m => ({ id: m.studentId, nim: m.studentNim, name: m.studentName }))
-      : [
-          { id: 'usr-mhs-01', nim: '21.01.0042', name: 'Ahmad Fauzi Rahman' }
-        ];
+    const students = members.map(m => ({ id: m.studentId, nim: m.studentNim, name: m.studentName }));
 
     return students.map((s) => {
       const prog = this.getCourseProgress(classId, s.id, s.nim, s.name);

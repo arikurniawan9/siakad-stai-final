@@ -99,6 +99,8 @@ const INITIAL_SEMESTERS: Semester[] = [
     totalStudentsCount: 480
   }
 ];
+void INITIAL_YEARS;
+void INITIAL_SEMESTERS;
 
 export class PeriodService {
   private getLocalYears(): AcademicYear[] {
@@ -108,8 +110,7 @@ export class PeriodService {
     } catch {
       // fallback
     }
-    localStorage.setItem(STORAGE_KEY_YEARS, JSON.stringify(INITIAL_YEARS));
-    return INITIAL_YEARS;
+    return [];
   }
 
   private saveLocalYears(years: AcademicYear[]): void {
@@ -127,8 +128,7 @@ export class PeriodService {
     } catch {
       // fallback
     }
-    localStorage.setItem(STORAGE_KEY_SEMESTERS, JSON.stringify(INITIAL_SEMESTERS));
-    return INITIAL_SEMESTERS;
+    return [];
   }
 
   private saveLocalSemesters(semesters: Semester[]): void {
@@ -159,9 +159,9 @@ export class PeriodService {
       stats: {
         totalAcademicYears: years.length,
         totalSemesters: sems.length,
-        activeSemesterClassesCount: active?.totalClassesCount || 2,
-        activeSemesterStudentsCount: active?.totalStudentsCount || 35,
-        activeSemesterLecturersCount: 2
+        activeSemesterClassesCount: active?.totalClassesCount || 0,
+        activeSemesterStudentsCount: active?.totalStudentsCount || 0,
+        activeSemesterLecturersCount: 0
       }
     };
   }

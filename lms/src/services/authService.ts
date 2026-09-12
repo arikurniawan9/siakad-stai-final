@@ -121,7 +121,7 @@ class AuthService {
 
           const now = Date.now();
           const session: UserSession = {
-            token: apiToken || `salam_jwt_${authUser.role}_${authUser.id}_${now}`,
+            token: apiToken,
             createdAt: now,
             expiresAt: now + 7 * 24 * 60 * 60 * 1000,
             ipAddress: '127.0.0.1',
@@ -146,8 +146,8 @@ class AuthService {
       // Fallback ke simulasi lokal jika backend offline
     }
 
-    // 2. Simulasi penundaan jaringan / async verification fallback
-    await new Promise((res) => setTimeout(res, 200));
+    // LMS tidak lagi membuat sesi lokal/dummy. Login harus tervalidasi oleh SIAKAD.
+    throw new Error('Layanan autentikasi SIAKAD tidak tersedia. Silakan coba lagi.');
 
     // Mencari user berdasarkan username/NIM/NIDN atau email
     const trimmed = identifier.trim().toLowerCase();
@@ -155,7 +155,7 @@ class AuthService {
       (u) => u.username.toLowerCase() === trimmed || 
              u.identityNumber.toLowerCase() === trimmed || 
              u.email.toLowerCase() === trimmed
-    );
+    )!;
 
     if (!user) {
       auditService.record(

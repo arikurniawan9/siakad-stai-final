@@ -13,7 +13,7 @@ const PROGRAMS_KEY = 'salam_study_programs';
 const COURSES_KEY = 'salam_courses';
 const CLASSES_KEY = 'salam_classes';
 const MEMBERS_KEY = 'salam_class_members';
-const SCHEMA_VERSION_KEY = 'salam_siakad_db_synced_v3';
+const SCHEMA_VERSION_KEY = 'salam_siakad_db_synced_v4';
 
 export const INITIAL_PERIODS: AcademicPeriod[] = [
   {
@@ -658,10 +658,13 @@ class AcademicService {
     try {
       const isSynced = localStorage.getItem(SCHEMA_VERSION_KEY);
       if (isSynced !== 'true') {
-        localStorage.setItem(CLASSES_KEY, JSON.stringify(INITIAL_CLASSES));
-        localStorage.setItem(COURSES_KEY, JSON.stringify(INITIAL_COURSES));
-        localStorage.setItem(PROGRAMS_KEY, JSON.stringify(INITIAL_PROGRAMS));
-        localStorage.setItem(MEMBERS_KEY, JSON.stringify(INITIAL_MEMBERS));
+        // Cache lama berisi data demo. Master akademik sekarang read-through
+        // dari SIAKAD, sehingga cache dimulai kosong dan hanya diisi respons API.
+        localStorage.setItem(PERIODS_KEY, JSON.stringify([]));
+        localStorage.setItem(CLASSES_KEY, JSON.stringify([]));
+        localStorage.setItem(COURSES_KEY, JSON.stringify([]));
+        localStorage.setItem(PROGRAMS_KEY, JSON.stringify([]));
+        localStorage.setItem(MEMBERS_KEY, JSON.stringify([]));
         localStorage.setItem(SCHEMA_VERSION_KEY, 'true');
       }
     } catch {
@@ -670,19 +673,19 @@ class AcademicService {
   }
 
   public getPeriods(): AcademicPeriod[] {
-    return this.getItem(PERIODS_KEY, INITIAL_PERIODS);
+    return this.getItem<AcademicPeriod[]>(PERIODS_KEY, []);
   }
 
   public getStudyPrograms(): StudyProgram[] {
-    return this.getItem(PROGRAMS_KEY, INITIAL_PROGRAMS);
+    return this.getItem<StudyProgram[]>(PROGRAMS_KEY, []);
   }
 
   public getCourses(): Course[] {
-    return this.getItem(COURSES_KEY, INITIAL_COURSES);
+    return this.getItem<Course[]>(COURSES_KEY, []);
   }
 
   public getClasses(periodId?: string): AcademicClass[] {
-    const classes = this.getItem(CLASSES_KEY, INITIAL_CLASSES);
+    const classes = this.getItem<AcademicClass[]>(CLASSES_KEY, []);
     if (periodId) {
       return classes.filter((c) => c.academicPeriodId === periodId);
     }
@@ -702,7 +705,7 @@ class AcademicService {
 
   public isStudentEnrolledInClass(classIdentifier: string, studentNim: string, studentId?: string): boolean {
     const cleanNim = studentNim.replace(/[^0-9]/g, '');
-    const members = this.getItem(MEMBERS_KEY, INITIAL_MEMBERS);
+    const members = this.getItem<ClassMember[]>(MEMBERS_KEY, []);
     const classes = this.getClasses();
     
     // Temukan class terkait
@@ -893,7 +896,7 @@ class AcademicService {
   }
 
   public getClassMembers(classId: string): ClassMember[] {
-    const members = this.getItem(MEMBERS_KEY, INITIAL_MEMBERS);
+    const members = this.getItem<ClassMember[]>(MEMBERS_KEY, []);
     const targetClass = this.getClassById(classId);
     const validIds = new Set<string>([classId]);
     if (targetClass) {

@@ -101,6 +101,19 @@ const INITIAL_PROFILE: StudentFullProfile = {
   ktmValidUntil: '31 Agustus 2027'
 };
 
+const EMPTY_PROFILE: StudentFullProfile = {
+  ...INITIAL_PROFILE,
+  id: '', userId: '', nim: '', name: '', arabicName: '', nik: '', email: '', personalEmail: '',
+  phoneNumber: '', birthPlace: '', birthDate: '', gender: 'LAKI_LAKI', bloodType: 'TIDAK_DIKETAHUI',
+  religion: '', avatarUrl: '', streetAddress: '', rtRw: '', village: '', district: '', regency: '',
+  province: '', postalCode: '', residenceType: 'RUMAH_ORANG_TUA', dormitoryName: '', studyProgram: '',
+  studyProgramCode: '', faculty: '', degree: '', entryYear: '', currentSemester: 0, academicStatus: 'NON_AKTIF',
+  academicAdvisorName: '', academicAdvisorNidn: '', previousSchool: '', pesantrenOrigin: '', cumulativeGpa: 0,
+  totalCreditsEarned: 0, maxCreditsNextSemester: 0,
+  emergencyContact: { name: '', relationship: 'WALI', phone: '', address: '' }, islamicAchievements: [],
+  ktmVerificationCode: '', ktmValidUntil: ''
+};
+
 class StudentProfileService {
   /**
    * Mengambil data profil lengkap mahasiswa
@@ -114,7 +127,7 @@ class StudentProfileService {
     } catch {
       // ignore
     }
-    return INITIAL_PROFILE;
+    return { ...EMPTY_PROFILE, id: `profile-${userId}`, userId };
   }
 
   /**

@@ -6,7 +6,6 @@ import {
   UpdateGradePayload 
 } from '../types/gradeAdmin';
 import { apiClient } from '../api/client';
-import { academicService } from './academicService';
 
 export class GradeAdminService {
   /**
@@ -17,14 +16,12 @@ export class GradeAdminService {
       return await apiClient.get<GradeSummaryStats>('/academic/grades/summary');
     } catch {
       return {
-        averageCampusScore: 89.95,
-        totalGradesRecorded: 1,
-        passRatePercent: 100.0,
-        gradeDistribution: [
-          { grade: 'A', count: 1 }
-        ],
-        totalClasses: 7,
-        publishedClasses: 1
+        averageCampusScore: 0,
+        totalGradesRecorded: 0,
+        passRatePercent: 0,
+        gradeDistribution: [],
+        totalClasses: 0,
+        publishedClasses: 0
       };
     }
   }
@@ -36,25 +33,7 @@ export class GradeAdminService {
     try {
       return await apiClient.get<ClassGradeSummary[]>('/academic/grades/classes');
     } catch {
-      const classes = academicService.getClasses();
-      return classes.map((c) => ({
-        classId: c.id,
-        className: c.className || c.section || 'Kelas A',
-        academicYear: c.academicPeriodName || 'Semester Ganjil 2026/2027',
-        courseCode: c.courseCode,
-        courseName: c.courseName,
-        credits: c.credits,
-        studyProgramName: c.studyProgramCode === 'PAI' ? 'Pendidikan Agama Islam' : c.studyProgramCode === 'PIAUD' ? 'Pendidikan Islam Anak Usia Dini' : 'Mata Kuliah Umum',
-        studyProgramCode: c.studyProgramCode,
-        lecturerName: c.lecturerName,
-        enrolledCount: c.studentCount || 1,
-        gradedCount: 1,
-        averageScore: 89.95,
-        highestScore: 89.95,
-        lowestScore: 89.95,
-        status: 'DITERBITKAN',
-        publishedAt: '2026-08-20T09:00:00Z'
-      }));
+      return [];
     }
   }
 
@@ -65,43 +44,7 @@ export class GradeAdminService {
     try {
       return await apiClient.get<StudentCourseGrade[]>(`/academic/grades/classes/${classId}/students`);
     } catch {
-      const members = academicService.getClassMembers(classId);
-      if (members.length > 0) {
-        return members.map((m) => ({
-          enrollmentId: m.id,
-          studentId: m.studentId,
-          studentName: m.studentName,
-          studentNim: m.studentNim,
-          studyProgramCode: 'PAI',
-          presenceScore: 92.0,
-          assignmentScore: 88.0,
-          quizScore: 90.0,
-          midtermScore: 88.0,
-          finalExamScore: 91.0,
-          finalScore: 89.95,
-          letterGrade: 'A',
-          gradePoint: 4.0,
-          status: 'DITERBITKAN'
-        }));
-      }
-      return [
-        {
-          enrollmentId: 'enr-af-01',
-          studentId: 'usr-mhs-01',
-          studentName: 'Ahmad Fauzi Rahman',
-          studentNim: '21.01.0042',
-          studyProgramCode: 'PAI',
-          presenceScore: 95.0,
-          assignmentScore: 90.0,
-          quizScore: 88.0,
-          midtermScore: 92.0,
-          finalExamScore: 94.0,
-          finalScore: 89.95,
-          letterGrade: 'A',
-          gradePoint: 4.0,
-          status: 'DITERBITKAN'
-        }
-      ];
+      return [];
     }
   }
 

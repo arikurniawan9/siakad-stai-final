@@ -76,9 +76,13 @@ import { runStudentSecurityTests, StudentSecurityTestResult } from './tests/stud
 import './styles/globals.css';
 import './styles/layout.css';
 import './styles/components.css';
+import { purgeLegacyDemoData } from './services/demoDataCleanup';
 
 function MainAppContent() {
   const { user, isAuthenticated } = useAuth();
+  useEffect(() => {
+    purgeLegacyDemoData();
+  }, []);
   const [activePath, setActivePath] = useState<string>(() => {
     let p = typeof window !== 'undefined' ? window.location.pathname : '/';
     if (p === '/materi' || p.startsWith('/materi/')) {

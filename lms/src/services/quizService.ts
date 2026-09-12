@@ -222,13 +222,13 @@ class QuizService {
   public getQuizzes(classId?: string, isStudent = false): Quiz[] {
     try {
       if (typeof localStorage === 'undefined') {
-        let list = INITIAL_QUIZZES;
+        let list: Quiz[] = [];
         if (classId) list = list.filter((q) => q.classId === classId);
         if (isStudent) list = list.filter((q) => q.status === 'DITERBITKAN');
         return list;
       }
       const raw = localStorage.getItem(QUIZZES_STORAGE_KEY);
-      let list: Quiz[] = raw ? JSON.parse(raw) : INITIAL_QUIZZES;
+      let list: Quiz[] = raw ? JSON.parse(raw) : [];
       if (classId) {
         list = list.filter((q) => 
           q.classId === classId || 
@@ -241,7 +241,7 @@ class QuizService {
       }
       return list;
     } catch {
-      return INITIAL_QUIZZES;
+      return [];
     }
   }
 
@@ -290,18 +290,18 @@ class QuizService {
   public getBankQuestions(courseCode?: string): BankQuestion[] {
     try {
       if (typeof localStorage === 'undefined') {
-        let list = INITIAL_BANK_QUESTIONS;
+        let list: BankQuestion[] = [];
         if (courseCode) list = list.filter((b) => b.courseCode === courseCode);
         return list;
       }
       const raw = localStorage.getItem(BANK_QUESTIONS_KEY);
-      let list: BankQuestion[] = raw ? JSON.parse(raw) : INITIAL_BANK_QUESTIONS;
+      let list: BankQuestion[] = raw ? JSON.parse(raw) : [];
       if (courseCode) {
         list = list.filter((b) => b.courseCode === courseCode);
       }
       return list;
     } catch {
-      return INITIAL_BANK_QUESTIONS;
+      return [];
     }
   }
 

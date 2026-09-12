@@ -3,6 +3,10 @@ import { db } from './pool.js';
 import { logger } from '../config/logger.js';
 
 export async function runSeeds(): Promise<void> {
+  if (process.env.ALLOW_DEMO_SEED !== 'true') {
+    logger.info('Demo seed disabled; LMS uses the shared SIAKAD database.');
+    return;
+  }
   logger.info('Starting PostgreSQL Database Seeding...');
   
   const passwordHash = await bcrypt.hash('salam2026!', 10);

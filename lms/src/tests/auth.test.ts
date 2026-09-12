@@ -48,8 +48,8 @@ export function runRbacTests(): { results: TestCaseResult[]; totalPassed: number
     {
       role: 'admin_akademik',
       permission: 'sync:execute',
-      expectedAllowed: true,
-      description: 'Admin akademik berhak menjalankan sinkronisasi data kelas'
+      expectedAllowed: false,
+      description: 'Admin akademik tidak mengelola master; data akademik bersumber dari SIAKAD'
     },
     {
       role: 'administrator_sistem',

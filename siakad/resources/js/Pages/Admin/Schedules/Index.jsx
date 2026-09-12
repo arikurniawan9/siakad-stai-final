@@ -525,7 +525,7 @@ export default function SchedulesIndex({
         <AppLayout title="Penjadwalan Kuliah & Presensi">
             <Head title="Penjadwalan Kuliah & Presensi" />
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
                 {/* 1. COMPACT HERO HEADER DENGAN TEMA DARK-EMERALD RESMI (HIDE SAAT PRINT) */}
                 <div className="print:hidden bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 rounded-2xl p-4 sm:p-5 text-white shadow-md relative border border-slate-700/50 z-10">
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -535,9 +535,9 @@ export default function SchedulesIndex({
                                 <span>MANAJEMEN WAKTU, RUANG KELAS & PRESENSI</span>
                             </div>
                             <h2 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center space-x-2">
-                                <span>Penjadwalan Perkuliahan, Ujian & Presensi Kelas</span>
+                                <span>Jadwal, Ujian & Presensi</span>
                             </h2>
-                            <p className="text-xs text-slate-300 mt-0.5">
+                            <p className="hidden sm:block text-xs text-slate-300 mt-0.5">
                                 Plotting jadwal kelas kuliah mingguan, jadwal ujian (UTS & UAS), serta pencatatan presensi mahasiswa dan BAP 16 pertemuan.
                             </p>
                         </div>
@@ -563,7 +563,7 @@ export default function SchedulesIndex({
                     </div>
 
                     {/* Integrated Sub-bar: Pemilih Tahun Akademik, Program Studi & Kurikulum */}
-                    <div className="relative z-20 mt-3 pt-3 border-t border-slate-700/60 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="relative z-20 mt-3 pt-3 border-t border-slate-700/60 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                         {/* 1. Pemilih Periode Akademik */}
                         <div ref={periodDropdownRef} className="relative">
                             <div className="flex items-center justify-between mb-1 text-[11px]">
@@ -791,8 +791,8 @@ export default function SchedulesIndex({
                 </div>
 
                 {/* 2. TAB NAVIGASI MENU (PERSIS GAYA FASILITAS: GEDUNG & RUANG) (HIDE SAAT PRINT) */}
-                <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-1">
-                    <div className="flex space-x-6">
+                <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-1">
+                    <div className="flex space-x-4 overflow-x-auto -mx-1 px-1 w-full sm:w-auto">
                         {/* Tab 1: Jadwal Perkuliahan */}
                         <button
                             type="button"
@@ -861,7 +861,7 @@ export default function SchedulesIndex({
                     </div>
 
                     {/* Sub-controls based on active tab */}
-                    <div className="flex items-center space-x-2 self-end sm:self-auto mb-2 sm:mb-0">
+                    <div className="flex items-center space-x-2 self-end sm:self-auto mb-1 sm:mb-0">
                         {activeTab === 'classes' && (
                             <>
                                 {/* View Mode Toggle */}
@@ -962,15 +962,15 @@ export default function SchedulesIndex({
                 {activeTab === 'classes' && (
                     <div className="space-y-4 animate-fadeIn">
                         {/* A. FORM INPUT CEPAT KELAS & JADWAL (PERSIS SEPERTI REFERENSI jadwalkelas.png) */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-4">
-                            <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-3 sm:p-4">
+                            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between mb-3 border-b border-slate-100 pb-2">
                                 <div className="flex items-center space-x-2">
                                     <Plus className="w-4 h-4 text-emerald-600" />
                                     <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
                                         Tambah Cepat Data Kelas & Jadwal Perkuliahan
                                     </h3>
                                 </div>
-                                <span className="text-[11px] text-slate-400">
+                                <span className="hidden sm:inline text-[11px] text-slate-400">
                                     Input langsung matakuliah, ruang, kuota dan jam kuliah
                                 </span>
                             </div>
@@ -997,9 +997,9 @@ export default function SchedulesIndex({
                                 </div>
 
                                 {/* Baris 2: Detail Kelas, Kuota, Ruangan, Hari & Waktu */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 items-end">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-2.5 items-end">
                                     {/* Kode Kelas */}
-                                    <div>
+                                    <div className="xl:col-span-2">
                                         <label className="block text-[11px] font-bold text-slate-600 mb-1">
                                             Kode Kelas <span className="text-rose-500">*</span>
                                         </label>
@@ -1014,7 +1014,7 @@ export default function SchedulesIndex({
                                     </div>
 
                                     {/* Kuota */}
-                                    <div>
+                                    <div className="xl:col-span-1">
                                         <label className="block text-[11px] font-bold text-slate-600 mb-1">
                                             Kuota Kelas <span className="text-rose-500">*</span>
                                         </label>
@@ -1030,7 +1030,7 @@ export default function SchedulesIndex({
                                     </div>
 
                                     {/* Ruangan */}
-                                    <div className="lg:col-span-2">
+                                    <div className="xl:col-span-3">
                                         <label className="block text-[11px] font-bold text-slate-600 mb-1">
                                             Ruangan Perkuliahan <span className="text-rose-500">*</span>
                                         </label>
@@ -1050,7 +1050,7 @@ export default function SchedulesIndex({
                                     </div>
 
                                     {/* Hari */}
-                                    <div>
+                                    <div className="xl:col-span-2">
                                         <label className="block text-[11px] font-bold text-slate-600 mb-1">
                                             Hari Kuliah <span className="text-rose-500">*</span>
                                         </label>
@@ -1067,8 +1067,8 @@ export default function SchedulesIndex({
                                     </div>
 
                                     {/* Jam Mulai - Selesai & Tombol Submit */}
-                                    <div className="flex items-center space-x-1.5">
-                                        <div className="flex-1">
+                                    <div className="xl:col-span-4 flex min-w-0 items-center space-x-1.5">
+                                        <div className="min-w-0 flex-1">
                                             <label className="block text-[10px] font-bold text-slate-600 mb-1">Mulai</label>
                                             <input
                                                 type="time"
@@ -1079,7 +1079,7 @@ export default function SchedulesIndex({
                                             />
                                         </div>
                                         <span className="text-slate-400 font-bold mt-5">-</span>
-                                        <div className="flex-1">
+                                        <div className="min-w-0 flex-1">
                                             <label className="block text-[10px] font-bold text-slate-600 mb-1">Selesai</label>
                                             <input
                                                 type="time"
@@ -1103,10 +1103,10 @@ export default function SchedulesIndex({
                         </div>
 
                         {/* B. TOOLBAR PENCARIAN & FILTER TABEL */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-                            <div className="flex flex-wrap items-center gap-2">
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
+                            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
                                 {/* Filter Hari */}
-                                <div className="flex items-center space-x-1">
+                                <div className="flex items-center space-x-1 overflow-x-auto pb-1 -mb-1">
                                     <button
                                         type="button"
                                         onClick={() => setSelectedDayFilter('ALL')}
@@ -1135,7 +1135,7 @@ export default function SchedulesIndex({
                                 </div>
 
                                 {/* Filter Ruangan */}
-                                <div className="flex items-center space-x-1 pl-2 border-l border-slate-200">
+                                <div className="flex items-center space-x-1 sm:pl-2 sm:border-l border-slate-200">
                                     <span className="text-slate-500 text-[11px] font-bold">Ruang:</span>
                                     <select
                                         value={selectedRoomFilter}
@@ -1150,7 +1150,7 @@ export default function SchedulesIndex({
                                 </div>
 
                                 {viewMode === 'table' && (
-                                    <div className="flex items-center space-x-1 pl-2 border-l border-slate-200">
+                                    <div className="flex items-center space-x-1 sm:pl-2 sm:border-l border-slate-200">
                                         <span className="text-slate-500 text-[11px] font-bold">Baris:</span>
                                         <select
                                             value={perPage}
@@ -1170,7 +1170,7 @@ export default function SchedulesIndex({
                             </div>
 
                             {/* Search Box */}
-                            <div className="relative">
+                            <div className="relative w-full lg:w-72">
                                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                 <input
                                     type="text"
@@ -1180,7 +1180,7 @@ export default function SchedulesIndex({
                                         setCurrentPage(1);
                                     }}
                                     placeholder="Cari matakuliah, dosen, ruang, kelas..."
-                                    className="pl-8 pr-7 py-1 bg-white border border-slate-300 rounded-lg text-xs placeholder:text-slate-400 focus:outline-emerald-500 w-60 shadow-2xs"
+                                    className="w-full pl-8 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg text-xs placeholder:text-slate-400 focus:outline-emerald-500 shadow-2xs"
                                 />
                                 {searchTerm && (
                                     <button
@@ -1200,7 +1200,80 @@ export default function SchedulesIndex({
                         {/* C. VIEW MODE 1: TABEL RINCI DATA KELAS (PERSIS SEPERTI jadwalkelas.png) */}
                         {viewMode === 'table' ? (
                             <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-                                <div className="overflow-x-auto">
+                                <div className="lg:hidden divide-y divide-slate-100">
+                                    {paginatedSchedules.length > 0 ? (
+                                        paginatedSchedules.map((s) => {
+                                            const isFull = Number(s.enrolled_count || 0) >= Number(s.class_capacity || 0);
+
+                                            return (
+                                                <article key={s.id} className="p-3 space-y-2.5">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-700">
+                                                                <span>{s.course_code}</span>
+                                                                <span className="text-slate-300">•</span>
+                                                                <span>{s.class_code || s.class_name}</span>
+                                                            </div>
+                                                            <h4 className="mt-0.5 text-sm font-black leading-snug text-slate-900">{s.course_name}</h4>
+                                                            <p className="mt-0.5 text-[11px] font-medium text-slate-500">{s.credits} SKS · Semester {s.semester_level || '-'}</p>
+                                                        </div>
+                                                        <div className="flex shrink-0 gap-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openModal(s)}
+                                                                title="Edit Jadwal Kuliah"
+                                                                className="p-1.5 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition cursor-pointer"
+                                                            >
+                                                                <Edit2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEnrolledClassDetail(s)}
+                                                                title="Lihat Peserta Kelas"
+                                                                className="p-1.5 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition cursor-pointer"
+                                                            >
+                                                                <Users className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setScheduleToDelete(s)}
+                                                                title="Hapus Jadwal Kuliah"
+                                                                className="p-1.5 rounded-md bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition cursor-pointer"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg bg-slate-50 p-2.5 text-[11px]">
+                                                        <div>
+                                                            <span className="block text-slate-400">Jadwal</span>
+                                                            <strong className="text-slate-800">{s.day_of_week}, {formatTimeRange(s.start_time, s.end_time)}</strong>
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-slate-400">Peserta</span>
+                                                            <strong className={isFull ? 'text-amber-700' : 'text-slate-800'}>{s.enrolled_count || 0} / {s.class_capacity}</strong>
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <span className="block text-slate-400">Ruang</span>
+                                                            <strong className="text-slate-800">{s.is_online ? 'Daring / Online' : <>{s.room_code} - {s.room_name}</>}</strong>
+                                                            {!s.is_online && <span className="ml-1 text-slate-500">({s.building_name}, Lt. {s.room_floor || 1})</span>}
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <span className="block text-slate-400">Pengajar</span>
+                                                            <strong className="text-slate-800">{s.lecturer_name || 'Belum ditugaskan'}</strong>
+                                                        </div>
+                                                    </div>
+                                                </article>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="p-8 text-center text-slate-400">
+                                            <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                                            <p className="text-xs font-bold">Tidak ada jadwal yang cocok.</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="hidden lg:block overflow-x-auto">
                                     <table className="w-full text-left text-xs border-collapse">
                                         <thead>
                                             <tr className="bg-slate-800 text-white font-bold uppercase tracking-wider text-[11px]">

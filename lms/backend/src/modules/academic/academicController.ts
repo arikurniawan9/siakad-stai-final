@@ -203,6 +203,50 @@ export async function syncAcademicData(req: AuthenticatedRequest, res: Response,
   }
 }
 
+/**
+ * Menerima notifikasi push master dari SIAKAD.
+ * Master tidak disalin menjadi data lokal LMS: kedua aplikasi membaca basis
+ * data akademik SIAKAD yang sama. LMS hanya mencatat penerimaan batch untuk
+ * observabilitas dan memakai endpoint read-only saat membutuhkan kelas.
+ */
+export async function acknowledgeAcademicSync(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const body = req.body || {};
+    const counts = {
+      periods: body.academicPeriod ? 1 : 0,
+      programs: Array.isArray(body.programs) ? body.programs.length : 0,
+      courses: Array.isArray(body.courses) ? body.courses.length : 0,
+      classes: Array.isArray(body.syncClasses) ? body.syncClasses.length : 0,
+      students: Array.isArray(body.syncStudents) ? body.syncStudents.length : 0,
+    };
+    const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+
+    // Tabel ini tersedia pada database SIAKAD bersama. Jangan menggagalkan
+    // acknowledgement jika instalasi LMS berdiri dengan database terpisah.
+    try {
+      await db.query(
+        `INSERT INTO lms_sync_logs (sync_type, status, records_processed, payload_summary, created_at, updated_at)
+         VALUES ($1, $2, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        ['PUSH_MASTER_TO_LMS', 'SUCCESS', total, JSON.stringify({ source: 'SIAKAD', counts })]
+      );
+    } catch {
+      // Logging bersifat best-effort; data master tetap bersumber dari SIAKAD.
+    }
+
+    res.json({
+      data: {
+        status: 'SUKSES',
+        sourceSystem: 'SIAKAD_ALITTIHAD',
+        mode: 'READ_THROUGH_SHARED_SIAKAD_DATABASE',
+        counts,
+        message: 'Master akademik diterima. LMS menggunakan data read-only dari SIAKAD.'
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getSyncLogs(_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const result = await db.query('SELECT * FROM academic_sync_logs ORDER BY timestamp DESC LIMIT 50');

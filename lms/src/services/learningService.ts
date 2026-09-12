@@ -640,8 +640,8 @@ class LearningService {
       const hasOldDummy = rawMeetings && rawMeetings.includes('Ushul Fiqih') && rawMeetings.includes('cls-20261-pai301-a');
 
       if (isLatest !== 'true' || hasOldDummy) {
-        localStorage.setItem(RPS_KEY, JSON.stringify(INITIAL_RPS_MAP));
-        localStorage.setItem(MEETINGS_KEY, JSON.stringify(INITIAL_MEETINGS));
+        localStorage.removeItem(RPS_KEY);
+        localStorage.removeItem(MEETINGS_KEY);
         localStorage.setItem(SCHEMA_VERSION_KEY, 'true');
       }
     } catch {
@@ -652,12 +652,20 @@ class LearningService {
   /**
    * Mengambil Rencana Pembelajaran Semester (RPS) untuk kelas terkait
    */
-  public getRPS(classId: string, classInfo?: AcademicClass | null): RPSSection {
+  public getRPS(classId: string, classInfoArg?: AcademicClass | null): RPSSection {
+    const classInfo = classInfoArg as AcademicClass;
+    // RPS hanya berasal dari data tersimpan/API; jangan membuat isi contoh di sisi klien.
+    const emptyRps: RPSSection = {
+      description: '', learningOutcomes: [], teachingMethods: [], assessmentWeights: [], references: [], updatedAt: ''
+    };
+    const storedRps = localStorage.getItem(RPS_KEY);
+    if (!storedRps) return emptyRps;
     try {
       const data = localStorage.getItem(RPS_KEY);
-      const map = data ? JSON.parse(data) : INITIAL_RPS_MAP;
+      const map = data ? JSON.parse(data) : {};
 
       if (map[classId]) return map[classId];
+      return emptyRps;
 
       // Cek berdasarkan kode kelas atau kode mata kuliah
       if (classInfo) {
@@ -721,9 +729,9 @@ class LearningService {
         return generatedRps;
       }
 
-      return INITIAL_RPS_MAP['cls-20261-pai301-a'];
+      return emptyRps;
     } catch {
-      return INITIAL_RPS_MAP['cls-20261-pai301-a'];
+      return emptyRps;
     }
   }
 
@@ -1041,9 +1049,9 @@ class LearningService {
   private getMeetingsData(): CourseMeeting[] {
     try {
       const data = localStorage.getItem(MEETINGS_KEY);
-      return data ? JSON.parse(data) : INITIAL_MEETINGS;
+      return data ? JSON.parse(data) : [];
     } catch {
-      return INITIAL_MEETINGS;
+      return [];
     }
   }
 

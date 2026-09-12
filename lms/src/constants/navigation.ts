@@ -13,11 +13,8 @@ import {
   Video, 
   Users, 
   Settings, 
-  Layers, 
   ShieldCheck, 
   Activity,
-  FileSpreadsheet,
-  RefreshCw,
   BarChart2,
   Lock,
   QrCode
@@ -29,6 +26,22 @@ import { UserRole } from '../types/roles';
  * Tautan resmi portal induk SALAM SIAKAD STAI Al-Ittihad Cianjur
  */
 export const SIAKAD_PORTAL_URL = ((import.meta as any).env?.VITE_SIAKAD_URL || 'https://salam.stai-alittihad.ac.id').replace(/\/+$/, '');
+
+/**
+ * Master akademik (mahasiswa, dosen, prodi, periode, mata kuliah, kelas,
+ * ruangan, jadwal, KRS/KHS dan nilai final) dikelola di SIAKAD.
+ * LMS hanya menyediakan tautan resmi ke portal sumber data tersebut.
+ */
+const SIAKAD_MASTER_LINK: NavItem = {
+  id: 'portal-siakad',
+  label: 'Buka Portal SIAKAD',
+  path: SIAKAD_PORTAL_URL,
+  icon: FileText,
+  badge: 'SIAKAD',
+  isExternal: true,
+  externalUrl: SIAKAD_PORTAL_URL,
+  description: 'Kelola data akademik pada portal SIAKAD resmi.'
+};
 
 // =========================================================================
 // 1. NAVIGASI KHUSUS MAHASISWA (PEMBELAJARAN DARING)
@@ -65,9 +78,7 @@ export const NAVIGATION_MAHASISWA: NavGroup[] = [
     id: 'akademik-group',
     title: 'PORTAL SIAKAD (ADMINISTRASI RESMI)',
     items: [
-      { id: 'krs', label: 'Kartu Rencana Studi (KRS)', path: '/krs', icon: FileText, badge: 'SIAKAD' },
-      { id: 'khs', label: 'Kartu Hasil Studi (KHS)', path: '/khs', icon: FileSpreadsheet, badge: 'SIAKAD' },
-      { id: 'buku-nilai', label: 'Buku Nilai Perkuliahan', path: '/buku-nilai', icon: Award },
+      { ...SIAKAD_MASTER_LINK, id: 'portal-siakad-mahasiswa', label: 'KRS, KHS & Administrasi Akademik' },
     ]
   },
   {
@@ -128,7 +139,7 @@ export const NAVIGATION_DOSEN: NavGroup[] = [
     items: [
       { id: 'jadwal-mengajar', label: 'Jadwal Mengajar', path: '/jadwal', icon: Calendar },
       { id: 'kalender-akademik', label: 'Kalender Akademik', path: '/kalender', icon: Calendar },
-      { id: 'rekap-nilai', label: 'Input DPNA di SIAKAD', path: '/admin/nilai', icon: Award, badge: 'SIAKAD' },
+      { ...SIAKAD_MASTER_LINK, id: 'portal-siakad-dosen', label: 'Input DPNA & Administrasi SIAKAD' },
       { id: 'pengumuman', label: 'Pengumuman Kampus', path: '/pengumuman', icon: Bell },
       { id: 'notifikasi-pusat', label: 'Pusat Notifikasi', path: '/notifikasi', icon: Bell },
     ]
@@ -185,8 +196,7 @@ export const NAVIGATION_DOSEN_PA: NavGroup[] = [
     items: [
       { id: 'jadwal-mengajar', label: 'Jadwal Mengajar', path: '/jadwal', icon: Calendar },
       { id: 'kalender-akademik', label: 'Kalender Akademik', path: '/kalender', icon: Calendar },
-      { id: 'mahasiswa-bimbingan', label: 'Bimbingan KRS di SIAKAD', path: '/bimbingan', icon: Users, badge: 'SIAKAD' },
-      { id: 'rekap-nilai', label: 'Input DPNA di SIAKAD', path: '/admin/nilai', icon: Award, badge: 'SIAKAD' },
+      { ...SIAKAD_MASTER_LINK, id: 'portal-siakad-dosen-pa', label: 'Bimbingan KRS & Nilai di SIAKAD' },
       { id: 'pengumuman', label: 'Pengumuman Kampus', path: '/pengumuman', icon: Bell },
       { id: 'notifikasi-pusat', label: 'Pusat Notifikasi', path: '/notifikasi', icon: Bell },
     ]
@@ -225,14 +235,9 @@ export const NAVIGATION_KAPRODI: NavGroup[] = [
   },
   {
     id: 'sinkronisasi-group',
-    title: 'SINKRONISASI & INTEGRASI SIAKAD',
+    title: 'ADMINISTRASI AKADEMIK',
     items: [
-      { id: 'sinkronisasi-akademik', label: 'Sinkronisasi SIAKAD', path: '/admin/sinkronisasi', icon: RefreshCw, badge: 'Bridge' },
-      { id: 'program-studi', label: 'Program Studi (SIAKAD)', path: '/admin/prodi', icon: Layers, badge: 'SIAKAD' },
-      { id: 'mata-kuliah-master', label: 'Katalog MK (SIAKAD)', path: '/admin/mata-kuliah', icon: BookOpen, badge: 'SIAKAD' },
-      { id: 'jadwal-master', label: 'Jadwal Kuliah (SIAKAD)', path: '/admin/jadwal', icon: Calendar, badge: 'SIAKAD' },
-      { id: 'validasi-krs', label: 'Persetujuan KRS (SIAKAD)', path: '/bimbingan', icon: Users, badge: 'SIAKAD' },
-      { id: 'monitoring-nilai', label: 'Rekap Nilai DPNA (SIAKAD)', path: '/admin/nilai', icon: Award, badge: 'SIAKAD' },
+      { ...SIAKAD_MASTER_LINK, id: 'portal-siakad-kaprodi', label: 'Program Studi, Kelas & Persetujuan KRS' },
     ]
   },
   {
@@ -271,20 +276,13 @@ export const NAVIGATION_ADMIN_AKADEMIK: NavGroup[] = [
     items: [
       { id: 'monitoring-aktivitas', label: 'Monitoring Aktivitas Kelas', path: '/admin/monitoring', icon: Activity },
       { id: 'laporan-institusi', label: 'Laporan Pembelajaran LMS', path: '/laporan', icon: BarChart2 },
-      { id: 'data-mahasiswa', label: 'Pengguna Mahasiswa LMS', path: '/admin/mahasiswa', icon: Users },
-      { id: 'data-dosen', label: 'Pengguna Dosen LMS', path: '/admin/dosen', icon: Users },
     ]
   },
   {
     id: 'sinkronisasi-group',
     title: 'SINKRONISASI DATA SIAKAD',
     items: [
-      { id: 'sinkronisasi-akademik', label: 'Sinkronisasi SIAKAD', path: '/admin/sinkronisasi', icon: RefreshCw, badge: 'Bridge' },
-      { id: 'tahun-akademik', label: 'Periode Akademik (SIAKAD)', path: '/admin/periode', icon: Calendar, badge: 'SIAKAD' },
-      { id: 'program-studi', label: 'Program Studi (SIAKAD)', path: '/admin/prodi', icon: Layers, badge: 'SIAKAD' },
-      { id: 'mata-kuliah-master', label: 'Mata Kuliah & Kelas (SIAKAD)', path: '/admin/mata-kuliah', icon: BookOpen, badge: 'SIAKAD' },
-      { id: 'jadwal-master', label: 'Ruangan & Jadwal (SIAKAD)', path: '/admin/jadwal', icon: Calendar, badge: 'SIAKAD' },
-      { id: 'monitoring-nilai', label: 'Rekap Nilai DPNA (SIAKAD)', path: '/admin/nilai', icon: Award, badge: 'SIAKAD' },
+      { ...SIAKAD_MASTER_LINK, id: 'portal-siakad-admin', label: 'Kelola Master Akademik di SIAKAD' },
     ]
   },
   {
@@ -330,9 +328,7 @@ export const NAVIGATION_PIMPINAN: NavGroup[] = [
     id: 'tinjauan-akademik-group',
     title: 'DATA TERPADU SIAKAD',
     items: [
-      { id: 'program-studi', label: 'Program Studi & Kurikulum', path: '/admin/prodi', icon: Layers, badge: 'SIAKAD' },
-      { id: 'katalog-mk', label: 'Katalog MK & Kelas', path: '/admin/mata-kuliah', icon: BookOpen, badge: 'SIAKAD' },
-      { id: 'jadwal-kuliah', label: 'Jadwal Perkuliahan', path: '/admin/jadwal', icon: Calendar, badge: 'SIAKAD' },
+      { ...SIAKAD_MASTER_LINK, id: 'portal-siakad-pimpinan', label: 'Lihat Master Akademik di SIAKAD' },
       { id: 'kalender-akademik', label: 'Kalender Akademik', path: '/kalender', icon: Calendar },
     ]
   },
@@ -371,20 +367,13 @@ export const NAVIGATION_SUPER_ADMIN: NavGroup[] = [
     items: [
       { id: 'monitoring-aktivitas', label: 'Monitoring Pembelajaran Daring', path: '/admin/monitoring', icon: Activity },
       { id: 'laporan-institusi', label: 'Laporan Pembelajaran LMS', path: '/laporan', icon: BarChart2 },
-      { id: 'data-mahasiswa', label: 'Pengguna Mahasiswa LMS', path: '/admin/mahasiswa', icon: Users },
-      { id: 'data-dosen', label: 'Pengguna Dosen LMS', path: '/admin/dosen', icon: Users },
     ]
   },
   {
     id: 'sinkronisasi-group',
     title: 'SINKRONISASI & INTEGRASI SIAKAD',
     items: [
-      { id: 'sinkronisasi-akademik', label: 'Sinkronisasi SIAKAD', path: '/admin/sinkronisasi', icon: RefreshCw, badge: 'Bridge' },
-      { id: 'tahun-akademik', label: 'Periode Akademik (SIAKAD)', path: '/admin/periode', icon: Calendar, badge: 'SIAKAD' },
-      { id: 'program-studi', label: 'Program Studi (SIAKAD)', path: '/admin/prodi', icon: Layers, badge: 'SIAKAD' },
-      { id: 'mata-kuliah-master', label: 'Mata Kuliah & Kelas (SIAKAD)', path: '/admin/mata-kuliah', icon: BookOpen, badge: 'SIAKAD' },
-      { id: 'jadwal-master', label: 'Ruangan & Jadwal (SIAKAD)', path: '/admin/jadwal', icon: Calendar, badge: 'SIAKAD' },
-      { id: 'monitoring-nilai', label: 'Rekap Nilai DPNA (SIAKAD)', path: '/admin/nilai', icon: Award, badge: 'SIAKAD' },
+      { ...SIAKAD_MASTER_LINK, id: 'portal-siakad-superadmin', label: 'Kelola Master Akademik di SIAKAD' },
     ]
   },
   {
@@ -446,7 +435,7 @@ export const MOBILE_NAV_DOSEN_PA: NavItem[] = [
 export const MOBILE_NAV_KAPRODI: NavItem[] = [
   { id: 'mobile-beranda', label: 'Beranda', path: '/', icon: Home },
   { id: 'mobile-monitoring', label: 'Monitoring', path: '/admin/monitoring', icon: Activity },
-  { id: 'mobile-sinkronisasi', label: 'Sinkronisasi', path: '/admin/sinkronisasi', icon: RefreshCw },
+  { ...SIAKAD_MASTER_LINK, id: 'mobile-siakad', label: 'SIAKAD' },
   { id: 'mobile-laporan', label: 'Laporan', path: '/laporan', icon: BarChart2 },
   { id: 'mobile-akun', label: 'Akun', path: '/profil', icon: User },
 ];
@@ -454,8 +443,8 @@ export const MOBILE_NAV_KAPRODI: NavItem[] = [
 export const MOBILE_NAV_ADMIN_AKADEMIK: NavItem[] = [
   { id: 'mobile-beranda', label: 'Beranda', path: '/', icon: Home },
   { id: 'mobile-monitoring', label: 'Monitoring', path: '/admin/monitoring', icon: Activity },
-  { id: 'mobile-sinkronisasi', label: 'Sinkronisasi', path: '/admin/sinkronisasi', icon: RefreshCw },
-  { id: 'mobile-pengguna', label: 'Pengguna', path: '/admin/mahasiswa', icon: Users },
+  { ...SIAKAD_MASTER_LINK, id: 'mobile-siakad-admin', label: 'SIAKAD' },
+  { id: 'mobile-laporan', label: 'Laporan', path: '/laporan', icon: BarChart2 },
   { id: 'mobile-akun', label: 'Akun', path: '/profil', icon: User },
 ];
 
@@ -469,8 +458,9 @@ export const MOBILE_NAV_PIMPINAN: NavItem[] = [
 
 export const MOBILE_NAV_SUPER_ADMIN: NavItem[] = [
   { id: 'mobile-beranda', label: 'Beranda', path: '/', icon: Home },
-  { id: 'mobile-sinkronisasi', label: 'Sinkronisasi', path: '/admin/sinkronisasi', icon: RefreshCw },
+  { ...SIAKAD_MASTER_LINK, id: 'mobile-siakad-superadmin', label: 'SIAKAD' },
   { id: 'mobile-monitoring', label: 'Monitoring', path: '/admin/monitoring', icon: Activity },
+  { id: 'mobile-laporan', label: 'Laporan', path: '/laporan', icon: BarChart2 },
   { id: 'mobile-keamanan', label: 'Keamanan', path: '/admin/keamanan', icon: ShieldCheck },
   { id: 'mobile-akun', label: 'Akun', path: '/profil', icon: User },
 ];

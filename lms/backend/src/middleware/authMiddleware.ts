@@ -121,30 +121,6 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
     req.user = decoded;
     return next();
   } catch {
-    // 2. Fallback untuk token demo/evaluator & role switcher
-    if (token.startsWith('salam_jwt_')) {
-      const headerRole = (req.headers['x-user-role'] as string) || '';
-      const headerUserId = (req.headers['x-user-id'] as string) || '';
-      
-      let detectedRole = 'dosen';
-      if (headerRole && DEMO_USERS_MAP[headerRole]) {
-        detectedRole = headerRole;
-      } else {
-        // Coba ekstrak dari token format salam_jwt_<role>_...
-        const parts = token.split('_');
-        if (parts.length >= 3 && DEMO_USERS_MAP[parts[2]]) {
-          detectedRole = parts[2];
-        }
-      }
-
-      const baseUser = DEMO_USERS_MAP[detectedRole] || DEMO_USERS_MAP['dosen'];
-      req.user = {
-        ...baseUser,
-        id: headerUserId || baseUser.id
-      };
-      return next();
-    }
-
     res.status(401).json({
       error: {
         code: 'SESSION_EXPIRED',
@@ -152,4 +128,34 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
       }
     });
   }
+}
+
+void DEMO_USERS_MAP;
+
+/**
+ * Autentikasi gateway-ke-gateway untuk push master dari SIAKAD.
+ * Endpoint ini tidak memakai JWT pengguna karena dipanggil oleh server SIAKAD.
+ */
+export function requireSiakadSync(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  const token = extractToken(req);
+
+  if (!token || token !== ENV.SIAKAD_SYNC_KEY) {
+    res.status(401).json({
+      error: {
+        code: 'INVALID_SIAKAD_SYNC_KEY',
+        message: 'Kunci sinkronisasi SIAKAD tidak valid.'
+      }
+    });
+    return;
+  }
+
+  req.user = {
+    id: 'siakad-gateway',
+    username: 'siakad-gateway',
+    name: 'SALAM SIAKAD Gateway',
+    identityNumber: '',
+    email: '',
+    role: 'siakad_gateway'
+  };
+  next();
 }

@@ -49,7 +49,13 @@ export const MobileNav: React.FC<MobileNavProps> = ({ activePath, onNavigate }) 
           <button
             key={item.id}
             className={`mobile-nav-item ${isActive ? 'active' : ''}`}
-            onClick={() => onNavigate(item.path)}
+            onClick={() => {
+              if (item.isExternal && item.externalUrl) {
+                window.open(item.externalUrl, '_blank', 'noopener,noreferrer');
+              } else {
+                onNavigate(item.path);
+              }
+            }}
             aria-label={item.label}
           >
             <div style={{ position: 'relative', display: 'inline-flex' }}>

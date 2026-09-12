@@ -44,21 +44,25 @@ export const attendanceService = {
     const meeting = learningService.getMeetingById(meetingId);
     const classId = meeting?.classId || 'cls-20261-pai301-a';
     const academicClass = academicService.getClassById(classId) || academicService.getClasses()[0];
+    if (!meeting || !academicClass) {
+      return {
+        meeting: {
+          id: meetingId, classId, meetingNumber: 0, title: '', topic: '', scheduledDate: '',
+          startTime: '', endTime: '', className: '', classCode: '', courseName: '', credits: 0,
+          lecturerName: '', lecturerId: ''
+        },
+        session: {
+          id: '', meetingId, classId, lecturerId: '', sessionStatus: 'DITUTUP', deliveryMode: 'TATAP_MUKA',
+          qrToken: '', qrExpiresAt: '', passcode: '', openedAt: '', studentAttendanceRate: 0,
+          teachingJournal: '', journalNotes: '', createdAt: '', updatedAt: ''
+        },
+        students: [],
+        summary: { totalStudents: 0, countHadir: 0, countSakit: 0, countIzin: 0, countAlpa: 0, attendancePercentage: 0 }
+      };
+    }
     const members = academicService.getClassMembers(academicClass?.id || classId);
 
-    const studentRecords: StudentAttendanceRecord[] = (members.length > 0 ? members : [
-      {
-        id: 'mbr-fallback-01',
-        externalId: 'EXT-MBR-1',
-        classId: academicClass?.id || classId,
-        studentId: 'usr-mhs-01',
-        studentNim: '21.01.0042',
-        studentName: 'Ahmad Fauzi Rahman',
-        enrollmentDate: '2026-08-20',
-        status: 'TERDAFTAR',
-        sourceSystem: 'SIAKAD_STAI'
-      }
-    ]).map((m, idx) => ({
+    const studentRecords: StudentAttendanceRecord[] = members.map((m, idx) => ({
       studentId: m.studentId,
       studentName: m.studentName,
       studentNim: m.studentNim,
@@ -239,22 +243,13 @@ export const attendanceService = {
       return await attendanceApi.getClassSummary(classId);
     } catch {
       const academicClass = academicService.getClassById(classId) || academicService.getClasses()[0];
+      if (!academicClass) {
+        return { classInfo: { id: classId, name: '', code: '', courseName: '', credits: 0, lecturerName: '', lecturerNidn: '' }, meetings: [], recap: [] };
+      }
       const meetings = learningService.getMeetingsByClass(academicClass?.id || classId);
       const members = academicService.getClassMembers(academicClass?.id || classId);
 
-      const recapRows: StudentRecapRow[] = (members.length > 0 ? members : [
-        {
-          id: 'mbr-fallback-01',
-          externalId: 'EXT-MBR-1',
-          classId: academicClass?.id || classId,
-          studentId: 'usr-mhs-01',
-          studentNim: '21.01.0042',
-          studentName: 'Ahmad Fauzi Rahman',
-          enrollmentDate: '2026-08-20',
-          status: 'TERDAFTAR',
-          sourceSystem: 'SIAKAD_STAI'
-        }
-      ]).map((m) => {
+      const recapRows: StudentRecapRow[] = members.map((m) => {
         const meetingStatuses: Record<string | number, AttendanceStatus> = {};
         meetings.forEach((mtg, i) => {
           meetingStatuses[mtg.meetingNumber || i + 1] = 'HADIR';
@@ -315,7 +310,7 @@ export const attendanceService = {
         izin: 0,
         alpa: 0,
         percentage: 100,
-        isEligibleForExam: true
+        isEligibleForExam: false
       }));
     }
   }

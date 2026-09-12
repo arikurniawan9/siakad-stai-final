@@ -147,14 +147,30 @@ class LecturerProfileService {
    */
   public getProfile(user: UserAuthProfile): LecturerFullProfile {
     let baseProfile: LecturerFullProfile | null = null;
+    let hasStoredProfile = false;
 
     try {
       const raw = localStorage.getItem(`${STORAGE_KEY_LECTURER_PROFILE}_${user.id}`);
       if (raw) {
         baseProfile = JSON.parse(raw);
+        hasStoredProfile = true;
       }
     } catch {
       // ignore
+    }
+
+    // Tanpa data profil dari SIAKAD, tampilkan keadaan kosong (bukan profil demo).
+    if (!hasStoredProfile) {
+      baseProfile = {
+        ...(baseProfile as LecturerFullProfile),
+        nidn: user.identityNumber || '', nik: '', name: user.name || '', titleWithDegree: user.name || '',
+        arabicName: '', email: user.email || '', personalEmail: '', phoneNumber: '', birthPlace: '', birthDate: '',
+        religion: '', avatarUrl: user.avatarUrl || '', streetAddress: '', village: '', district: '', regency: '',
+        province: '', postalCode: '', faculty: '', studyProgram: user.studyProgram || '', academicPosition: '',
+        rankAndGrade: '', employmentStatus: 'DOSEN_TIDAK_TETAP', serdosNumber: '', isSerdos: false, sintaId: '',
+        googleScholarId: '', totalTeachingCredits: 0, mentoredStudentsCount: 0, thesisStudentsCount: 0,
+        teachingCourses: [], educationHistory: [], publications: [], ktdVerificationCode: '', ktdValidUntil: ''
+      };
     }
 
     if (!baseProfile) {

@@ -858,13 +858,7 @@ export class KhsService {
     academicYear: string;
     isCurrent: boolean;
   }> {
-    return [
-      { id: 'sem-20261', name: 'Semester 5 (2026/2027 Ganjil)', semesterNumber: 5, academicYear: '2026/2027 Ganjil', isCurrent: true },
-      { id: 'sem-20252', name: 'Semester 4 (2025/2026 Genap)', semesterNumber: 4, academicYear: '2025/2026 Genap', isCurrent: false },
-      { id: 'sem-20251', name: 'Semester 3 (2025/2026 Ganjil)', semesterNumber: 3, academicYear: '2025/2026 Ganjil', isCurrent: false },
-      { id: 'sem-20242', name: 'Semester 2 (2024/2025 Genap)', semesterNumber: 2, academicYear: '2024/2025 Genap', isCurrent: false },
-      { id: 'sem-20241', name: 'Semester 1 (2024/2025 Ganjil)', semesterNumber: 1, academicYear: '2024/2025 Ganjil', isCurrent: false }
-    ];
+    return [];
   }
 
   /**
@@ -874,6 +868,13 @@ export class KhsService {
     studentId: string = 'usr-mhs-01',
     semesterId: string = 'sem-20261'
   ): KhsSemesterData {
+    return {
+      id: '', semesterId, semesterNumber: 0, academicPeriodName: '', academicYear: '', semesterType: 'Ganjil',
+      studentId, studentName: '', studentNim: '', studyProgram: '', studyProgramCode: '', academicDegree: '',
+      academicAdvisorName: '', academicAdvisorNidn: '', headOfStudyProgramName: '', headOfStudyProgramNidn: '',
+      totalCreditsEnrolled: 0, totalCreditsPassed: 0, semesterGpa: 0, cumulativeGpa: 0, totalCumulativeCredits: 0,
+      maxCreditNextSemester: 0, academicStanding: '', verificationCode: '', publishedDate: '', grades: []
+    };
     let grades: KhsGradeItem[] = SEMESTER_5_GRADES;
     let semesterNumber = 5;
     let academicPeriodName = 'Tahun Akademik 2026/2027 Ganjil';
@@ -993,19 +994,18 @@ export class KhsService {
    * Mengambil histori tren capaian belajar semester ke semester (Tren IPS & IPK)
    */
   getPerformanceTrend(_studentId: string = 'usr-mhs-01'): KhsPerformanceTrend[] {
-    return [
-      { semester: 'Sem 1', semesterNumber: 1, ips: 3.93, ipk: 3.93, sksTaken: 19, sksPassed: 19 },
-      { semester: 'Sem 2', semesterNumber: 2, ips: 3.88, ipk: 3.90, sksTaken: 19, sksPassed: 19 },
-      { semester: 'Sem 3', semesterNumber: 3, ips: 3.96, ipk: 3.93, sksTaken: 20, sksPassed: 20 },
-      { semester: 'Sem 4', semesterNumber: 4, ips: 3.86, ipk: 3.90, sksTaken: 21, sksPassed: 21 },
-      { semester: 'Sem 5', semesterNumber: 5, ips: 3.89, ipk: 3.91, sksTaken: 21, sksPassed: 21 }
-    ];
+    return [];
   }
 
   /**
    * Mengambil transkrip nilai akademik lengkap dari semester awal sampai akhir
    */
   getFullTranscript(studentId: string = 'usr-mhs-01'): StudentTranscriptSummary {
+    return {
+      studentId, studentName: '', studentNim: '', studyProgram: '', studyProgramCode: '', academicDegree: '',
+      entryYear: '', totalCreditsEarned: 0, totalQualityPoints: 0, cumulativeGpa: 0, academicStanding: '',
+      verificationCode: '', groups: []
+    };
     const groups: KhsTranscriptGroup[] = [
       {
         semesterNumber: 1,

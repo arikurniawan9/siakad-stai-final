@@ -16,16 +16,9 @@ export class MonitoringAdminService {
       return await apiClient.get<MonitoringSummaryStats>('/monitoring/summary');
     } catch {
       return {
-        totalInteractions: 142,
-        totalMaterialAccesses: 48,
-        avgVideoProgressPercent: 82.5,
-        totalAssignmentSubmissions: 35,
-        avgAssignmentScore: 86.4,
-        totalQuizAttempts: 42,
-        avgQuizScore: 84.8,
-        totalForumPosts: 17,
-        averageEngagementRate: 88.5,
-        atRiskCount: 2
+        totalInteractions: 0, totalMaterialAccesses: 0, avgVideoProgressPercent: 0,
+        totalAssignmentSubmissions: 0, avgAssignmentScore: 0, totalQuizAttempts: 0,
+        avgQuizScore: 0, totalForumPosts: 0, averageEngagementRate: 0, atRiskCount: 0
       };
     }
   }
@@ -49,7 +42,8 @@ export class MonitoringAdminService {
       const qs = params.toString();
       return await apiClient.get<ActivityFeedItem[]>(`/monitoring/realtime-feed${qs ? `?${qs}` : ''}`);
     } catch {
-      const now = new Date();
+      return [];
+      /* const now = new Date();
       return [
         {
           activityId: 'act-01',
@@ -95,7 +89,7 @@ export class MonitoringAdminService {
           detail: 'Menyelesaikan Video Interaktif: Akad Mudharabah (100%)',
           timestamp: new Date(now.getTime() - 50 * 60 * 1000).toISOString()
         }
-      ];
+      ]; */
     }
   }
 
@@ -106,7 +100,8 @@ export class MonitoringAdminService {
     try {
       return await apiClient.get<ClassEngagementItem[]>('/monitoring/classes-engagement');
     } catch {
-      return [
+      return [];
+      /* return [
         {
           classId: 'cls-pai-01',
           className: 'Kelas A',
@@ -143,7 +138,7 @@ export class MonitoringAdminService {
           averageQuizScore: 84.0,
           statusHealth: 'SANGAT_BAIK'
         }
-      ];
+      ]; */
     }
   }
 
@@ -154,7 +149,8 @@ export class MonitoringAdminService {
     try {
       return await apiClient.get<AtRiskStudentItem[]>('/monitoring/at-risk-students');
     } catch {
-      return [
+      return [];
+      /* return [
         {
           profileId: 'prof-mhs-08',
           nim: '23.04.0005',
@@ -191,7 +187,7 @@ export class MonitoringAdminService {
           lastActiveDaysAgo: 2,
           recommendedAction: 'Anjurkan sesi bimbingan remedial bersama Dosen Pengampu'
         }
-      ];
+      ]; */
     }
   }
 }

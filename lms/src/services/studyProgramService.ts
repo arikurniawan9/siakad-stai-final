@@ -124,6 +124,7 @@ const INITIAL_STUDY_PROGRAMS: StudyProgram[] = [
     activeCurriculumName: 'Kurikulum Bisnis & Halal Value Chain 2024'
   }
 ];
+void INITIAL_STUDY_PROGRAMS;
 
 export class StudyProgramService {
   private getLocalPrograms(): StudyProgram[] {
@@ -135,8 +136,7 @@ export class StudyProgramService {
     } catch {
       // fallback
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_STUDY_PROGRAMS));
-    return INITIAL_STUDY_PROGRAMS;
+    return [];
   }
 
   private saveLocalPrograms(programs: StudyProgram[]): void {

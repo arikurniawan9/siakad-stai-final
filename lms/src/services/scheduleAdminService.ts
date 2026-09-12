@@ -17,26 +17,13 @@ export class ScheduleAdminService {
       return await apiClient.get<ScheduleSummaryStats>('/academic/schedules/summary');
     } catch {
       return {
-        totalSchedules: 6,
-        totalRooms: 6,
-        totalActiveRooms: 6,
-        totalScheduledCredits: 17,
-        utilizationRatePercent: 12,
+        totalSchedules: 0,
+        totalRooms: 0,
+        totalActiveRooms: 0,
+        totalScheduledCredits: 0,
+        utilizationRatePercent: 0,
         conflictsCount: 0,
-        dayDistribution: [
-          { dayOfWeek: 'Senin', count: 2 },
-          { dayOfWeek: 'Selasa', count: 1 },
-          { dayOfWeek: 'Rabu', count: 1 },
-          { dayOfWeek: 'Kamis', count: 1 },
-          { dayOfWeek: 'Jumat', count: 1 }
-        ],
-        roomTypeDistribution: [
-          { roomType: 'TEORI', count: 2 },
-          { roomType: 'SMART_CLASS', count: 1 },
-          { roomType: 'LABORATORIUM', count: 1 },
-          { roomType: 'STUDIO', count: 1 },
-          { roomType: 'AUDITORIUM', count: 1 }
-        ]
+        dayDistribution: [], roomTypeDistribution: []
       };
     }
   }
@@ -64,7 +51,8 @@ export class ScheduleAdminService {
       const qs = params.toString();
       return await apiClient.get<ClassSchedule[]>(`/academic/schedules${qs ? `?${qs}` : ''}`);
     } catch {
-      return [
+      return [] as ClassSchedule[];
+      /* return [
         {
           id: 'sch-01',
           classId: 'cls-pai301-a',
@@ -129,7 +117,7 @@ export class ScheduleAdminService {
           isActive: true,
           enrolledCount: 30
         }
-      ];
+      ]; */
     }
   }
 
@@ -140,8 +128,9 @@ export class ScheduleAdminService {
     try {
       return await apiClient.get<ScheduleMatrixData>('/academic/schedules/matrix');
     } catch {
-      return {
-        days: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'],
+      return { days: [], matrix: {} as ScheduleMatrixData['matrix'] };
+      /* return {
+        days: [],
         matrix: {
           Senin: [
             {
@@ -257,7 +246,7 @@ export class ScheduleAdminService {
           ],
           Sabtu: []
         }
-      };
+      }; */
     }
   }
 
@@ -289,7 +278,8 @@ export class ScheduleAdminService {
     try {
       return await apiClient.get<CampusRoom[]>('/academic/rooms');
     } catch {
-      return [
+      return [] as CampusRoom[];
+      /* return [
         {
           id: 'rm-a201',
           code: 'A-201',
@@ -318,7 +308,7 @@ export class ScheduleAdminService {
           updatedAt: '2026-08-17T00:00:00Z',
           activeSchedulesCount: 1
         }
-      ];
+      ]; */
     }
   }
 

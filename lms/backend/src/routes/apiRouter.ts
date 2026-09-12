@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../middleware/authMiddleware.js';
+import { requireAuth, requireSiakadSync } from '../middleware/authMiddleware.js';
 import { requireRole, requirePermission } from '../middleware/rbacMiddleware.js';
 
 // Controllers
@@ -36,7 +36,7 @@ apiRouter.post('/auth/switch-role', requireAuth, authCtrl.switchRole);
 
 // 2. ACADEMIC & SIAKAD SYNC ROUTES
 apiRouter.get('/academic/classes', requireAuth, academicCtrl.getClasses);
-apiRouter.post('/academic/sync', requireAuth, requirePermission('sync:execute'), academicCtrl.syncAcademicData);
+apiRouter.post('/academic/sync', requireSiakadSync, academicCtrl.acknowledgeAcademicSync);
 apiRouter.get('/academic/sync-logs', requireAuth, requirePermission('sync:view_logs'), academicCtrl.getSyncLogs);
 
 // 2b. ACADEMIC PERIODS & SEMESTERS (ADMIN/PERIODE)

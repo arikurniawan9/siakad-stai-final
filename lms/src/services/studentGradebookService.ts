@@ -117,6 +117,7 @@ const PAI_301_ITEMS: AssessmentItemDetail[] = [
     lecturerFeedback: 'Sangat aktif memberikan tanggapan ilmiah dan rujukan kitab pada forum diskusi kelas.'
   }
 ];
+void PAI_301_ITEMS;
 
 // In-Memory Storage for Inquiries
 let INQUIRIES_DATA: GradeInquiryRequest[] = [
@@ -145,7 +146,8 @@ export class StudentGradebookService {
    * Mengambil buku nilai seluruh mata kuliah yang diambil mahasiswa pada semester aktif
    */
   getStudentGradebook(_studentId: string = 'usr-mhs-01'): CourseGradebookSummary[] {
-    return [
+    return [];
+    /* return [
       {
         classId: 'cls-pai301-a',
         courseId: 'crs-pai301',
@@ -451,7 +453,7 @@ export class StudentGradebookService {
         isFinalized: true,
         items: []
       }
-    ];
+    ]; */
   }
 
   /**
@@ -523,7 +525,7 @@ export class StudentGradebookService {
    * Mengambil daftar permohonan sanggahan/klarifikasi nilai mahasiswa
    */
   getGradeInquiries(_studentId: string = 'usr-mhs-01'): GradeInquiryRequest[] {
-    return [...INQUIRIES_DATA];
+    return [];
   }
 
   /**
